@@ -1,0 +1,40 @@
+# ============================================================================
+# Cloudflare Tunnel Configuration for Homing Hub (lophocso.io.vn)
+# ============================================================================
+#
+# Cách 1: Quản lý qua Cloudflare Zero Trust Dashboard (Khuyến nghị - Dễ nhất):
+# 1. Truy cập https://one.dash.cloudflare.com/ -> Networks -> Tunnels
+# 2. Bấm "Add a tunnel" -> Chọn "Cloudflared" -> Đặt tên (vd: homing-hub)
+# 3. Copy Token và dán vào file .env:
+#    CLOUDFLARE_TUNNEL_TOKEN=eyJhIjoi...
+# 4. Trong tab "Public Hostname", thêm rule:
+#    - Subdomain: (để trống hoặc www)
+#    - Domain: lophocso.io.vn
+#    - Type: HTTP
+#    - URL: frontend:80 (hoặc localhost:80)
+# 5. Khởi động container:
+#    docker compose --profile tunnel up -d
+#
+# ============================================================================
+# Cách 2: Quản lý bằng file config cục bộ (Locally-managed):
+# ============================================================================
+# tunnel: <YOUR_TUNNEL_UUID>
+# credentials-file: /etc/cloudflared/<YOUR_TUNNEL_UUID>.json
+#
+# ingress:
+#   - hostname: lophocso.io.vn
+#     service: http://frontend:80
+#     originRequest:
+#       httpHostHeader: lophocso.io.vn
+#       connectTimeout: 15s
+#       noTLSVerify: true
+#
+#   - hostname: www.lophocso.io.vn
+#     service: http://frontend:80
+#     originRequest:
+#       httpHostHeader: www.lophocso.io.vn
+#       connectTimeout: 15s
+#       noTLSVerify: true
+#
+#   # Catch-all rule (bắt buộc kết thúc bằng 404)
+#   - service: http_status:404

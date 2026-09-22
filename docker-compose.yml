@@ -32,8 +32,6 @@ services:
   frontend:
     build: ./frontend
     ports: ["80:80"]
-    volumes:
-      - ./frontend/dist:/usr/share/nginx/html:ro
     depends_on:
       backend:
         condition: service_healthy
@@ -41,8 +39,11 @@ services:
 
   mqtt:
     image: eclipse-mosquitto:2
-    # MQTT is for the local stack; do not expose it to the LAN by default.
-    ports: ["1883:1883", "9001:9001"]
+    # Cổng 1883 (TCP) mở ra mạng LAN để kết nối với ESP32 qua WiFi
+    # Cổng 9001 (WebSocket) cho Web Dashboard / Reverse proxy
+    ports:
+      - "0.0.0.0:1883:1883"
+      - "0.0.0.0:9001:9001"
     volumes:
       - ./infra/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mqtt-data:/mosquitto/data
@@ -101,6 +102,17 @@ services:
       timeout: 3s
       retries: 12
     restart: unless-stopped
+
+  # Cloudflare Tunnel for domain lophocso.io.vn (HTTPS & secure remote access)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel", "cloudflare"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
 
 volumes:
   mqtt-data:

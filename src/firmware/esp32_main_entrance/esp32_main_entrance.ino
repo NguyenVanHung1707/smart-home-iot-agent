@@ -17,123 +17,20 @@
 #include <Wire.h>
 #include <vector>
 
-// --- THÔNG TIN MẠNG WIFI & CLOUD WSS BROKER ---
-char ssid[] = "TP-Link_ED49";
-char pass[] = "76664748";
+// --- THÔNG TIN MẠNG WIFI & MQTT BROKER TRONG MẠNG LAN ---
+// Cấu hình mạng WiFi gia đình
+char ssid[] = "TP-Link_ED49";            // Tên WiFi
+char pass[] = "76664748";                // Mật khẩu WiFi
 
-// Địa chỉ Cloud WebSocket Secure (WSS) Broker ngoài Internet
-const char* wss_host = "mqtt.blask.id.vn";
-const int wss_port = 443;
-const char* wss_path = "/mqtt";
+// Địa chỉ IP LAN của máy tính/server chạy Docker (Mosquitto Port 1883)
+// Tra cứu IP: Chạy 'ipconfig' trên Windows hoặc 'hostname -I' trên Linux
+const char* mqtt_server = "192.168.1.16"; 
+const int mqtt_port = 1883;
 
-// --- ADAPTER LỚP STREAM CHO PUBSUBCLIENT CHẠY QUA WEBSOCKET SECURE (WSS) ---
-class WebsocketClientStream : public Client {
-private:
-  websockets::WebsocketsClient* _ws;
-  String _host;
-  uint16_t _port;
-  String _path;
-  std::vector<uint8_t> _rxBuffer;
-  size_t _rxIndex = 0;
+// Client kết nối TCP thuần trong mạng WiFi LAN (phản hồi tức thì < 10ms, tiết kiệm RAM)
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
 
-public:
-  WebsocketClientStream(websockets::WebsocketsClient& ws, const char* host, uint16_t port, const char* path = "/mqtt")
-    : _ws(&ws), _host(host), _port(port), _path(path) {
-    _ws->setInsecure();
-    _ws->addHeader("Sec-WebSocket-Protocol", "mqtt");
-    _ws->onMessage([this](websockets::WebsocketsClient&, websockets::WebsocketsMessage msg) {
-      const char* ptr = msg.c_str();
-      uint32_t len = msg.length();
-      if (ptr && len > 0) {
-        _rxBuffer.insert(_rxBuffer.end(), (const uint8_t*)ptr, (const uint8_t*)ptr + len);
-      }
-    });
-  }
-
-  int connect(IPAddress ip, uint16_t port) override {
-    return connect(ip.toString().c_str(), port);
-  }
-
-  int connect(const char *host, uint16_t port) override {
-    _rxBuffer.clear();
-    _rxIndex = 0;
-    String url = "wss://" + _host + ":" + String(_port) + _path;
-    return _ws->connect(url) ? 1 : 0;
-  }
-
-  size_t write(uint8_t b) override {
-    return write(&b, 1);
-  }
-
-  size_t write(const uint8_t *buf, size_t size) override {
-    if (!_ws->available()) return 0;
-    bool ok = _ws->sendBinary((const char*)buf, size);
-    return ok ? size : 0;
-  }
-
-  int available() override {
-    if (_ws->available()) {
-      _ws->poll();
-    }
-    int avail = (int)(_rxBuffer.size() - _rxIndex);
-    return avail > 0 ? avail : 0;
-  }
-
-  int read() override {
-    if (!available()) return -1;
-    uint8_t b = _rxBuffer[_rxIndex++];
-    if (_rxIndex >= _rxBuffer.size()) {
-      _rxBuffer.clear();
-      _rxIndex = 0;
-    }
-    return b;
-  }
-
-  int read(uint8_t *buf, size_t size) override {
-    int avail = available();
-    if (avail <= 0) return -1;
-    size_t toRead = (size < (size_t)avail) ? size : (size_t)avail;
-    memcpy(buf, _rxBuffer.data() + _rxIndex, toRead);
-    _rxIndex += toRead;
-    if (_rxIndex >= _rxBuffer.size()) {
-      _rxBuffer.clear();
-      _rxIndex = 0;
-    } else if (_rxIndex > 2048) {
-      _rxBuffer.erase(_rxBuffer.begin(), _rxBuffer.begin() + _rxIndex);
-      _rxIndex = 0;
-    }
-    return toRead;
-  }
-
-  int peek() override {
-    if (!available()) return -1;
-    return _rxBuffer[_rxIndex];
-  }
-
-  void flush() override {
-    if (_ws->available()) {
-      _ws->poll();
-    }
-  }
-
-  void stop() override {
-    _ws->close();
-    _rxBuffer.clear();
-    _rxIndex = 0;
-  }
-
-  uint8_t connected() override {
-    return _ws->available() ? 1 : 0;
-  }
-
-  operator bool() override {
-    return _ws->available();
-  }
-};
-
-websockets::WebsocketsClient wsClient;
-WebsocketClientStream wsStream(wsClient, wss_host, wss_port, wss_path);
-PubSubClient mqttClient(wsStream);
 
 // --- KHAI BÁO CHÂN PHẦN CỨNG ---
 #define DOOR_SERVO_PIN 4 // Servo mở chốt cửa -> Chân D4
@@ -343,7 +240,7 @@ void reconnectWiFi() {
   }
 }
 
-// KẾT NỐI CLOUD WSS-MQTT KHÔNG CHẶN (NON-BLOCKING) - KHÔNG BAO GIỜ LÀM ĐƠ BÀN PHÍM/RFID
+// KẾT NỐI LAN TCP-MQTT KHÔNG CHẶN (NON-BLOCKING) - KHÔNG BAO GIỜ LÀM ĐƠ BÀN PHÍM/RFID
 void reconnectMQTT() {
   if (WiFi.status() != WL_CONNECTED)
     return;
@@ -352,24 +249,23 @@ void reconnectMQTT() {
 
   if (millis() - lastMqttRetry > 5000) {
     lastMqttRetry = millis();
-    Serial.print("[WSS-MQTT Client] Đang thử kết nối Cloud Mosquitto Broker: wss://");
-    Serial.print(wss_host);
+    Serial.print("[LAN-MQTT Client] Đang thử kết nối Mosquitto Broker LAN: ");
+    Serial.print(mqtt_server);
     Serial.print(":");
-    Serial.print(wss_port);
-    Serial.println(wss_path);
+    Serial.println(mqtt_port);
 
     const char* clientId = "ESP32_Main_Entrance";
     const char* willTopic = "homing/nodes/esp32_main_entrance/lwt";
     const char* willPayload = "{\"node_id\":\"esp32_main_entrance\",\"device_id\":\"entry-lock\",\"online\":false,\"status\":\"offline\"}";
     if (mqttClient.connect(clientId, willTopic, 1, true, willPayload)) {
-      Serial.println("[WSS-MQTT Client] KẾT NỐI CLOUD WSS THÀNH CÔNG (ĐÃ ĐĂNG KÝ LWT)!");
+      Serial.println("[LAN-MQTT Client] KẾT NỐI BROKER LAN THÀNH CÔNG (ĐÃ ĐĂNG KÝ LWT)!");
       mqttClient.subscribe("homing/devices/entry-lock/command");
       mqttClient.subscribe("homing/broadcast/scan");
       Serial.println(
-          "[WSS-MQTT Client] Subscribed: homing/devices/entry-lock/command, homing/broadcast/scan");
+          "[LAN-MQTT Client] Subscribed: homing/devices/entry-lock/command, homing/broadcast/scan");
       publishLockState(isLocked);
     } else {
-      Serial.printf("[WSS-MQTT Error] Thất bại, rc=%d\n", mqttClient.state());
+      Serial.printf("[LAN-MQTT Error] Thất bại, rc=%d\n", mqttClient.state());
     }
   }
 }
@@ -487,13 +383,13 @@ void setup() {
   }
 
   // Cấu hình MQTT Client
-  mqttClient.setServer(wss_host, wss_port);
+  mqttClient.setServer(mqtt_server, mqtt_port);
   mqttClient.setCallback(mqttCallback);
   mqttClient.setBufferSize(512);
   mqttClient.setKeepAlive(15);
 
   Serial.println(
-      "ESP32 #2 (Main Entrance Security System - Cloud WSS MQTT) SẴN SÀNG!");
+      "ESP32 #2 (Main Entrance Security System - LAN TCP MQTT) SẴN SÀNG!");
 }
 
 void loop() {
