@@ -1,0 +1,713 @@
+:root[data-theme="light"] body {
+  background: #f8fafb;
+}
+
+:root[data-theme="light"] .hm-app,
+:root[data-theme="light"] .hm-main,
+:root[data-theme="light"] .hm-main-home {
+  background: #f8fafb;
+}
+
+:root[data-theme="light"] .hm-connected.live {
+  background: #f8fafb;
+  color: #4b596a;
+  border-color: #dbe3eb;
+}
+
+:root[data-theme="light"] .hm-connected.fallback {
+  background: #fff7ed;
+  color: #92400e;
+  border-color: #fed7aa;
+}
+
+:root[data-theme="light"] .hm-sidebar {
+  border-right-color: #e5eaf0;
+  box-shadow: inset -1px 0 0 rgba(226, 232, 240, 0.72);
+}
+
+:root[data-theme="light"] .hm-sidebar-brand > span {
+  color: #ffffff;
+  background: #0f8778;
+  box-shadow: 0 14px 28px rgba(15, 135, 120, 0.18);
+}
+
+:root[data-theme="light"] .hm-sidebar nav {
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.035);
+}
+
+:root[data-theme="light"] .hm-sidebar nav button:hover,
+:root[data-theme="light"] .hm-sidebar nav button.active {
+  border-color: #0f8778;
+  color: #ffffff;
+  background: #0f8778;
+  box-shadow: 0 12px 24px rgba(15, 135, 120, 0.2);
+}
+
+:root[data-theme="light"] .hm-sidebar-note {
+  background: #ecfdf8;
+  border-color: #bce7dd;
+  color: #0f8778;
+}
+
+:root[data-theme="light"] .hm-top-greeting {
+  background: #f8fafb;
+  border-bottom-color: #e5eaf0;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+:root[data-theme="light"] .hm-main-home .hm-top-greeting {
+  background: #f8fafb;
+  border-bottom-color: #e5eaf0;
+  backdrop-filter: none;
+}
+
+:root[data-theme="light"] .hm-top-title p {
+  color: #66758a;
+}
+
+:root[data-theme="light"] .hm-top-title h1 {
+  color: #162033;
+}
+
+:root[data-theme="light"] .hm-menu-button,
+:root[data-theme="light"] .hm-theme-toggle,
+:root[data-theme="light"] .hm-notification {
+  background: #ffffff;
+  border-color: #dbe3eb;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+:root[data-theme="light"] .hm-house-badge {
+  background: #0f8778;
+  color: #ffffff;
+}
+
+:root[data-theme="light"] .hm-mode-switcher {
+  background: #f1f5f9;
+  border-color: #dbe3eb;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+:root[data-theme="light"] .hm-mode-btn.active {
+  background: #ffffff;
+  color: #0f8778;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+}
+
+:root[data-theme="light"] .hm-notification {
+  border-color: #f0a66d;
+}
+
+:root[data-theme="light"] .hm-notification:hover {
+  border-color: #ea580c;
+  background: #fff7ed;
+}
+
+:root[data-theme="light"] .hm-notification b {
+  background: #f97316;
+}
+
+:root[data-theme="light"] .hm-room-pagination,
+:root[data-theme="light"] .hm-room-card,
+:root[data-theme="light"] .hm-stat,
+:root[data-theme="light"] .hm-empty {
+  background: var(--hm-card-bg);
+  border-color: #e5eaf0;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.055);
+}
+
+:root[data-theme="light"] .hm-history-item {
+  background: #ffffff;
+  border-color: #e5eaf0;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.055);
+}
+
+:root[data-theme="light"] .hm-history-item:hover,
+:root[data-theme="light"] .hm-history-item.selected {
+  background: #0f8778;
+  border-color: #0f8778;
+  box-shadow: 0 14px 30px rgba(15, 135, 120, 0.22);
+  color: #ffffff;
+}
+
+:root[data-theme="light"] .hm-history-item:hover .hm-hist-body small,
+:root[data-theme="light"] .hm-history-item.selected .hm-hist-body small,
+:root[data-theme="light"] .hm-history-item:hover .hm-hist-time b,
+:root[data-theme="light"] .hm-history-item.selected .hm-hist-time b,
+:root[data-theme="light"] .hm-history-item:hover .hm-hist-time span,
+:root[data-theme="light"] .hm-history-item.selected .hm-hist-time span {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+:root[data-theme="light"] .hm-history-item:hover .hm-hist-icon,
+:root[data-theme="light"] .hm-history-item.selected .hm-hist-icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #d7fff7;
+}
+
+:root[data-theme="light"] .hm-history-detail {
+  background: #ffffff;
+  border-color: #e5eaf0;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+}
+
+:root[data-theme="light"] .hm-detail-reply-box {
+  background: #f1f5f9;
+}
+
+:root[data-theme="light"] .hm-device-status.on,
+:root[data-theme="light"] .hm-hist-icon.done,
+:root[data-theme="light"] .hm-detail-badge.done {
+  background: var(--hm-positive-bg);
+  color: var(--hm-positive-text);
+}
+
+:root[data-theme="light"] .hm-device-status.offline,
+:root[data-theme="light"] .hm-hist-icon.declined,
+:root[data-theme="light"] .hm-detail-badge.declined {
+  background: var(--hm-danger-bg);
+  color: var(--hm-danger-text);
+}
+
+:root[data-theme="light"] .hm-device-status.warning,
+:root[data-theme="light"] .hm-hist-icon.pending,
+:root[data-theme="light"] .hm-detail-badge.pending {
+  background: var(--hm-warning-bg);
+  color: var(--hm-warning-text);
+}
+
+:root[data-theme="light"] .hm-modal-backdrop {
+  background: rgb(16 38 52 / 0.36);
+}
+
+:root[data-theme="light"] .hm-room-modal {
+  border: 1px solid var(--hm-border-soft);
+  background: var(--hm-surface);
+  color: var(--hm-text);
+  box-shadow: 0 24px 58px rgba(15, 23, 42, 0.16);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal {
+  border-color: var(--hm-border-soft);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 248, 248, 0.98));
+  color: var(--hm-text);
+  box-shadow: var(--hm-shadow-lg);
+  scrollbar-color: rgba(0, 127, 115, 0.34) rgba(229, 240, 242, 0.9);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-room-head strong,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-discovery-empty h4,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-disc-id,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-device-cb-info strong {
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-text-subtle,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-field-hint,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-device-cb-info small,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-disc-time,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-add-tab,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-discovery-empty p {
+  color: var(--hm-muted);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-close-btn,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-btn-secondary,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-btn-ghost,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-icon-picker-btn,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-kind-btn,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-btn-scan-sm {
+  border-color: var(--hm-border-soft);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-form-group label,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-form-field label,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-field-group label {
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-form-group input:not([type="checkbox"]):not([type="radio"]),
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-form-group select,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-form-group textarea,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-form-field input[type="text"],
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-form-field select,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-field-group input,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-field-group select,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-room-select-row input,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-room-select-row select {
+  border-color: var(--hm-border-soft);
+  background: #ffffff;
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal input::placeholder,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal textarea::placeholder {
+  color: var(--hm-subtle);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal input:focus,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal select:focus,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal textarea:focus {
+  border-color: rgba(0, 127, 115, 0.68);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 127, 115, 0.12);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal select {
+  color-scheme: light;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--hm-primary) 50%),
+    linear-gradient(135deg, var(--hm-primary) 50%, transparent 50%);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal select option {
+  background: #ffffff;
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-add-tabs,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-discovery-empty,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-discovery-card,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-device-select-list {
+  border-color: var(--hm-border-soft);
+  background: rgba(229, 240, 242, 0.72);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-add-tab.active,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-icon-picker-btn.active,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-kind-btn.active {
+  background: rgba(0, 127, 115, 0.12);
+  color: var(--hm-primary);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-device-checkbox-row {
+  border-color: var(--hm-border-soft);
+  background: #ffffff;
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-scan-notice,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-discovery-alert,
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-tab-badge {
+  border-color: rgba(37, 99, 235, 0.24);
+  background: rgba(37, 99, 235, 0.09);
+  color: #1d4ed8;
+}
+
+:root[data-theme="light"] .hm-room-modal.hm-add-device-modal .hm-disc-kind-tag {
+  border-color: rgba(180, 83, 9, 0.22);
+  background: rgba(180, 83, 9, 0.1);
+  color: #92400e;
+}
+
+:root[data-theme="light"] .hm-approval-card,
+:root[data-theme="light"] .hm-panel {
+  border-color: var(--hm-border-soft);
+  background: #ffffff;
+  box-shadow: var(--hm-shadow);
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-approval-card:hover,
+:root[data-theme="light"] .hm-panel:hover {
+  border-color: rgba(0, 127, 115, 0.34);
+  background: #ffffff;
+  box-shadow: var(--hm-shadow-lg);
+}
+
+:root[data-theme="light"] .hm-approval-info h2,
+:root[data-theme="light"] .hm-approval-info p strong,
+:root[data-theme="light"] .hm-panel-title,
+:root[data-theme="light"] .hm-activity-row p,
+:root[data-theme="light"] .hm-rows p b {
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-approval-info p,
+:root[data-theme="light"] .hm-approval-info small,
+:root[data-theme="light"] .hm-activity-row time,
+:root[data-theme="light"] .hm-rows p span,
+:root[data-theme="light"] .hm-empty-note {
+  color: var(--hm-muted);
+}
+
+:root[data-theme="light"] .hm-activity-row,
+:root[data-theme="light"] .hm-rows p {
+  border-color: var(--hm-border-soft);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+:root[data-theme="light"] .hm-pill.pending {
+  border-color: rgba(180, 83, 9, 0.24);
+  background: rgba(180, 83, 9, 0.1);
+  color: #92400e;
+}
+
+:root[data-theme="light"] .hm-pill.approved,
+:root[data-theme="light"] .hm-pill.done,
+:root[data-theme="light"] .hm-activity-badge.ok {
+  border-color: rgba(0, 127, 115, 0.28);
+  background: rgba(0, 127, 115, 0.11);
+  color: #006d63;
+}
+
+:root[data-theme="light"] .hm-pill.rejected,
+:root[data-theme="light"] .hm-pill.declined,
+:root[data-theme="light"] .hm-activity-badge.error {
+  border-color: rgba(220, 38, 38, 0.24);
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+
+:root[data-theme="light"] .hm-voice-backdrop {
+  background: rgb(248 250 251 / 0.82);
+}
+
+:root[data-theme="light"] .hm-voice-panel {
+  border-color: var(--hm-border-soft);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 247, 245, 0.98));
+  box-shadow: var(--hm-shadow-lg);
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-voice-head strong,
+:root[data-theme="light"] .hm-voice-last-reply p {
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-voice-mode-switch,
+:root[data-theme="light"] .hm-voice-error,
+:root[data-theme="light"] .hm-voice-input-wrap textarea {
+  border-color: var(--hm-border-soft);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+:root[data-theme="light"] .hm-voice-mode-btn {
+  color: var(--hm-muted);
+}
+
+:root[data-theme="light"] .hm-voice-mode-btn.active,
+:root[data-theme="light"] .hm-voice-status-text.is-listening {
+  color: var(--hm-primary);
+}
+
+:root[data-theme="light"] .hm-voice-action.secondary,
+:root[data-theme="light"] .hm-voice-action.ghost {
+  border-color: var(--hm-border-soft);
+  background: #ffffff;
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-voice-status-text,
+:root[data-theme="light"] .hm-voice-transcript-empty,
+:root[data-theme="light"] .hm-voice-input-wrap textarea::placeholder {
+  color: var(--hm-muted);
+}
+
+:root[data-theme="light"] .hm-home-dashboard {
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .hm-home-toolbar,
+:root[data-theme="light"] .main-panel,
+:root[data-theme="light"] .right-rail,
+:root[data-theme="light"] .room-card,
+:root[data-theme="light"] .device-card,
+:root[data-theme="light"] .widget {
+  border-color: var(--hm-border-soft);
+  background: #ffffff;
+  box-shadow: var(--hm-shadow);
+}
+
+:root[data-theme="light"] .main-panel {
+  background: #f8fafb;
+}
+
+:root[data-theme="light"] .right-rail {
+  background: #f8fafb;
+}
+
+:root[data-theme="light"] .circuit-backplane path {
+  stroke-width: 1.18;
+  opacity: 0.82;
+}
+
+:root[data-theme="light"] .circuit-backplane .room-header-circuits path {
+  stroke-width: 1.02;
+  opacity: 0.52;
+}
+
+:root[data-theme="light"] .circuit-backplane .room-band-circuits path {
+  stroke-width: 1.36;
+  opacity: 0.95;
+}
+
+:root[data-theme="light"] .circuit-backplane circle,
+:root[data-theme="light"] .circuit-backplane .room-header-circuits circle,
+:root[data-theme="light"] .circuit-backplane .room-band-circuits circle {
+  fill: rgba(15, 135, 120, 0.2);
+  opacity: 0.72;
+}
+
+:root[data-theme="light"] .circuit-hover-svg {
+  filter: drop-shadow(0 0 6px rgba(15, 135, 120, 0.26));
+}
+
+:root[data-theme="light"] .circuit-backplane-hover path {
+  stroke: rgba(15, 135, 120, 0.68);
+  stroke-width: 1.45;
+}
+
+:root[data-theme="light"] .circuit-backplane-hover circle {
+  fill: rgba(15, 135, 120, 0.72);
+}
+
+:root[data-theme="light"] .circuit-active-lines .circuit-line {
+  stroke-width: 2.5;
+  filter:
+    url("#neonTrace")
+    drop-shadow(0 0 6px rgba(15, 135, 120, 0.32))
+    drop-shadow(0 0 14px rgba(15, 135, 120, 0.14));
+}
+
+:root[data-theme="light"] .circuit-active-lines .circuit-line.active-glowing {
+  opacity: 0.96;
+}
+
+:root[data-theme="light"] .circuit-node {
+  fill: rgba(15, 135, 120, 0.24);
+  opacity: 0.58;
+}
+
+:root[data-theme="light"] .circuit-nodes .circuit-node.active-glowing {
+  fill: #0f8778;
+  filter: drop-shadow(0 0 10px rgba(15, 135, 120, 0.46));
+}
+
+:root[data-theme="light"] .hm-home-toolbar-kicker,
+:root[data-theme="light"] .section-heading span,
+:root[data-theme="light"] .status-state,
+:root[data-theme="light"] .security-card li span {
+  color: var(--hm-primary);
+}
+
+:root[data-theme="light"] .hm-home-toolbar strong,
+:root[data-theme="light"] .section-heading h2,
+:root[data-theme="light"] .card-topline h3,
+:root[data-theme="light"] .device-info h3,
+:root[data-theme="light"] .widget h2,
+:root[data-theme="light"] .temperature,
+:root[data-theme="light"] .energy-card strong,
+:root[data-theme="light"] .security-main strong,
+:root[data-theme="light"] .status-meta {
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .card-topline p,
+:root[data-theme="light"] .device-info p,
+:root[data-theme="light"] .widget p,
+:root[data-theme="light"] .weather-meta,
+:root[data-theme="light"] .weather-meta small,
+:root[data-theme="light"] .trend small,
+:root[data-theme="light"] .security-card li,
+:root[data-theme="light"] .bar-labels {
+  color: var(--hm-muted);
+}
+
+:root[data-theme="light"] .hm-home-toolbar-actions button,
+:root[data-theme="light"] .carousel-controls,
+:root[data-theme="light"] .carousel-controls button,
+:root[data-theme="light"] .section-heading small,
+:root[data-theme="light"] .scenes-card button {
+  border-color: var(--hm-border-soft);
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--hm-text);
+}
+
+:root[data-theme="light"] .room-card:hover,
+:root[data-theme="light"] .room-card:focus-visible,
+:root[data-theme="light"] .room-card.active,
+:root[data-theme="light"] .device-card:hover,
+:root[data-theme="light"] .device-card:focus-visible,
+:root[data-theme="light"] .device-card.active {
+  border-color: #0f8778;
+  background: #ffffff;
+  box-shadow: var(--hm-shadow-lg);
+}
+
+:root[data-theme="light"] .light-dot {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+:root[data-theme="light"] .mic-orbit {
+  background: radial-gradient(circle, rgba(0, 127, 115, 0.14), rgba(255, 255, 255, 0.84) 54%, rgba(37, 99, 235, 0.1) 60%, transparent 63%);
+}
+
+:root[data-theme="light"] .mic-core {
+  background: #ffffff;
+  color: var(--hm-primary);
+}
+
+:root[data-theme="light"] .assistant-mic > span:last-child {
+  color: var(--hm-primary);
+  text-shadow: none;
+}
+
+:root[data-theme="light"] .scenes-card button.active {
+  background: var(--hm-primary);
+  color: #ffffff;
+}
+
+/* ---------- Landing + auth: light mode ---------- */
+
+:root[data-theme="light"] .hm-landing,
+:root[data-theme="light"] .hm-auth {
+  background: #f8fafb;
+}
+
+:root[data-theme="light"] .hm-landing-logo > span,
+:root[data-theme="light"] .hm-auth-brand > span,
+:root[data-theme="light"] .hm-landing-btn.primary,
+:root[data-theme="light"] .hm-auth-submit {
+  color: #ffffff;
+}
+
+/* Light mode dùng nền phẳng: bỏ gradient chữ, dùng màu primary đặc. */
+:root[data-theme="light"] .hm-landing-hero h1 em {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--hm-primary);
+}
+
+/* Light mode: halo mờ trên nền trắng gần như không thấy, nên orb được vẽ
+   thành một đĩa có viền + shadow, vòng pulse và chip đậm hơn. */
+:root[data-theme="light"] .hm-landing-orb {
+  background: radial-gradient(circle, #ffffff 38%, #eefaf7 64%, rgba(238, 250, 247, 0) 78%);
+  border: 1px solid #cfeee8;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.09);
+}
+
+:root[data-theme="light"] .hm-landing-pulse span {
+  border-color: rgba(15, 135, 120, 0.52);
+}
+
+:root[data-theme="light"] .hm-landing-hero-chip {
+  border-color: #cfeee8;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+}
+
+:root[data-theme="light"] .hm-landing-flow-bubble.hub {
+  background: #ffffff;
+}
+
+/* Light mode: nền phẳng nên khung sơ đồ cần viền + shadow để tách khỏi trang. */
+:root[data-theme="light"] .hm-landing-flow-stage {
+  border-color: #e2e8f0;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+:root[data-theme="light"] .hm-landing-cards article:hover {
+  box-shadow: var(--hm-shadow-lg);
+}
+
+:root[data-theme="light"] .hm-landing-footer {
+  background: #ffffff;
+}
+
+/* Light mode overrides for Notification Center */
+:root[data-theme="light"] .hm-badge-icon.notif-bell {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+:root[data-theme="light"] .hm-btn-ghost-sm {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #162033;
+}
+
+:root[data-theme="light"] .hm-btn-ghost-sm:hover {
+  background: #e2e8f0;
+}
+
+:root[data-theme="light"] .hm-btn-ghost-sm.danger {
+  color: #dc2626;
+  border-color: #fca5a5;
+  background: #fff5f5;
+}
+
+:root[data-theme="light"] .hm-btn-ghost-sm.danger:hover {
+  background: #fee2e2;
+}
+
+:root[data-theme="light"] .hm-notif-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+:root[data-theme="light"] .hm-notif-card.offline {
+  border-left-color: #dc2626;
+  background: #fffafa;
+  border-color: #fecaca;
+}
+
+:root[data-theme="light"] .hm-notif-card.online {
+  border-left-color: #16a34a;
+  background: #f8fdf9;
+  border-color: #bbf7d0;
+}
+
+:root[data-theme="light"] .hm-notif-card.discovery {
+  border-left-color: #ea580c;
+  background: #fffaf5;
+  border-color: #fed7aa;
+}
+
+:root[data-theme="light"] .hm-notif-card.approval {
+  border-left-color: #d97706;
+  background: #fffdf5;
+  border-color: #fde68a;
+}
+
+:root[data-theme="light"] .hm-notif-icon-box.offline {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+:root[data-theme="light"] .hm-notif-icon-box.online {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+:root[data-theme="light"] .hm-notif-icon-box.discovery {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+:root[data-theme="light"] .hm-notif-icon-box.approval {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+:root[data-theme="light"] .hm-notif-title-row strong {
+  color: #162033;
+}
+
+:root[data-theme="light"] .hm-notif-content p {
+  color: #4b596a;
+}
+
+:root[data-theme="light"] .hm-notif-time {
+  color: #8793a3;
+}
+
+:root[data-theme="light"] .hm-notif-empty {
+  background: #f8fafb;
+  border-color: #e2e8f0;
+}
+

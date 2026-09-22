@@ -1,0 +1,143 @@
+/* Overview Stats */
+.hm-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.hm-stat {
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: var(--hm-card-bg);
+  border: 1px solid var(--hm-border-soft);
+  box-shadow: var(--hm-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hm-stat small { font-size: 12px; font-weight: 700; color: var(--hm-muted); }
+.hm-stat strong { font-size: 26px; font-weight: 900; line-height: 1.1; color: var(--hm-text); }
+.hm-stat span { font-size: 12px; font-weight: 600; color: var(--hm-subtle); }
+.hm-stat.ok strong { color: var(--hm-success); }
+.hm-stat.accent strong { color: var(--hm-accent); }
+.hm-stat.warn strong { color: var(--hm-warning); }
+.hm-stat.info strong { color: var(--hm-primary); }
+
+/* Room Grid & Pagination */
+.hm-room-intro-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.hm-room-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--hm-border-soft);
+  border-radius: 12px;
+  background: var(--hm-card-bg);
+}
+.hm-room-pagination button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--hm-surface-muted);
+}
+.hm-room-pagination span { font-size: 13px; font-weight: 700; }
+
+.hm-room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+.hm-room-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 130px;
+  padding: 18px;
+  border: 1px solid var(--hm-border-soft);
+  border-radius: 16px;
+  background: var(--hm-card-bg);
+  box-shadow: var(--hm-shadow);
+  text-align: left;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.hm-room-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--hm-shadow-lg);
+  border-color: var(--hm-primary-light);
+}
+.hm-room-card.hm-room-placeholder {
+  visibility: hidden;
+}
+.hm-room-head { display: flex; align-items: center; gap: 12px; }
+.hm-room-head > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--hm-primary-soft);
+  color: var(--hm-primary);
+  flex-shrink: 0;
+}
+.hm-room-head strong { display: block; font-size: 16px; font-weight: 800; color: var(--hm-text); }
+.hm-room-head small { display: block; font-size: 12px; color: var(--hm-muted); margin-top: 2px; }
+
+.hm-room-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hm-border-soft);
+}
+.hm-room-device-pill {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--hm-primary);
+}
+.hm-room-cta {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--hm-accent);
+}
+
+/* Floating Voice Button */
+.hm-floating-voice {
+  position: fixed;
+  bottom: 28px;
+  right: 32px;
+  z-index: 80;
+}
+.hm-floating-voice-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border: 0;
+  border-radius: 30px;
+  background: linear-gradient(135deg, var(--hm-primary), var(--hm-primary-hover));
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 10px 25px rgb(15 118 110 / 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.hm-floating-voice-button:hover {
+  transform: scale(1.04);
+  box-shadow: 0 14px 30px rgb(15 118 110 / 0.45);
+}
+.hm-floating-voice.active .hm-floating-voice-button {
+  background: linear-gradient(135deg, var(--hm-accent), #ea580c);
+  animation: pulse 1.5s infinite;
+}
+

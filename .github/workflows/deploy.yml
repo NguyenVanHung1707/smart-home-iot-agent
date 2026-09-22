@@ -1,0 +1,136 @@
+name: Deploy to Raspberry Pi
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build Frontends
+        run: |
+          npm --prefix frontend install
+          npm --prefix frontend run build
+          npm --prefix frontend-simulator install
+          npm --prefix frontend-simulator run build
+
+      - name: Set up SSH & Cloudflared
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          # Install cloudflared if not present on runner
+          CF_BIN="$(command -v cloudflared 2>/dev/null || true)"
+          if [ -z "$CF_BIN" ]; then
+            for candidate in /usr/local/bin/cloudflared "$HOME/.local/bin/cloudflared" "${GITHUB_WORKSPACE}/.bin/cloudflared"; do
+              if [ -x "$candidate" ]; then
+                CF_BIN="$candidate"
+                break
+              fi
+            done
+          fi
+
+          if [ -z "$CF_BIN" ]; then
+            echo "Installing cloudflared..."
+            RAW_ARCH="$(uname -m)"
+            case "$RAW_ARCH" in
+              x86_64) ARCH="amd64" ;;
+              aarch64|arm64) ARCH="arm64" ;;
+              armv7l|armhf) ARCH="arm" ;;
+              i386|i686) ARCH="386" ;;
+              *) ARCH="amd64" ;;
+            esac
+
+            curl -fsSL -o /tmp/cloudflared "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}"
+            chmod +x /tmp/cloudflared
+
+            if (command -v sudo >/dev/null 2>&1 && sudo -n cp /tmp/cloudflared /usr/local/bin/cloudflared 2>/dev/null) || \
+               (command -v sudo >/dev/null 2>&1 && sudo cp /tmp/cloudflared /usr/local/bin/cloudflared 2>/dev/null) || \
+               cp /tmp/cloudflared /usr/local/bin/cloudflared 2>/dev/null; then
+              CF_BIN="/usr/local/bin/cloudflared"
+            elif mkdir -p "$HOME/.local/bin" && cp /tmp/cloudflared "$HOME/.local/bin/cloudflared" 2>/dev/null; then
+              CF_BIN="$HOME/.local/bin/cloudflared"
+            else
+              mkdir -p "${GITHUB_WORKSPACE}/.bin"
+              cp /tmp/cloudflared "${GITHUB_WORKSPACE}/.bin/cloudflared"
+              CF_BIN="${GITHUB_WORKSPACE}/.bin/cloudflared"
+            fi
+            chmod +x "$CF_BIN" 2>/dev/null || true
+            rm -f /tmp/cloudflared
+          fi
+
+          if [ -z "$CF_BIN" ] || [ ! -x "$CF_BIN" ]; then
+            echo "cloudflared binary is not executable: $CF_BIN" >&2
+            exit 1
+          fi
+
+          "$CF_BIN" --version
+
+          echo "$(dirname "$CF_BIN")" >> "$GITHUB_PATH"
+
+          # Setup SSH configuration matching local config
+          cat << SSHEOF > ~/.ssh/config
+          Host pi
+              HostName ${{ secrets.SSH_HOST }}
+              User ${{ secrets.SSH_USER }}
+              IdentityFile ~/.ssh/id_ed25519
+              IdentitiesOnly yes
+              IdentityAgent none
+              PreferredAuthentications publickey
+              PubkeyAuthentication yes
+              StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+              ProxyCommand ${CF_BIN} access ssh --hostname %h
+              ServerAliveInterval 240
+          SSHEOF
+
+      - name: Deploy to Pi
+        run: |
+          echo "Syncing code and updating Docker containers on Pi..."
+          tar --exclude=".git" \
+              --exclude="node_modules" \
+              --exclude=".venv" \
+              --exclude=".pytest_cache" \
+              --exclude=".ruff_cache" \
+              --exclude="__pycache__" \
+              -czf - . | ssh -T pi "bash -c '
+                mkdir -p /opt/homing-hub/data /opt/homing-hub/runtime && \
+                tar -xzf - -C /opt/homing-hub/ && \
+                chmod -R 777 /opt/homing-hub/data /opt/homing-hub/runtime 2>/dev/null || true && \
+                cd /opt/homing-hub && \
+                docker compose up -d --build
+              '"
+          echo "Deploy complete!"
+
+      - name: Post-deploy Healthcheck
+        run: |
+          echo "Verifying deployment health on Raspberry Pi..."
+          ssh -T pi "bash -c '
+            cd /opt/homing-hub
+            echo \"Waiting for backend service to respond...\"
+            for i in {1..30}; do
+              if curl -sf http://localhost:8000/docs >/dev/null 2>&1; then
+                echo \"Backend API is healthy and responding!\"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo \"Healthcheck failed: Backend did not respond within 60s!\" >&2
+            docker compose logs --tail=50 backend
+            exit 1
+          '"

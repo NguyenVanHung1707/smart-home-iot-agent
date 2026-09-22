@@ -1,0 +1,18 @@
+# Project-local Codex lifecycle hooks. Trust this hook definition in `/hooks`
+# after opening a new Codex session.
+
+[[hooks.UserPromptSubmit]]
+
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = 'root="$(git rev-parse --show-toplevel)" && bash "$root/scripts/_pyrun.sh" "$root/scripts/log_hook.py" --tool=codex'
+command_windows = "powershell -NoProfile -Command '$root = git rev-parse --show-toplevel; & (Join-Path $root \"scripts/_pyrun.cmd\") (Join-Path $root \"scripts/log_hook.py\") --tool=codex'"
+timeout = 10
+
+[[hooks.Stop]]
+
+[[hooks.Stop.hooks]]
+type = "command"
+command = 'root="$(git rev-parse --show-toplevel)" && bash "$root/scripts/_pyrun.sh" "$root/scripts/log_hook.py" --tool=codex'
+command_windows = "powershell -NoProfile -Command '$root = git rev-parse --show-toplevel; & (Join-Path $root \"scripts/_pyrun.cmd\") (Join-Path $root \"scripts/log_hook.py\") --tool=codex'"
+timeout = 10

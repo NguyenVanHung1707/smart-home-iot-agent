@@ -1,0 +1,11 @@
+{
+  "ai-usage-log": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "root=\"$(git rev-parse --show-toplevel)\" && bash \"$root/scripts/_pyrun.sh\" \"$root/scripts/log_antigravity.py\" --auto --hook",
+        "timeout": 10
+      }
+    ]
+  }
+}

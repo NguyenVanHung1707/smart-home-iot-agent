@@ -1,0 +1,195 @@
+:root {
+  --hm-primary: #12d8c1;
+  --hm-primary-hover: #2f9eff;
+  --hm-primary-light: #0b3a45;
+  --hm-primary-soft: #061b2d;
+  --hm-accent: #2f9eff;
+  --hm-accent-soft: #0b263f;
+  --hm-bg: #03111f;
+  --hm-surface: #061b2d;
+  --hm-surface-muted: #092235;
+  --hm-border: #123852;
+  --hm-border-soft: #1c4b68;
+  --hm-text: #f4fbff;
+  --hm-muted: #b8cbe0;
+  --hm-subtle: #93abc2;
+  --hm-success: #18e6b7;
+  --hm-ai: #12d8c1;
+  --hm-warning: #ffb84d;
+  --hm-danger: #ff5f58;
+  --hm-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
+  --hm-shadow-lg: 0 20px 35px rgb(0 0 0 / 0.35);
+  --hm-body-bg:
+    radial-gradient(circle at 18% 12%, rgba(18, 216, 193, 0.14), transparent 22rem),
+    radial-gradient(circle at 82% 8%, rgba(47, 158, 255, 0.12), transparent 24rem),
+    linear-gradient(180deg, #03111f 0%, #061728 48%, #03111f 100%);
+  --hm-app-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 18rem);
+  --hm-grid-line: rgba(18, 216, 193, 0.018);
+  --hm-card-bg: #ffffff;
+  --hm-control-bg: rgba(23, 23, 32, 0.88);
+  --hm-control-color: #b8cbe0;
+  --hm-control-hover: rgba(18, 216, 193, 0.08);
+  --hm-control-active-bg: rgba(18, 216, 193, 0.14);
+  --hm-control-active-color: #9ff9ee;
+  --hm-sidebar-bg:
+    linear-gradient(180deg, rgba(7, 27, 49, 0.96), rgba(5, 5, 7, 0.98)),
+    linear-gradient(90deg, rgba(18, 216, 193, 0.045), transparent);
+  --hm-sidebar-nav-bg: rgba(5, 5, 7, 0.32);
+  --hm-sidebar-nav-color: #c7d7e8;
+  --hm-sidebar-active-bg:
+    radial-gradient(circle at 86% 18%, rgba(18, 216, 193, 0.18), transparent 4.4rem),
+    linear-gradient(135deg, rgba(47, 158, 255, 0.12), rgba(7, 27, 49, 0.34));
+  --hm-sidebar-note-bg: rgba(5, 5, 7, 0.86);
+  --hm-top-bg: var(--hm-bg);
+  --hm-positive-bg: rgba(22, 163, 74, 0.2);
+  --hm-positive-text: #4ade80;
+  --hm-neutral-bg: rgba(148, 163, 184, 0.15);
+  --hm-neutral-text: #94a3b8;
+  --hm-danger-bg: rgba(220, 38, 38, 0.2);
+  --hm-danger-text: #f87171;
+  --hm-warning-bg: rgba(217, 119, 6, 0.2);
+  --hm-warning-text: #fbbf24;
+  --hm-circuit-idle-0: rgba(0, 255, 240, 0.102);
+  --hm-circuit-idle-1: rgba(0, 255, 240, 0.064);
+  --hm-circuit-idle-2: rgba(0, 255, 240, 0.05);
+  --hm-circuit-idle-3: rgba(0, 255, 240, 0.034);
+  --hm-circuit-active-0: #00f5ff;
+  --hm-circuit-active-1: #16f3be;
+  --hm-circuit-active-2: #c9ffff;
+  --hm-circuit-active-opacity-0: 0.82;
+  --hm-circuit-active-opacity-1: 0.77;
+  --hm-circuit-active-opacity-2: 0.68;
+  --hm-landing-bg:
+    radial-gradient(circle at 20% 0%, rgba(18, 216, 193, 0.16), transparent 26rem),
+    radial-gradient(circle at 84% 6%, rgba(47, 158, 255, 0.14), transparent 28rem),
+    linear-gradient(180deg, #03111f 0%, #061728 52%, #03111f 100%);
+  --hm-landing-panel: rgba(6, 27, 45, 0.72);
+  --hm-landing-panel-strong: rgba(9, 34, 53, 0.9);
+  --hm-landing-nav-bg: rgba(3, 17, 31, 0.82);
+  --hm-landing-divider: rgba(18, 216, 193, 0.14);
+  --hm-landing-glow: 0 0 0 1px rgba(18, 216, 193, 0.16), 0 24px 60px rgba(0, 0, 0, 0.45);
+  --hm-landing-halo: radial-gradient(circle, rgba(18, 216, 193, 0.42), transparent 68%);
+  --hm-landing-hero-title: linear-gradient(120deg, #f4fbff 12%, #9ff9ee 62%, #2f9eff 100%);
+  --hm-landing-tag-bg: rgba(18, 216, 193, 0.14);
+  --hm-landing-wire: rgba(18, 216, 193, 0.24);
+  --hm-landing-wire-lit: #16f3be;
+  --hm-landing-wire-glow: drop-shadow(0 0 6px rgba(22, 243, 190, 0.55));
+  --hm-landing-mic-line: rgba(159, 249, 238, 0.5);
+  --hm-landing-mic-accent: #16f3be;
+  --hm-landing-device-bg: rgba(6, 27, 45, 0.72);
+  color-scheme: dark;
+  font-family: "Be Vietnam Pro", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--hm-text);
+  background: var(--hm-bg);
+}
+
+:root[data-theme="light"] {
+  --hm-primary: #0f8778;
+  --hm-primary-hover: #0b7469;
+  --hm-primary-light: #d8f3ee;
+  --hm-primary-soft: #eefaf7;
+  --hm-accent: #0f8778;
+  --hm-accent-soft: #e2f7f3;
+  --hm-bg: #f8fafb;
+  --hm-surface: #ffffff;
+  --hm-surface-muted: #f1f5f9;
+  --hm-border: #e2e8f0;
+  --hm-border-soft: #e5eaf0;
+  --hm-text: #162033;
+  --hm-muted: #5d6b7c;
+  --hm-subtle: #8793a3;
+  --hm-success: #10946f;
+  --hm-ai: #0f8778;
+  --hm-warning: #b45309;
+  --hm-danger: #dc2626;
+  --hm-shadow: 0 10px 28px rgb(15 23 42 / 0.06);
+  --hm-shadow-lg: 0 18px 44px rgb(15 23 42 / 0.11);
+  --hm-body-bg: #f8fafb;
+  --hm-app-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.68), transparent 18rem);
+  --hm-grid-line: rgba(15, 135, 120, 0.028);
+  --hm-card-bg: #ffffff;
+  --hm-control-bg: #ffffff;
+  --hm-control-color: #5d6b7c;
+  --hm-control-hover: #f1f5f9;
+  --hm-control-active-bg: #ffffff;
+  --hm-control-active-color: #0f8778;
+  --hm-sidebar-bg: #ffffff;
+  --hm-sidebar-nav-bg: #ffffff;
+  --hm-sidebar-nav-color: #4b596a;
+  --hm-sidebar-active-bg: #0f8778;
+  --hm-sidebar-note-bg: #ecfdf8;
+  --hm-top-bg: rgba(248, 250, 251, 0.94);
+  --hm-positive-bg: #dcfce7;
+  --hm-positive-text: #0f8b66;
+  --hm-neutral-bg: #eef2f7;
+  --hm-neutral-text: #475569;
+  --hm-danger-bg: #fee2e2;
+  --hm-danger-text: #b91c1c;
+  --hm-warning-bg: #fef3c7;
+  --hm-warning-text: #b45309;
+  --hm-circuit-idle-0: rgba(15, 135, 120, 0.26);
+  --hm-circuit-idle-1: rgba(15, 135, 120, 0.2);
+  --hm-circuit-idle-2: rgba(15, 135, 120, 0.15);
+  --hm-circuit-idle-3: rgba(15, 135, 120, 0.1);
+  --hm-circuit-active-0: #0f8778;
+  --hm-circuit-active-1: #0f8778;
+  --hm-circuit-active-2: #0f8778;
+  --hm-circuit-active-opacity-0: 0.88;
+  --hm-circuit-active-opacity-1: 0.86;
+  --hm-circuit-active-opacity-2: 0.78;
+  --hm-landing-bg: #f8fafb;
+  --hm-landing-panel: #ffffff;
+  --hm-landing-panel-strong: #ffffff;
+  --hm-landing-nav-bg: rgba(248, 250, 251, 0.92);
+  --hm-landing-divider: #e2e8f0;
+  --hm-landing-glow: 0 1px 0 0 #e2e8f0, 0 12px 30px rgba(15, 23, 42, 0.07);
+  --hm-landing-halo: radial-gradient(circle, rgba(15, 135, 120, 0.14), transparent 70%);
+  --hm-landing-hero-title: none;
+  --hm-landing-tag-bg: #d8f3ee;
+  --hm-landing-wire: rgba(15, 135, 120, 0.28);
+  --hm-landing-wire-lit: #0f8778;
+  --hm-landing-wire-glow: drop-shadow(0 0 5px rgba(15, 135, 120, 0.32));
+  --hm-landing-mic-line: rgba(15, 135, 120, 0.55);
+  --hm-landing-mic-accent: #0f8778;
+  --hm-landing-device-bg: #ffffff;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--hm-body-bg);
+  font-family: inherit;
+}
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: 0.45; }
+a { color: inherit; text-decoration: none; }
+textarea { border: 0; outline: 0; resize: vertical; background: transparent; }
+
+button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid rgb(249 115 22 / 0.72);
+  outline-offset: 2px;
+}
+
+.hm-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hm-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+

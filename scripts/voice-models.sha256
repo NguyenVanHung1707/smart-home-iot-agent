@@ -1,0 +1,6 @@
+b3abdef7a660fea7faf5e076b3c7613b0fc98406707103784d018189bb522124  models/zipformer/sherpa-onnx-zipformer-vi-int8-2025-04-20/encoder-epoch-12-avg-8.int8.onnx
+d1d27cca84c824a8acf5ce6edf0f2c0880cfe295d2e69b95134de1707e1d9998  models/zipformer/sherpa-onnx-zipformer-vi-int8-2025-04-20/decoder-epoch-12-avg-8.onnx
+38ec49e1c18e4feb0cad4de13e25c83a866cf56f4a66f22e8ff579d591a69a46  models/zipformer/sherpa-onnx-zipformer-vi-int8-2025-04-20/joiner-epoch-12-avg-8.int8.onnx
+f536d03c2e95ebd2930cf0abec88e823bd17d3c1933da7ae6a82db3b80605e15  models/zipformer/sherpa-onnx-zipformer-vi-int8-2025-04-20/tokens.txt
+ec7c89e2c85f4d1edc24b6120c18aaf1bda614f06b511567eb9c7c0de15e2dab  models/piper/vi_VN-vais1000-medium.onnx
+fafb9da1354ed4b77c31af228ed41fb41cd825c14cffa105454b25e6ae751ee0  models/piper/vi_VN-vais1000-medium.onnx.json

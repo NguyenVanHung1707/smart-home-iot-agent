@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HomeMind Member</title>
+    <script>
+      const target = new URL("./index.html", window.location.href);
+      const params = new URLSearchParams(window.location.search);
+      params.set("role", "member");
+      target.search = params.toString();
+      window.location.replace(target);
+    </script>
+  </head>
+  <body>
+    <a href="./index.html?role=member">Đang chuyển đến giao diện Family Member...</a>
+  </body>
+</html>

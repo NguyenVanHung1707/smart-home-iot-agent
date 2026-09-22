@@ -1,0 +1,557 @@
+/* ==========================================================================
+   Room Management: Add Room & Rename Room
+   ========================================================================== */
+.hm-btn-add-room {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--hm-surface-muted);
+  border: 1px solid var(--hm-border-soft);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hm-btn-add-room:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0284c7;
+}
+
+.hm-btn-add-room .hm-icon {
+  width: 16px;
+  height: 16px;
+  color: #0284c7;
+}
+
+.hm-room-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hm-room-title-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--hm-surface-muted);
+  border: 1px solid var(--hm-border-soft);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hm-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hm-room-title-edit-btn:hover {
+  background: var(--hm-primary);
+  color: #03111f;
+  border-color: var(--hm-primary);
+}
+
+.hm-room-title-edit-btn .hm-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.hm-room-title-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--hm-surface-muted);
+  border: 1px solid var(--hm-border-soft);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hm-danger, #ef4444);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hm-room-title-delete-btn:hover {
+  background: var(--hm-danger, #ef4444);
+  color: #ffffff;
+  border-color: var(--hm-danger, #ef4444);
+}
+
+.hm-room-title-delete-btn .hm-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.hm-room-name-inline-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hm-room-name-inline-edit input {
+  padding: 6px 10px;
+  border: 1px solid var(--hm-primary);
+  background: var(--hm-surface-muted);
+  color: var(--hm-text);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  outline: none;
+  min-width: 180px;
+}
+
+.hm-icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.hm-icon-picker-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: var(--hm-surface-muted);
+  border: 1px solid var(--hm-border-soft);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hm-text);
+}
+
+.hm-icon-picker-btn:hover {
+  border-color: var(--hm-primary);
+  color: var(--hm-primary);
+}
+
+.hm-icon-picker-btn.active {
+  background: rgba(18, 216, 193, 0.1);
+  border-color: var(--hm-primary);
+  color: var(--hm-primary);
+  box-shadow: 0 0 0 2px rgba(18, 216, 193, 0.2);
+}
+
+.hm-icon-picker-btn .hm-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.hm-device-select-list {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--hm-border-soft);
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #b8cbe0;
+}
+
+.hm-device-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hm-device-checkbox-row:hover {
+  border-color: #cbd5e1;
+}
+
+.hm-device-cb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hm-device-cb-info strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-text);
+}
+
+.hm-device-cb-info small {
+  font-size: 11px;
+  color: var(--hm-text-subtle);
+}
+
+/* Dark modal pass for Add Room and Add Device */
+.hm-room-modal.hm-add-device-modal {
+  width: min(96vw, 680px);
+  max-width: 680px;
+  max-height: min(88vh, 820px);
+  border: 1px solid rgba(18, 216, 193, 0.22);
+  background:
+    linear-gradient(180deg, rgba(23, 23, 32, 0.98), rgba(16, 16, 20, 0.98));
+  color: var(--hm-text);
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(47, 158, 255, 0.06) inset;
+  scrollbar-color: rgba(18, 216, 193, 0.45) rgba(23, 23, 32, 0.9);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-room-modal-head {
+  gap: 16px;
+  border-bottom-color: rgba(18, 216, 193, 0.18);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-room-head {
+  min-width: 0;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-room-head > span,
+.hm-room-modal.hm-add-device-modal .hm-badge-icon {
+  background: rgba(18, 216, 193, 0.13) !important;
+  color: var(--hm-primary) !important;
+  border: 1px solid rgba(18, 216, 193, 0.26);
+  box-shadow: 0 0 24px rgba(18, 216, 193, 0.08);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-room-head strong {
+  color: #f4fbff;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-text-subtle,
+.hm-room-modal.hm-add-device-modal .hm-field-hint,
+.hm-room-modal.hm-add-device-modal .hm-device-cb-info small,
+.hm-room-modal.hm-add-device-modal .hm-disc-time {
+  color: #b8cbe0;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-close-btn {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(18, 216, 193, 0.18);
+  border-radius: 10px;
+  background: rgba(23, 23, 32, 0.9);
+  color: #cbe8f7;
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-close-btn:hover {
+  border-color: rgba(18, 216, 193, 0.55);
+  background: rgba(18, 216, 193, 0.08);
+  color: var(--hm-primary);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-add-device-form,
+.hm-room-modal.hm-add-device-modal .hm-manual-form {
+  display: grid;
+  gap: 16px;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-form-group,
+.hm-room-modal.hm-add-device-modal .hm-form-field,
+.hm-room-modal.hm-add-device-modal .hm-field-group {
+  min-width: 0;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-form-group label,
+.hm-room-modal.hm-add-device-modal .hm-form-field label,
+.hm-room-modal.hm-add-device-modal .hm-field-group label {
+  display: block;
+  margin-bottom: 7px;
+  color: #d8edf9;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-form-group input:not([type="checkbox"]):not([type="radio"]),
+.hm-room-modal.hm-add-device-modal .hm-form-group select,
+.hm-room-modal.hm-add-device-modal .hm-form-group textarea,
+.hm-room-modal.hm-add-device-modal .hm-form-field input[type="text"],
+.hm-room-modal.hm-add-device-modal .hm-form-field select,
+.hm-room-modal.hm-add-device-modal .hm-field-group input,
+.hm-room-modal.hm-add-device-modal .hm-field-group select,
+.hm-room-modal.hm-add-device-modal .hm-room-select-row input,
+.hm-room-modal.hm-add-device-modal .hm-room-select-row select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(117, 171, 212, 0.34);
+  background: rgba(5, 5, 7, 0.64);
+  color: #f1f8ff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.hm-room-modal.hm-add-device-modal input::placeholder,
+.hm-room-modal.hm-add-device-modal textarea::placeholder {
+  color: #93abc2;
+}
+
+.hm-room-modal.hm-add-device-modal input:focus,
+.hm-room-modal.hm-add-device-modal select:focus,
+.hm-room-modal.hm-add-device-modal textarea:focus {
+  outline: none;
+  border-color: rgba(18, 216, 193, 0.82);
+  background: rgba(16, 16, 20, 0.96);
+  box-shadow:
+    0 0 0 3px rgba(18, 216, 193, 0.12),
+    0 0 22px rgba(18, 216, 193, 0.08);
+}
+
+.hm-room-modal.hm-add-device-modal select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #9ff9ee 50%),
+    linear-gradient(135deg, #9ff9ee 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+  padding-right: 38px;
+  color-scheme: dark;
+}
+
+.hm-room-modal.hm-add-device-modal select option {
+  background: #061827;
+  color: #f4fbff;
+}
+
+.hm-room-modal.hm-add-device-modal select option:checked,
+.hm-room-modal.hm-add-device-modal select option:hover,
+.hm-room-modal.hm-add-device-modal select option:focus {
+  background: linear-gradient(135deg, rgba(18, 216, 193, 0.28), rgba(47, 158, 255, 0.18));
+  color: #ffffff;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-add-tabs {
+  border: 1px solid rgba(18, 216, 193, 0.12);
+  background: rgba(5, 5, 7, 0.52);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-add-tab {
+  min-width: 0;
+  color: #b8cbe0;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-add-tab.active {
+  background: rgba(18, 216, 193, 0.12);
+  color: #e8fffb;
+  box-shadow:
+    0 0 0 1px rgba(18, 216, 193, 0.28) inset,
+    0 8px 22px rgba(18, 216, 193, 0.08);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-tab-badge {
+  background: rgba(47, 158, 255, 0.18);
+  color: #9ff9ee;
+  border: 1px solid rgba(47, 158, 255, 0.34);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-discovery-empty,
+.hm-room-modal.hm-add-device-modal .hm-discovery-card,
+.hm-room-modal.hm-add-device-modal .hm-device-select-list {
+  border-color: rgba(117, 171, 212, 0.25);
+  background: rgba(23, 23, 32, 0.72);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-discovery-empty {
+  padding: 32px 18px;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-discovery-empty h4 {
+  color: #f4fbff;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-discovery-empty p {
+  color: #b8cbe0;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-discovery-empty code,
+.hm-room-modal.hm-add-device-modal .hm-field-hint code {
+  background: rgba(18, 216, 193, 0.09);
+  color: #9ff9ee;
+  border: 1px solid rgba(18, 216, 193, 0.14);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-scan-notice,
+.hm-room-modal.hm-add-device-modal .hm-discovery-alert {
+  border-color: rgba(47, 158, 255, 0.26);
+  background: rgba(47, 158, 255, 0.1);
+  color: #c8fff8;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-btn-scan-sm {
+  border-color: rgba(47, 158, 255, 0.28);
+  background: rgba(23, 23, 32, 0.86);
+  color: #9ff9ee;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-btn-scan-sm:hover:not(:disabled) {
+  background: rgba(47, 158, 255, 0.16);
+  color: #ffffff;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-discovery-card {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-discovery-header,
+.hm-room-modal.hm-add-device-modal .hm-disc-info,
+.hm-room-modal.hm-add-device-modal .hm-discovery-actions,
+.hm-room-modal.hm-add-device-modal .hm-form-actions,
+.hm-room-modal.hm-add-device-modal .hm-modal-foot {
+  min-width: 0;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-disc-kind-tag {
+  background: rgba(255, 184, 77, 0.12);
+  color: #ffd28a;
+  border: 1px solid rgba(255, 184, 77, 0.24);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-disc-id,
+.hm-room-modal.hm-add-device-modal .hm-device-cb-info strong {
+  color: #f1f8ff;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-icon-picker-btn,
+.hm-room-modal.hm-add-device-modal .hm-kind-btn {
+  min-width: 0;
+  border-color: rgba(117, 171, 212, 0.26);
+  background: rgba(23, 23, 32, 0.76);
+  color: #b8cbe0;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-icon-picker-btn:hover,
+.hm-room-modal.hm-add-device-modal .hm-kind-btn:hover {
+  border-color: rgba(18, 216, 193, 0.54);
+  color: #dffffd;
+  background: rgba(18, 216, 193, 0.08);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-icon-picker-btn.active,
+.hm-room-modal.hm-add-device-modal .hm-kind-btn.active {
+  border-color: rgba(18, 216, 193, 0.72);
+  background: rgba(18, 216, 193, 0.14);
+  color: #9ff9ee;
+  box-shadow:
+    0 0 0 2px rgba(18, 216, 193, 0.12),
+    0 10px 24px rgba(18, 216, 193, 0.08);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-device-select-list {
+  max-height: 210px;
+  padding: 8px;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-device-checkbox-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  border: 1px solid rgba(117, 171, 212, 0.18);
+  background: rgba(5, 5, 7, 0.38);
+  color: var(--hm-text);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-device-checkbox-row:hover {
+  border-color: rgba(18, 216, 193, 0.38);
+  background: rgba(18, 216, 193, 0.07);
+}
+
+.hm-room-modal.hm-add-device-modal input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--hm-primary);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-device-cb-info {
+  min-width: 0;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-form-error {
+  border-color: rgba(255, 95, 88, 0.32);
+  background: rgba(255, 95, 88, 0.12);
+  color: #ffc4c1;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-room-select-row,
+.hm-room-modal.hm-add-device-modal .hm-form-actions,
+.hm-room-modal.hm-add-device-modal .hm-modal-foot {
+  display: flex;
+  gap: 10px;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-form-actions,
+.hm-room-modal.hm-add-device-modal .hm-modal-foot {
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 14px;
+  border-top: 1px solid rgba(18, 216, 193, 0.13);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-btn-primary,
+.hm-room-modal.hm-add-device-modal .hm-btn-secondary,
+.hm-room-modal.hm-add-device-modal .hm-btn-ghost {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-btn-primary {
+  padding: 9px 16px;
+  border: 1px solid rgba(18, 216, 193, 0.42);
+  background: linear-gradient(135deg, #12d8c1, #2f9eff);
+  color: #02111d;
+  box-shadow: 0 12px 26px rgba(18, 216, 193, 0.17);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-btn-secondary,
+.hm-room-modal.hm-add-device-modal .hm-btn-ghost {
+  padding: 9px 14px;
+  border: 1px solid rgba(117, 171, 212, 0.28);
+  background: rgba(23, 23, 32, 0.84);
+  color: #ffffff;
+}
+
+.hm-room-modal.hm-add-device-modal .hm-btn-primary:hover:not(:disabled),
+.hm-room-modal.hm-add-device-modal .hm-btn-secondary:hover:not(:disabled),
+.hm-room-modal.hm-add-device-modal .hm-btn-ghost:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.hm-room-modal.hm-add-device-modal .hm-btn-secondary:hover:not(:disabled),
+.hm-room-modal.hm-add-device-modal .hm-btn-ghost:hover:not(:disabled) {
+  border-color: rgba(18, 216, 193, 0.5);
+  color: #ffffff;
+  background: rgba(18, 216, 193, 0.09);
+}
+
+.hm-room-modal.hm-add-device-modal button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  filter: saturate(0.75);
+  box-shadow: none;
+}
+

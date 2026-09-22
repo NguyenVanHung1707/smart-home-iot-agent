@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [
+      {
+        "command": "root=\"$(git rev-parse --show-toplevel)\" && bash \"$root/scripts/_pyrun.sh\" \"$root/scripts/log_hook.py\" --tool=cursor"
+      }
+    ],
+    "stop": [
+      {
+        "command": "root=\"$(git rev-parse --show-toplevel)\" && bash \"$root/scripts/_pyrun.sh\" \"$root/scripts/log_hook.py\" --tool=cursor"
+      }
+    ]
+  }
+}

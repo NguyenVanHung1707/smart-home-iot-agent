@@ -1,0 +1,6 @@
+# Normalize line endings to LF in the repository
+* text=auto
+
+# Shell scripts must always use LF
+*.sh text eol=lf
+*.sha256 text eol=lf

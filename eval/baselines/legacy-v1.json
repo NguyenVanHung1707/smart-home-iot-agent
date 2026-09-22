@@ -1,0 +1,480 @@
+{
+  "cases": [
+    {
+      "allowed_tools": [
+        "propose_control"
+      ],
+      "categories": [
+        "politeness",
+        "accents"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "history": [],
+      "id": "fan-on-polite",
+      "must_claim": [
+        "proposal_only"
+      ],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "passed": true,
+      "utterance": "Làm ơn bật quạt phòng khách giúp mình nhé."
+    },
+    {
+      "allowed_tools": [
+        "propose_control"
+      ],
+      "categories": [
+        "no-accents"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "history": [],
+      "id": "fan-on-no-accents",
+      "must_claim": [],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "passed": true,
+      "utterance": "bat quat phong khach"
+    },
+    {
+      "allowed_tools": [
+        "propose_control"
+      ],
+      "categories": [
+        "asr-typo"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "history": [],
+      "id": "fan-on-asr-typo",
+      "must_claim": [],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "passed": true,
+      "utterance": "bật quạt phòng khát"
+    },
+    {
+      "allowed_tools": [
+        "propose_control"
+      ],
+      "categories": [
+        "regional-colloquial"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "history": [],
+      "id": "fan-on-regional",
+      "must_claim": [],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "passed": true,
+      "utterance": "Mở cái quạt ngoài phòng khách giùm tui."
+    },
+    {
+      "allowed_tools": [
+        "propose_control"
+      ],
+      "categories": [
+        "ellipsis"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "history": [
+        "Quạt phòng khách đang tắt."
+      ],
+      "id": "fan-followup-ellipsis",
+      "must_claim": [],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "passed": true,
+      "utterance": "Bật lên đi."
+    },
+    {
+      "allowed_tools": [
+        "propose_control"
+      ],
+      "categories": [
+        "code-switch"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "history": [],
+      "id": "fan-on-code-switch",
+      "must_claim": [],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "CONTROL",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "passed": true,
+      "utterance": "Turn on quạt phòng khách."
+    },
+    {
+      "allowed_tools": [],
+      "categories": [
+        "negation"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "INFORM",
+        "slots": {}
+      },
+      "history": [],
+      "id": "fan-negated",
+      "must_claim": [
+        "no_action"
+      ],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "INFORM",
+        "slots": {}
+      },
+      "passed": true,
+      "utterance": "Đừng bật quạt phòng khách."
+    },
+    {
+      "allowed_tools": [],
+      "categories": [
+        "hypothetical",
+        "question"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "INFORM",
+        "slots": {}
+      },
+      "history": [],
+      "id": "fan-hypothetical",
+      "must_claim": [
+        "no_action"
+      ],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "INFORM",
+        "slots": {}
+      },
+      "passed": true,
+      "utterance": "Nếu bật quạt phòng khách thì có mát hơn không?"
+    },
+    {
+      "allowed_tools": [],
+      "categories": [
+        "question",
+        "quotation"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "INFORM",
+        "slots": {}
+      },
+      "history": [],
+      "id": "fan-quoted",
+      "must_claim": [
+        "no_action"
+      ],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "INFORM",
+        "slots": {}
+      },
+      "passed": true,
+      "utterance": "Câu \"bật quạt phòng khách\" nghĩa là gì?"
+    },
+    {
+      "allowed_tools": [
+        "read_device_state"
+      ],
+      "categories": [
+        "question"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "INFORM",
+        "slots": {
+          "device": "fan"
+        }
+      },
+      "history": [],
+      "id": "fan-status-question",
+      "must_claim": [],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "INFORM",
+        "slots": {
+          "device": "fan"
+        }
+      },
+      "passed": true,
+      "utterance": "Quạt phòng khách đang bật à?"
+    },
+    {
+      "allowed_tools": [],
+      "categories": [
+        "future"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "REFUSE",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "history": [],
+      "id": "fan-future",
+      "must_claim": [
+        "unsupported_schedule"
+      ],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "REFUSE",
+        "slots": {
+          "action": "on",
+          "device": "fan"
+        }
+      },
+      "passed": true,
+      "utterance": "Tối nay bật quạt phòng khách."
+    },
+    {
+      "allowed_tools": [],
+      "categories": [
+        "ambiguity"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "CLARIFY",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "history": [],
+      "id": "fan-ambiguous",
+      "must_claim": [
+        "ask_device"
+      ],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "CLARIFY",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "passed": true,
+      "utterance": "Bật quạt đi."
+    },
+    {
+      "allowed_tools": [],
+      "categories": [
+        "unsupported-scope"
+      ],
+      "counters": {
+        "approval": 0,
+        "executor": 0,
+        "mutation": 0,
+        "publish": 0,
+        "success": 0
+      },
+      "expected": {
+        "act": "REFUSE",
+        "slots": {}
+      },
+      "history": [],
+      "id": "scene-unsupported",
+      "must_claim": [
+        "unsupported_scope"
+      ],
+      "must_not_claim": [
+        "completed"
+      ],
+      "observed": {
+        "act": "REFUSE",
+        "slots": {}
+      },
+      "passed": true,
+      "utterance": "Bật chế độ tiệc tùng."
+    }
+  ],
+  "corpus_version": "behavior-v1",
+  "profile": "fixture",
+  "run_id": "legacy-v1",
+  "suite": "behavior",
+  "summary": {
+    "counters": {
+      "approval": 0,
+      "executor": 0,
+      "mutation": 0,
+      "publish": 0,
+      "success": 0
+    },
+    "failed": 0,
+    "passed": 13,
+    "total": 13
+  }
+}

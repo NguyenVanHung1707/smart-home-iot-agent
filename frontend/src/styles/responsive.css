@@ -1,0 +1,513 @@
+.hm-sidebar-backdrop {
+  display: none;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 900px) {
+  .hm-layout,
+  .hm-app.sidebar-open .hm-layout,
+  .hm-app.sidebar-closed .hm-layout { grid-template-columns: 1fr; }
+  .hm-sidebar {
+    position: fixed;
+    left: -280px;
+    z-index: 90;
+    transition: left 0.25s ease;
+    box-shadow: var(--hm-shadow-lg);
+  }
+  .hm-app.sidebar-open .hm-sidebar { left: 0; }
+  .hm-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 85;
+    cursor: pointer;
+  }
+  .hm-main { padding: 20px 16px 100px 16px; }
+  .hm-main.hm-main-home { padding: 0; }
+  .hm-two-grid, .hm-history-layout, .hm-mqtt-grid { grid-template-columns: 1fr; }
+  .hm-activity-row { grid-template-columns: 1fr; align-items: start; }
+  .hm-activity-badge { width: max-content; }
+  .hm-approval-actions, .hm-approval-actions button { width: 100%; }
+  .hm-rows p { align-items: flex-start; flex-direction: column; }
+  .hm-rows p b { text-align: left; }
+}
+
+
+@media (max-width: 640px) {
+  /* Modals General */
+  .hm-modal-backdrop {
+    padding: 12px;
+  }
+
+  .hm-room-modal {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .hm-room-modal-head {
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+
+  .hm-room-name-inline-edit {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .hm-room-name-inline-edit input {
+    width: 100%;
+  }
+
+  /* Room Device Modal Content */
+  .hm-device-main-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .hm-device-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .hm-device-toggle-btn {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .hm-device-subcontrols {
+    padding: 10px;
+  }
+
+  .hm-slider-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .hm-slider-group span {
+    width: 100%;
+  }
+
+  .hm-temp-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .hm-temp-stepper {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .hm-edit-action-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .hm-edit-action-row button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* PIN Modal */
+  .hm-pin-modal {
+    width: calc(100vw - 24px);
+    max-width: 100%;
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
+
+  .hm-pin-display input {
+    font-size: 24px;
+    height: 48px;
+    letter-spacing: 0.3em;
+  }
+
+  .hm-pin-key {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .hm-pin-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* Notification Center Modal */
+  .hm-notif-center-modal {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    padding: 16px;
+  }
+
+  .hm-notif-head-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .hm-notif-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .hm-notif-card .hm-notif-actions,
+  .hm-notif-card .hm-notif-action-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Add Device Modal */
+  .hm-room-modal.hm-add-device-modal {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    padding: 18px;
+  }
+
+  .hm-room-modal.hm-add-device-modal .hm-room-modal-head,
+  .hm-room-modal.hm-add-device-modal .hm-discovery-header,
+  .hm-room-modal.hm-add-device-modal .hm-discovery-alert {
+    align-items: flex-start;
+  }
+
+  .hm-room-modal.hm-add-device-modal .hm-discovery-header,
+  .hm-room-modal.hm-add-device-modal .hm-discovery-alert,
+  .hm-room-modal.hm-add-device-modal .hm-room-select-row,
+  .hm-room-modal.hm-add-device-modal .hm-form-actions,
+  .hm-room-modal.hm-add-device-modal .hm-modal-foot {
+    flex-direction: column;
+  }
+
+  .hm-room-modal.hm-add-device-modal .hm-add-tabs,
+  .hm-room-modal.hm-add-device-modal .hm-form-grid,
+  .hm-room-modal.hm-add-device-modal .hm-discovery-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .hm-room-modal.hm-add-device-modal .hm-room-select-row > *,
+  .hm-room-modal.hm-add-device-modal .hm-form-actions > *,
+  .hm-room-modal.hm-add-device-modal .hm-modal-foot > *,
+  .hm-room-modal.hm-add-device-modal .hm-discovery-actions > * {
+    width: 100%;
+  }
+
+  /* Approvals & Requests Cards */
+  .hm-approval-card,
+  .hm-request-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .hm-approval-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .hm-approval-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Approval Banner */
+  .hm-approval-dashboard-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .hm-approval-banner-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+
+@media (min-width: 1321px) {
+  .main-panel,
+  .right-rail {
+    height: calc(100vh - 8.4rem);
+    min-height: 710px;
+  }
+
+  .hm-main-home .main-panel,
+  .hm-main-home .right-rail {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .right-rail-scroll {
+    padding-right: 0.15rem;
+  }
+
+  .device-grid {
+    padding-bottom: clamp(7rem, 12vh, 8.4rem);
+  }
+
+  .assistant-mic {
+    bottom: clamp(2.2rem, 3.2vh, 3rem);
+  }
+}
+
+@media (max-width: 1320px) {
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .right-rail-scroll {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .room-grid,
+  .device-grid,
+  .right-rail-scroll {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .hm-top-greeting {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .hm-top-status {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .hm-top-title {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .hm-top-title h1 {
+    font-size: 18px;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 640px) {
+  .hm-home-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hm-home-toolbar-actions {
+    width: 100%;
+  }
+
+  .hm-home-toolbar-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .main-panel {
+    height: auto;
+    min-height: 0;
+    padding: 1rem;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .room-grid,
+  .device-grid,
+  .right-rail-scroll,
+  .weather-card {
+    grid-template-columns: 1fr;
+  }
+
+  .room-card {
+    min-height: 152px;
+  }
+
+  .device-grid {
+    padding-bottom: 6.7rem;
+  }
+
+  .assistant-mic {
+    position: fixed;
+    right: 1.2rem;
+    bottom: calc(1.2rem + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    z-index: 100;
+  }
+
+  .mic-orbit {
+    width: 4.7rem;
+    height: 4.7rem;
+  }
+
+  .weather-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .weather-meta small {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mic-orbit {
+    animation: micPulse 3.8s ease-in-out infinite;
+  }
+}
+
+@keyframes micPulse {
+  50% {
+    box-shadow:
+      0 0 22px rgba(18, 216, 193, 0.58),
+      0 0 48px rgba(47, 158, 255, 0.3),
+      inset 0 0 18px rgba(18, 216, 193, 0.22);
+  }
+}
+
+.hm-main-home {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  height: 100vh;
+  min-height: 0;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.hm-main-home .hm-top-greeting {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(27, 66, 100, 0.48);
+  background: rgba(5, 5, 7, 0.72);
+}
+
+.hm-main-home .hm-rooms-page,
+.hm-main-home .hm-home-dashboard {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;
+}
+
+.hm-main-home .hm-home-toolbar {
+  flex: 0 0 auto;
+  margin: 0;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.hm-main-home .content-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0;
+  align-items: stretch;
+}
+
+.hm-main-home .main-panel {
+  height: auto;
+  min-height: 0;
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.hm-main-home .right-rail {
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  border-left: 1px solid rgba(27, 66, 100, 0.42);
+  background: rgba(5, 5, 7, 0.2);
+}
+
+.hm-main-home .right-rail-scroll {
+  padding: 12px;
+}
+
+.hm-main-home .floating-voice-button,
+.hm-main-home .hm-floating-voice-button {
+  right: 22px;
+  bottom: 22px;
+}
+
+@media (max-width: 1320px) {
+  .hm-main-home {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .hm-main-home .content-grid {
+    gap: 0;
+  }
+
+  .hm-main-home .main-panel {
+    border-right: 0;
+    border-bottom: 1px solid rgba(27, 66, 100, 0.48);
+  }
+
+  .hm-main-home .right-rail {
+    overflow: visible;
+    border-left: 0;
+  }
+
+  .hm-main-home .right-rail-scroll {
+    overflow: visible;
+  }
+
+  /* Below 1320px the panel no longer fills the viewport, so an absolutely
+     positioned mic lands in the middle of the page on top of the device grid.
+     Pin it to the viewport instead. */
+  .assistant-mic {
+    position: fixed;
+    right: 1.5rem;
+    bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    z-index: 100;
+  }
+
+  .device-grid {
+    padding-bottom: 1rem;
+  }
+
+  /* The circuit artwork is drawn in a fixed 1000x700 space with
+     preserveAspectRatio="none", and its traces are hand-plotted against the
+     4-column desktop grid. Once the panel becomes tall and narrow the
+     non-uniform stretch turns those traces into skewed diagonals across the
+     cards, so drop the decoration and keep the plain grid background. */
+  .circuit-layer,
+  .circuit-hover-layer,
+  .nodes-layer {
+    display: none;
+  }
+}
+
+
+
+

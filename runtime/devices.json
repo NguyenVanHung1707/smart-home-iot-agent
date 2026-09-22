@@ -1,0 +1,136 @@
+[
+  {
+    "id": "living-light",
+    "name": "Đèn phòng khách",
+    "room": "Phòng khách",
+    "kind": "light",
+    "online": true,
+    "state": {
+      "power": false,
+      "brightness": 80
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "bedroom-light",
+    "name": "Đèn phòng ngủ",
+    "room": "Phòng ngủ",
+    "kind": "light",
+    "online": true,
+    "state": {
+      "power": false,
+      "brightness": 45
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "kitchen-light",
+    "name": "Đèn phòng bếp",
+    "room": "Phòng bếp",
+    "kind": "light",
+    "online": true,
+    "state": {
+      "power": true,
+      "brightness": 90
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-aircon",
+    "name": "Điều hòa phòng khách",
+    "room": "Phòng khách",
+    "kind": "aircon",
+    "online": true,
+    "state": {
+      "power": true,
+      "target_temperature": 25,
+      "mode": "cool"
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-blind",
+    "name": "Rèm phòng khách",
+    "room": "Phòng khách",
+    "kind": "blind",
+    "online": true,
+    "state": {
+      "position": 0
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "hub-speaker",
+    "name": "Loa Homing",
+    "room": "Phòng khách",
+    "kind": "speaker",
+    "online": true,
+    "state": {
+      "power": false,
+      "volume": 45,
+      "playing": false
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "entry-lock",
+    "name": "Khóa cửa chính",
+    "room": "Lối vào",
+    "kind": "lock",
+    "online": true,
+    "state": {
+      "locked": false
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "entry-sensor",
+    "name": "Cảm biến cửa",
+    "room": "Lối vào",
+    "kind": "sensor",
+    "online": true,
+    "state": {
+      "open": false,
+      "battery": 92
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-temperature",
+    "name": "Cảm biến nhiệt độ",
+    "room": "Phòng khách",
+    "kind": "sensor",
+    "online": true,
+    "state": {
+      "temperature": 27.8,
+      "humidity": 56.0,
+      "battery": 96
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "kitchen-gas",
+    "name": "Cảm biến khí gas",
+    "room": "Phòng bếp",
+    "kind": "sensor",
+    "online": true,
+    "state": {
+      "gas_detected": false,
+      "ppm": 114,
+      "battery": 98
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-motion",
+    "name": "Cảm biến chuyển động",
+    "room": "Phòng khách",
+    "kind": "sensor",
+    "online": true,
+    "state": {
+      "motion": true,
+      "battery": 94
+    },
+    "capabilities": {}
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "active_mode": "legacy_active",
+  "publisher": "legacy",
+  "requested_mode": "legacy_active",
+  "safety_kernel": [
+    "validator",
+    "policy",
+    "idempotency_ledger",
+    "verification"
+  ],
+  "typed_available": false
+}

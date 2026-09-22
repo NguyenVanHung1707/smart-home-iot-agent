@@ -1,0 +1,1207 @@
+/* Landing page + màn đăng nhập cho khách chưa đăng nhập.
+   Chỉ dùng token --hm-*; phần khác biệt giữa dark/light nằm ở tokens.css
+   và theme-light.css theo đúng convention của dashboard. */
+
+.hm-landing {
+  min-height: 100vh;
+  background: var(--hm-landing-bg);
+  color: var(--hm-text);
+}
+
+/* ---------- Nav ---------- */
+
+.hm-landing-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px clamp(16px, 4vw, 56px);
+  background: var(--hm-landing-nav-bg);
+  border-bottom: 1px solid var(--hm-landing-divider);
+  backdrop-filter: blur(14px);
+}
+
+.hm-landing-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.hm-landing-logo > span {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--hm-primary);
+  color: #03111f;
+}
+
+.hm-landing-logo b { font-size: 17px; }
+
+.hm-landing-logo em {
+  padding: 3px 8px;
+  border: 1px solid var(--hm-landing-divider);
+  border-radius: 999px;
+  color: var(--hm-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hm-landing-nav nav {
+  display: flex;
+  gap: 4px;
+  margin-inline-start: auto;
+}
+
+.hm-landing-nav nav a {
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: var(--hm-muted);
+  font-size: 13px;
+  font-weight: 700;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+
+.hm-landing-nav nav a:hover {
+  color: var(--hm-primary);
+  background: var(--hm-control-hover);
+}
+
+.hm-landing-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- Buttons ---------- */
+
+.hm-landing-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 9px 18px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  transition: transform 0.16s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.hm-landing-btn.lg {
+  min-height: 48px;
+  padding: 13px 26px;
+  font-size: 15px;
+}
+
+.hm-landing-btn.primary {
+  background: var(--hm-primary);
+  color: #03111f;
+}
+
+.hm-landing-btn.primary:hover {
+  background: var(--hm-primary-hover);
+  transform: translateY(-1px);
+}
+
+.hm-landing-btn.ghost {
+  border-color: var(--hm-border-soft);
+  background: transparent;
+  color: var(--hm-text);
+}
+
+.hm-landing-btn.ghost:hover {
+  border-color: var(--hm-primary);
+  color: var(--hm-primary);
+}
+
+/* ---------- Hero ---------- */
+
+.hm-landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(24px, 5vw, 64px);
+  align-items: center;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(48px, 8vw, 104px) clamp(16px, 4vw, 56px) clamp(32px, 5vw, 64px);
+}
+
+.hm-landing-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 6px 14px;
+  border: 1px solid var(--hm-landing-divider);
+  border-radius: 999px;
+  background: var(--hm-landing-tag-bg);
+  color: var(--hm-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hm-landing-hero h1 {
+  margin: 0 0 20px;
+  font-size: clamp(38px, 6.4vw, 72px);
+  font-weight: 900;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+}
+
+.hm-landing-hero h1 em {
+  font-style: normal;
+  background: var(--hm-landing-hero-title);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: var(--hm-primary);
+}
+
+.hm-landing-lead {
+  max-width: 34rem;
+  margin: 0 0 28px;
+  color: var(--hm-muted);
+  font-size: clamp(15px, 1.7vw, 18px);
+  line-height: 1.62;
+}
+
+.hm-landing-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hm-landing-note {
+  margin: 16px 0 0;
+  color: var(--hm-subtle);
+  font-size: 12.5px;
+}
+
+.hm-landing-hero-visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 340px;
+}
+
+.hm-landing-orb {
+  width: min(300px, 68%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--hm-landing-halo);
+}
+
+.hm-landing-pulse {
+  position: absolute;
+  display: grid;
+  place-items: center;
+}
+
+.hm-landing-pulse span {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border: 1px solid var(--hm-primary);
+  border-radius: 50%;
+  opacity: 0;
+  animation: hm-landing-ring 3.4s ease-out infinite;
+}
+
+.hm-landing-pulse span:nth-child(2) { animation-delay: 1.1s; }
+.hm-landing-pulse span:nth-child(3) { animation-delay: 2.2s; }
+
+@keyframes hm-landing-ring {
+  0% { transform: scale(0.55); opacity: 0.55; }
+  100% { transform: scale(1.75); opacity: 0; }
+}
+
+.hm-landing-hero-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 20px;
+  border: 1px solid var(--hm-landing-divider);
+  border-radius: 999px;
+  background: var(--hm-landing-panel-strong);
+  box-shadow: var(--hm-landing-glow);
+  color: var(--hm-primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-landing-pulse span { animation: none; opacity: 0.28; }
+}
+
+/* ---------- Stats ---------- */
+
+.hm-landing-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 56px);
+}
+
+.hm-landing-stats > div {
+  display: grid;
+  gap: 6px;
+  padding: 26px 20px;
+  border-top: 1px solid var(--hm-landing-divider);
+  border-bottom: 1px solid var(--hm-landing-divider);
+  text-align: center;
+}
+
+.hm-landing-stats b {
+  color: var(--hm-primary);
+  font-size: clamp(24px, 3.4vw, 34px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.hm-landing-stats span {
+  color: var(--hm-subtle);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* ---------- Section shell ---------- */
+
+.hm-landing-section {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(48px, 7vw, 92px) clamp(16px, 4vw, 56px);
+}
+
+.hm-landing-section-head {
+  max-width: 42rem;
+  margin: 0 0 clamp(28px, 4vw, 44px);
+}
+
+.hm-landing-section-head h2 {
+  margin: 0 0 12px;
+  font-size: clamp(26px, 3.8vw, 42px);
+  font-weight: 900;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+
+.hm-landing-section-head p {
+  margin: 0;
+  color: var(--hm-muted);
+  font-size: clamp(14px, 1.5vw, 16.5px);
+  line-height: 1.6;
+}
+
+/* ---------- Sơ đồ mạch: hub bên trái, bus ngang rẽ nhánh sang thiết bị ---------- */
+
+.hm-landing-flow-stage {
+  display: grid;
+  --hm-flow-h: clamp(330px, 34vw, 420px);
+  --hm-flow-mic: clamp(96px, 9.5vw, 126px);
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+  padding: clamp(14px, 2vw, 22px);
+  border: 1px solid var(--hm-landing-divider);
+  border-radius: 22px;
+  background: var(--hm-landing-panel);
+  box-shadow: var(--hm-landing-glow);
+  overflow: hidden;
+}
+
+/* Cột hub: mic nằm ngay điểm bắt đầu bus (biên giữa 2 hàng), hội thoại ở dưới. */
+
+.hm-landing-flow-hub {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  /* Đẩy mic xuống đúng cao độ bus (nửa chiều cao vùng mạch) rồi kéo lại 50% thân mic. */
+  padding-top: calc(var(--hm-flow-h) / 2);
+}
+
+/* Đoạn bus nối từ mép phải mic sang vùng mạch. */
+.hm-landing-flow-lead {
+  position: absolute;
+  top: calc(var(--hm-flow-h) / 2 - 1px);
+  left: var(--hm-flow-mic);
+  right: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--hm-landing-wire);
+}
+
+.hm-landing-flow-core {
+  position: relative;
+  transform: translateY(-50%);
+}
+
+.hm-landing-mic-art {
+  display: block;
+  width: var(--hm-flow-mic);
+  height: auto;
+  fill: none;
+  stroke: var(--hm-landing-mic-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hm-landing-mic-art .hm-mic-grille {
+  stroke: var(--hm-landing-mic-line);
+  stroke-width: 1.4;
+}
+
+.hm-landing-mic-art .hm-mic-led {
+  fill: var(--hm-landing-mic-accent);
+  stroke: none;
+  opacity: 0.35;
+  transition: opacity 0.3s ease;
+}
+
+.hm-landing-flow-stage:not(.is-acting) .hm-landing-mic-art .hm-mic-led { opacity: 1; }
+
+.hm-landing-flow-say {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  width: 100%;
+  margin-top: calc(var(--hm-flow-mic) / -2 + 18px);
+}
+
+.hm-landing-wave {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 20px;
+  margin-inline-start: clamp(18px, 2.5vw, 34px);
+}
+
+.hm-landing-wave > span {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hm-landing-mic-accent);
+  opacity: 0.45;
+}
+
+.hm-landing-wave.active > span {
+  animation: hm-landing-wave 1s ease-in-out infinite;
+  opacity: 1;
+}
+
+.hm-landing-wave.active > span:nth-child(2) { animation-delay: 0.1s; }
+.hm-landing-wave.active > span:nth-child(3) { animation-delay: 0.2s; }
+.hm-landing-wave.active > span:nth-child(4) { animation-delay: 0.3s; }
+.hm-landing-wave.active > span:nth-child(5) { animation-delay: 0.2s; }
+.hm-landing-wave.active > span:nth-child(6) { animation-delay: 0.1s; }
+.hm-landing-wave.active > span:nth-child(7) { animation-delay: 0s; }
+
+@keyframes hm-landing-wave {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+
+.hm-landing-flow-bubbles {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  width: 100%;
+}
+
+.hm-landing-flow-bubble {
+  max-width: 100%;
+  margin: 0;
+  padding: 12px 20px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: clamp(13px, 1.3vw, 15px);
+  font-weight: 650;
+  line-height: 1.4;
+  animation: hm-landing-fade 0.4s ease both;
+}
+
+.hm-landing-flow-bubble.user {
+  margin-inline-start: clamp(10px, 2vw, 24px);
+  background: var(--hm-landing-tag-bg);
+  border-color: var(--hm-primary);
+  color: var(--hm-text);
+}
+
+.hm-landing-flow-bubble.hub {
+  background: var(--hm-surface);
+  border-color: var(--hm-border-soft);
+  color: var(--hm-text);
+}
+
+.hm-landing-flow-bubble.is-thinking {
+  background: transparent;
+  border-color: var(--hm-landing-divider);
+  color: var(--hm-muted);
+}
+
+@keyframes hm-landing-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Vùng thiết bị: SVG bus phủ kín, lưới 3x2 xếp đúng hai bên bus. */
+
+.hm-landing-flow-web {
+  position: relative;
+  align-self: start;
+  height: var(--hm-flow-h);
+}
+
+.hm-landing-flow-cable {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.hm-landing-bus {
+  fill: none;
+  stroke: var(--hm-landing-wire);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.hm-landing-branch path {
+  fill: none;
+  stroke: var(--hm-landing-wire);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  transition: stroke 0.35s ease, stroke-width 0.35s ease;
+}
+
+.hm-landing-branch circle {
+  fill: var(--hm-landing-wire);
+  transition: fill 0.35s ease;
+}
+
+.hm-landing-branch.lit path {
+  stroke: var(--hm-landing-wire-lit);
+  stroke-width: 2.6;
+  stroke-dasharray: 260;
+  filter: var(--hm-landing-wire-glow);
+  animation: hm-landing-draw 0.6s ease forwards;
+}
+
+.hm-landing-branch.lit circle {
+  fill: var(--hm-landing-wire-lit);
+  filter: var(--hm-landing-wire-glow);
+}
+
+@keyframes hm-landing-draw {
+  from { stroke-dashoffset: 260; }
+  to { stroke-dashoffset: 0; }
+}
+
+.hm-landing-flow-devices {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hm-landing-flow-devices li {
+  display: grid;
+  place-items: center;
+}
+
+/* Hàng trên dừng phía trên bus, hàng dưới bắt đầu phía dưới bus. */
+.hm-landing-flow-devices li:nth-child(-n + 3) { align-items: end; padding-bottom: 17%; }
+.hm-landing-flow-devices li:nth-child(n + 4) { align-items: start; padding-top: 17%; }
+
+.hm-landing-device-art {
+  width: clamp(88px, 9vw, 122px);
+  height: auto;
+  fill: none;
+  stroke: var(--hm-landing-mic-line);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.3s ease, transform 0.3s ease, filter 0.3s ease;
+}
+
+.hm-landing-flow-devices li.lit .hm-landing-device-art {
+  stroke: var(--hm-landing-wire-lit);
+  transform: scale(1.06);
+  filter: var(--hm-landing-wire-glow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-landing-wave.active > span { animation: none; }
+  .hm-landing-branch.lit path { animation: none; stroke-dasharray: none; }
+  .hm-landing-flow-bubble { animation: none; }
+}
+
+/* ---------- Pipeline ---------- */
+
+.hm-landing-pipeline {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.hm-landing-pipeline li {
+  position: relative;
+  padding: 26px 24px;
+  border: 1px solid var(--hm-landing-divider);
+  border-radius: 20px;
+  background: var(--hm-landing-panel);
+  box-shadow: var(--hm-landing-glow);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.hm-landing-pipeline li:hover {
+  border-color: var(--hm-primary);
+  transform: translateY(-2px);
+}
+
+.hm-landing-pipeline-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 16px;
+  border-radius: 13px;
+  background: var(--hm-landing-tag-bg);
+  color: var(--hm-primary);
+}
+
+.hm-landing-pipeline-step {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  color: var(--hm-subtle);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.hm-landing-pipeline h3 {
+  margin: 0 0 10px;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.hm-landing-pipeline p {
+  margin: 0;
+  color: var(--hm-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ---------- Local vs cloud ---------- */
+
+.hm-landing-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.hm-landing-compare-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px 24px;
+  border: 1px solid var(--hm-landing-divider);
+  border-radius: 20px;
+  background: var(--hm-landing-panel);
+  box-shadow: var(--hm-landing-glow);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.hm-landing-compare-card:hover {
+  border-color: var(--hm-primary);
+  transform: translateY(-2px);
+}
+
+.hm-landing-tag {
+  align-self: flex-start;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--hm-landing-tag-bg);
+  color: var(--hm-primary);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hm-landing-tag.muted {
+  background: var(--hm-neutral-bg);
+  color: var(--hm-neutral-text);
+}
+
+.hm-landing-compare-card h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 850;
+}
+
+.hm-landing-compare-card > p {
+  margin: 0;
+  color: var(--hm-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hm-landing-compare-card ul {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hm-landing-compare-card li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--hm-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.hm-landing-compare-card li .hm-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--hm-primary);
+}
+
+/* ---------- Card grids (bảo mật, thiết bị) ---------- */
+
+.hm-landing-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 18px;
+}
+
+.hm-landing-cards article {
+  padding: 24px;
+  border: 1px solid var(--hm-landing-divider);
+  border-radius: 20px;
+  background: var(--hm-landing-panel);
+  box-shadow: var(--hm-landing-glow);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.hm-landing-cards article:hover {
+  border-color: var(--hm-primary);
+  transform: translateY(-2px);
+}
+
+.hm-landing-cards article > span,
+.hm-landing-compare-card > span {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: var(--hm-landing-tag-bg);
+  color: var(--hm-primary);
+}
+
+.hm-landing-cards h3 {
+  margin: 0 0 9px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.hm-landing-cards p {
+  margin: 0;
+  color: var(--hm-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+/* ---------- FAQ ---------- */
+
+.hm-landing-faq-list {
+  display: grid;
+  gap: 10px;
+  max-width: 54rem;
+}
+
+.hm-landing-faq-list details {
+  border: 1px solid var(--hm-landing-divider);
+  border-radius: 16px;
+  background: var(--hm-landing-panel);
+  overflow: hidden;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.hm-landing-faq-list details:hover {
+  border-color: var(--hm-primary);
+  transform: translateY(-2px);
+}
+
+.hm-landing-faq-list details[open] { border-color: var(--hm-primary); }
+
+.hm-landing-faq-list summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 750;
+  list-style: none;
+}
+
+.hm-landing-faq-list summary::-webkit-details-marker { display: none; }
+
+.hm-landing-faq-list summary .hm-icon {
+  flex: none;
+  color: var(--hm-primary);
+  transition: transform 0.2s ease;
+}
+
+.hm-landing-faq-list details[open] summary .hm-icon { transform: rotate(90deg); }
+
+.hm-landing-faq-list p {
+  margin: 0;
+  padding: 0 22px 20px;
+  color: var(--hm-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* ---------- CTA + footer ---------- */
+
+.hm-landing-cta {
+  max-width: 1180px;
+  margin: 0 auto clamp(48px, 7vw, 88px);
+  padding: clamp(40px, 6vw, 72px) clamp(20px, 4vw, 56px);
+  border: 1px solid var(--hm-landing-divider);
+  border-radius: 26px;
+  background: var(--hm-landing-panel-strong);
+  box-shadow: var(--hm-landing-glow);
+  text-align: center;
+}
+
+.hm-landing-cta h2 {
+  margin: 0 0 12px;
+  font-size: clamp(26px, 3.6vw, 40px);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.hm-landing-cta p {
+  max-width: 34rem;
+  margin: 0 auto 26px;
+  color: var(--hm-muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.hm-landing-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  justify-content: space-between;
+  padding: 26px clamp(16px, 4vw, 56px);
+  border-top: 1px solid var(--hm-landing-divider);
+  color: var(--hm-subtle);
+  font-size: 12.5px;
+}
+
+/* ---------- Màn đăng nhập ---------- */
+
+.hm-auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--hm-landing-bg);
+  color: var(--hm-text);
+}
+
+.hm-auth-aside {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  padding: clamp(32px, 5vw, 72px);
+  border-right: 1px solid var(--hm-landing-divider);
+}
+
+.hm-auth-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-weight: 900;
+}
+
+.hm-auth-brand > span {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--hm-primary);
+  color: #03111f;
+}
+
+.hm-auth-brand b { font-size: 17px; }
+
+.hm-auth-aside h2 {
+  max-width: 22rem;
+  margin: 12px 0 0;
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 900;
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+
+.hm-auth-aside > p {
+  max-width: 28rem;
+  margin: 0;
+  color: var(--hm-muted);
+  font-size: 15px;
+  line-height: 1.62;
+}
+
+.hm-auth-points {
+  display: grid;
+  gap: 12px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hm-auth-points li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--hm-muted);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.hm-auth-points .hm-icon { color: var(--hm-primary); }
+
+.hm-auth-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: clamp(28px, 5vw, 72px);
+}
+
+.hm-auth-panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hm-auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px 7px 9px;
+  border: 1px solid var(--hm-border-soft);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--hm-muted);
+  font-size: 12.5px;
+  font-weight: 750;
+  transition: color 0.18s ease, border-color 0.18s ease;
+}
+
+.hm-auth-back:hover {
+  border-color: var(--hm-primary);
+  color: var(--hm-primary);
+}
+
+.hm-auth-head {
+  margin-top: auto;
+  max-width: 26rem;
+}
+
+.hm-auth-head h1 {
+  margin: 0 0 8px;
+  font-size: clamp(26px, 3.2vw, 34px);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.hm-auth-head p {
+  margin: 0;
+  color: var(--hm-muted);
+  font-size: 14px;
+}
+
+.hm-auth-form {
+  display: grid;
+  gap: 16px;
+  max-width: 26rem;
+  margin-bottom: auto;
+}
+
+.hm-field {
+  display: grid;
+  gap: 7px;
+}
+
+.hm-field > span {
+  color: var(--hm-muted);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.hm-field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--hm-border);
+  border-radius: 12px;
+  background: var(--hm-surface);
+  color: var(--hm-text);
+  font-size: 14.5px;
+  transition: border-color 0.18s ease;
+}
+
+.hm-field input::placeholder { color: var(--hm-subtle); }
+
+.hm-field input:focus {
+  border-color: var(--hm-primary);
+  outline: none;
+}
+
+.hm-field-affix {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.hm-field-affix input { padding-right: 46px; }
+
+.hm-field-affix > button {
+  position: absolute;
+  right: 6px;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--hm-subtle);
+}
+
+.hm-field-affix > button:hover { color: var(--hm-primary); }
+
+.hm-auth-error {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--hm-danger);
+  border-radius: 12px;
+  background: var(--hm-danger-bg);
+  color: var(--hm-danger-text);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.hm-auth-error .hm-icon { flex: none; }
+
+.hm-auth-submit {
+  min-height: 46px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--hm-primary);
+  color: #03111f;
+  font-size: 15px;
+  font-weight: 850;
+  transition: background 0.18s ease;
+}
+
+.hm-auth-submit:hover:not(:disabled) { background: var(--hm-primary-hover); }
+
+.hm-auth-submit.secondary {
+  border: 1px solid var(--hm-border);
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--hm-text);
+}
+
+.hm-auth-submit.secondary:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.hm-auth-foot {
+  max-width: 26rem;
+  margin: 0 0 auto;
+  color: var(--hm-subtle);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.hm-quick-login-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.hm-quick-login-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--hm-subtle);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hm-quick-login-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--hm-border);
+}
+
+.hm-quick-login-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hm-quick-login-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--hm-border);
+  background: rgba(148, 163, 184, 0.06);
+  color: var(--hm-text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
+}
+
+.hm-quick-login-btn:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.14);
+  border-color: var(--hm-primary);
+  transform: translateY(-1px);
+}
+
+.hm-quick-login-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hm-quick-login-btn-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--hm-text);
+}
+
+.hm-quick-login-btn-head .hm-icon {
+  color: var(--hm-primary);
+}
+
+.hm-quick-login-btn-sub {
+  font-size: 11.5px;
+  color: var(--hm-subtle);
+  margin-top: 3px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1024px) {
+  .hm-landing-hero { grid-template-columns: minmax(0, 1fr); }
+  .hm-landing-hero-visual { order: -1; min-height: 220px; }
+  .hm-landing-pipeline,
+  .hm-landing-compare-grid { grid-template-columns: minmax(0, 1fr); }
+  .hm-landing-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hm-landing-flow-stage { grid-template-columns: minmax(0, 1fr); }
+  .hm-landing-flow-hub { justify-items: center; padding-top: 0; }
+  .hm-landing-flow-lead { display: none; }
+  .hm-landing-flow-core { transform: none; }
+  .hm-landing-flow-say { justify-items: center; margin-top: 4px; }
+  .hm-landing-flow-bubbles { justify-items: center; }
+  .hm-landing-flow-bubble.user { margin-inline-start: 0; }
+  .hm-landing-wave { margin-inline-start: 0; }
+  .hm-landing-flow-bubbles { justify-items: center; }
+  .hm-landing-flow-bubble.user { margin-inline-start: 0; }
+  .hm-landing-flow-web { margin-top: 20px; }
+  .hm-auth { grid-template-columns: minmax(0, 1fr); }
+  .hm-auth-aside { display: none; }
+}
+
+@media (max-width: 720px) {
+  .hm-landing-nav nav { display: none; }
+  .hm-landing-logo em { display: none; }
+  .hm-landing-flow-web { min-height: 300px; }
+}
+
+/* ---------- Màn khôi phục phiên ---------- */
+
+.hm-boot {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
+  min-height: 100vh;
+  background: var(--hm-landing-bg);
+  color: var(--hm-muted);
+}
+
+.hm-boot p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.hm-boot-dot {
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--hm-border-soft);
+  border-top-color: var(--hm-primary);
+  border-radius: 50%;
+  animation: hm-boot-spin 0.9s linear infinite;
+}
+
+@keyframes hm-boot-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-boot-dot { animation-duration: 2.4s; }
+}

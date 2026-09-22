@@ -1,0 +1,106 @@
+services:
+  backend:
+    build: .
+    ports: ["8000:8000"]
+    env_file: .env
+    environment:
+      MQTT_BROKER: mqtt
+      MQTT_ENABLED: "true"
+      LLM_ENABLED: ${LLM_ENABLED:-true}
+      LLM_LOCAL_ONLY: ${LLM_LOCAL_ONLY:-true}
+      LLAMA_BASE_URL: ${LLAMA_BASE_URL:-http://192.168.1.16:8080/v1}
+      VOICE_ENABLED: ${VOICE_ENABLED:-true}
+      ZIPFORMER_ENDPOINT: ${ZIPFORMER_ENDPOINT:-http://192.168.1.16:8090/v1/audio/transcriptions}
+      ZIPFORMER_HEALTH_ENDPOINT: ${ZIPFORMER_HEALTH_ENDPOINT:-http://192.168.1.16:8090/health}
+      ZIPFORMER_MODEL_DIR: ${ZIPFORMER_MODEL_DIR:-/models/zipformer/sherpa-onnx-zipformer-vi-int8-2025-04-20}
+      ZIPFORMER_NUM_THREADS: ${ZIPFORMER_NUM_THREADS:-2}
+      PIPER_ENDPOINT: ${PIPER_ENDPOINT:-http://192.168.1.16:8091}
+      PIPER_VOICE: ${PIPER_VOICE:-vi_VN-vais1000-medium}
+      TTS_TIMEOUT_SECONDS: ${TTS_TIMEOUT_SECONDS:-30}
+      VOICE_MAX_AUDIO_SECONDS: ${VOICE_MAX_AUDIO_SECONDS:-20}
+      VOICE_MAX_AUDIO_BYTES: ${VOICE_MAX_AUDIO_BYTES:-1000000}
+      VOICE_MAX_TTS_CHARS: ${VOICE_MAX_TTS_CHARS:-1000}
+    volumes:
+      - ./data:/app/data
+      - ./runtime:/app/runtime
+      - ./src:/app/src
+    depends_on:
+      mqtt:
+        condition: service_started
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports: ["80:80"]
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    # MQTT is for the local stack; do not expose it to the LAN by default.
+    ports: ["1883:1883", "9001:9001"]
+    volumes:
+      - ./infra/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mqtt-data:/mosquitto/data
+    restart: unless-stopped
+
+  device-simulator:
+    build: .
+    command: ["python", "-m", "src.simulator"]
+    ports: ["8001:8001"]
+    environment:
+      MQTT_BROKER: mqtt
+      MQTT_PORT: 1883
+      MQTT_TOPIC_PREFIX: homing
+      DEVICE_STORAGE_PATH: runtime/devices.json
+      SIMULATOR_HOST: "0.0.0.0"
+      SIMULATOR_PORT: "8001"
+    volumes:
+      - ./runtime:/app/runtime
+      - ./frontend-simulator/dist:/app/frontend-simulator/dist:ro
+      - ./src:/app/src
+    depends_on:
+      mqtt:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Start only when a GGUF model is mounted in ./models.
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    profiles: ["local-llm"]
+    command: ["-m", "/models/${LLAMA_MODEL_FILE:-qwen2.5-3b-instruct-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080", "-c", "8192", "-t", "4", "--parallel", "1"]
+    volumes:
+      - ./models:/models:ro
+    ports: ["8080:8080"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  piper:
+    build:
+      context: .
+      dockerfile: infra/piper/Dockerfile
+    profiles: ["voice"]
+    command: ["--host", "0.0.0.0", "--port", "5000", "--data-dir", "/voices", "-m", "${PIPER_VOICE:-vi_VN-vais1000-medium}"]
+    volumes:
+      - ./models/piper:/voices:ro
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/info')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  mqtt-data:
