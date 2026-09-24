@@ -91,25 +91,50 @@ class UserStore:
 
     def load(self) -> None:
         with self._lock:
+            try:
+                from src.database import db_load_users, is_postgres_enabled
+
+                if is_postgres_enabled():
+                    db_users = db_load_users()
+                    if db_users:
+                        self._users = db_users
+                        return
+            except Exception:
+                pass
+
             if not self.storage_path.exists():
                 self._users = {}
                 return
-            raw = json.loads(self.storage_path.read_text(encoding="utf-8"))
-            if not isinstance(raw, list):
+            try:
+                raw = json.loads(self.storage_path.read_text(encoding="utf-8"))
+                if not isinstance(raw, list):
+                    self._users = {}
+                    return
+                self._users = {item["id"]: item for item in raw if isinstance(item, dict) and item.get("id")}
+            except Exception:
                 self._users = {}
-                return
-            self._users = {item["id"]: item for item in raw if isinstance(item, dict) and item.get("id")}
 
     def save(self) -> None:
         with self._lock:
             self._save_locked()
 
     def _save_locked(self) -> None:
-        self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = self.storage_path.with_suffix(self.storage_path.suffix + ".tmp")
-        payload = list(self._users.values())
-        tmp_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-        os.replace(tmp_path, self.storage_path)
+        try:
+            self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = self.storage_path.with_suffix(self.storage_path.suffix + ".tmp")
+            payload = list(self._users.values())
+            tmp_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+            os.replace(tmp_path, self.storage_path)
+        except Exception:
+            pass
+
+        try:
+            from src.database import db_save_users, is_postgres_enabled
+
+            if is_postgres_enabled():
+                db_save_users(self._users)
+        except Exception:
+            pass
 
     def bootstrap_admin(self, settings: Settings | None = None) -> str | None:
         settings = settings or get_settings()

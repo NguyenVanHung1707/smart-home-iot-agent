@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { processVoice } from "../../api/client";
+import { connectCloudMqtt, getCloudMqttConfig, publishDeviceCommand } from "../../api/cloudMqtt";
 import type { ApiDeviceCommand } from "../../api/types";
 import { roomsPerPage } from "../../data/mockHome";
 import { useHistoryStorage } from "../../hooks/useHistoryStorage";
@@ -15,6 +16,7 @@ import { ActivityPage } from "../admin/ActivityPage";
 import { ApprovalsPage } from "../admin/ApprovalsPage";
 import { PerformancePage } from "../admin/PerformancePage";
 import { SettingsPage } from "../admin/SettingsPage";
+import { FloorplanPage } from "../floorplan/FloorplanPage";
 import { HistoryPage } from "../history/HistoryPage";
 import { MqttPage } from "../mqtt/MqttPage";
 import { PresetsPage } from "../rooms/PresetsPage";
@@ -23,6 +25,7 @@ import { RoomsPage } from "../rooms/RoomsPage";
 import { ModePinModal } from "../security/ModePinModal";
 import { PinModal } from "../security/PinModal";
 import { VoiceOverlay } from "../voice/VoiceOverlay";
+import { XiaozhiWebModal } from "../voice/XiaozhiWebModal";
 import { NotificationCenterModal } from "./NotificationCenterModal";
 import { PageShell } from "./PageShell";
 import { Sidebar } from "./Sidebar";
@@ -57,6 +60,15 @@ function useHomeAppController(role: Role) {
   const [requestCancelled, setRequestCancelled] = useState(false);
   const [notifCenterOpen, setNotifCenterOpen] = useState(false);
   const [modePinModalOpen, setModePinModalOpen] = useState(false);
+  const [xiaozhiModalOpen, setXiaozhiModalOpen] = useState(false);
+
+  // Tự động kết nối Cloud MQTT (HiveMQ Cloud WSS)
+  useEffect(() => {
+    const cfg = getCloudMqttConfig();
+    if (cfg.autoConnect) {
+      connectCloudMqtt(cfg);
+    }
+  }, []);
 
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [pinDevice, setPinDevice] = useState<Device | null>(null);
@@ -267,6 +279,8 @@ function useHomeAppController(role: Role) {
 
   async function handleDeviceCommand(device: Device, deviceCommand: ApiDeviceCommand, pin?: string) {
     setActionError("");
+    // Gửi lệnh song song trực tiếp qua Cloud MQTT (WSS Serverless)
+    publishDeviceCommand(device.id, deviceCommand.action, deviceCommand.value ?? 1);
     try {
       await home.sendDeviceCommand(device, deviceCommand, pin);
       addHistory(`${deviceCommand.action.toUpperCase()} ${device.name}`, `${device.name} \u0111\u00e3 c\u1eadp nh\u1eadt tr\u1ea1ng th\u00e1i.`);
@@ -357,6 +371,8 @@ function useHomeAppController(role: Role) {
     setCommand,
     setChatCommand,
     setTtsEnabled,
+    xiaozhiModalOpen,
+    setXiaozhiModalOpen,
     setActionError,
     setActionNotice,
     closeVoice,
@@ -452,6 +468,9 @@ function HomeAdminApp({ theme, onToggleTheme, userName, onSignOut }: SessionShel
           onDismissDiscovered={app.home.dismissDiscoveredDevice}
         />
       ) : null}
+
+      {app.page === "Floorplan2D" ? <FloorplanPage view="2d" /> : null}
+      {app.page === "Floorplan3D" ? <FloorplanPage view="3d" /> : null}
 
       {app.page === "History" ? (
         <HistoryPage
@@ -553,6 +572,9 @@ function MemberApp({ theme, onToggleTheme, userName, onSignOut }: SessionShellPr
         />
       ) : null}
 
+      {app.page === "Floorplan2D" ? <FloorplanPage view="2d" /> : null}
+      {app.page === "Floorplan3D" ? <FloorplanPage view="3d" /> : null}
+
       {app.page === "History" ? (
         <HistoryPage
           history={app.history}
@@ -645,6 +667,7 @@ function HomeAppFrame({
               onToggleTheme={onToggleTheme}
               onToggleSidebar={() => app.setSidebarOpen((open) => !open)}
               onOpenNotifications={() => app.setNotifCenterOpen(true)}
+              onOpenXiaozhi={() => app.setXiaozhiModalOpen(true)}
               onSignOut={onSignOut}
             />
 
@@ -703,6 +726,45 @@ function HomeAppFrame({
         onClose={() => app.setModePinModalOpen(false)}
         onSuccess={app.handleModePinSuccess}
       />
+
+      {/* Xiaozhi AI Web Assistant Modal */}
+      <XiaozhiWebModal
+        open={app.xiaozhiModalOpen}
+        onClose={() => app.setXiaozhiModalOpen(false)}
+        onDeviceCommand={(deviceId, action) => {
+          app.notify(`Xiaozhi \u0111i\u1ec1u khi\u1ec3n: ${action} \u2794 ${deviceId}`);
+        }}
+      />
+
+      {/* Floating Action Button for Xiaozhi */}
+      <button
+        type="button"
+        onClick={() => app.setXiaozhiModalOpen(true)}
+        className="hm-floating-xiaozhi"
+        title="Tr\u00f2 chuy\u1ec7n v\u1edbi Xiaozhi AI"
+        style={{
+          position: "fixed",
+          bottom: "24px",
+          right: "24px",
+          width: "52px",
+          height: "52px",
+          borderRadius: "50%",
+          border: "none",
+          background: "linear-gradient(135deg, #6366f1, #a855f7)",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 6px 20px rgba(99, 102, 241, 0.45)",
+          cursor: "pointer",
+          zIndex: 80,
+          transition: "transform 0.2s ease",
+        }}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z" />
+        </svg>
+      </button>
     </main>
   );
 }

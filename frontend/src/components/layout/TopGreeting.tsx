@@ -12,6 +12,7 @@ export function TopGreeting({
   onToggleTheme,
   onToggleSidebar,
   onOpenNotifications,
+  onOpenXiaozhi,
   onSignOut,
 }: {
   role: Role;
@@ -24,6 +25,7 @@ export function TopGreeting({
   onToggleTheme: () => void;
   onToggleSidebar: () => void;
   onOpenNotifications?: () => void;
+  onOpenXiaozhi?: () => void;
   onSignOut?: () => void;
 }) {
   const nextThemeLabel = theme === "dark" ? "Chuyen sang light mode" : "Chuyen sang dark mode";
@@ -54,6 +56,32 @@ export function TopGreeting({
       </div>
 
       <div className="hm-top-status">
+        {/* Xiaozhi AI Assistant Button */}
+        {onOpenXiaozhi ? (
+          <button
+            type="button"
+            onClick={onOpenXiaozhi}
+            title="Trò chuyện với Trợ lý ảo Xiaozhi trên Web"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "7px 14px",
+              borderRadius: "20px",
+              border: "1px solid rgba(168, 85, 247, 0.4)",
+              background: "linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.2))",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: 500,
+              fontSize: "13px",
+              boxShadow: "0 2px 8px rgba(99, 102, 241, 0.15)",
+            }}
+          >
+            <span style={{ color: "#a855f7" }}><Icon name="sparkles" /></span>
+            <span>Xiaozhi AI</span>
+          </button>
+        ) : null}
+
         {/* Prominent Data Mode Switcher Toggle */}
         <div className="hm-mode-switcher" title="Chuyển đổi chế độ hoạt động giữa Nhà mô phỏng và Mô hình nhà thông minh">
           <button

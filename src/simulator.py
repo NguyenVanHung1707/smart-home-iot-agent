@@ -109,6 +109,10 @@ def publish_all_devices() -> None:
         publish_state(dev["id"])
 
 
+# Timestamp tracking for physical hardware telemetry
+_last_hardware_telemetry: dict[str, float] = {}
+
+
 def on_connect(client: mqtt.Client, userdata: Any, flags: Any, reason_code: Any, properties: Any = None) -> None:
     global mqtt_connected
     logger.info("Simulator MQTT connected with code %s", reason_code)
@@ -118,6 +122,10 @@ def on_connect(client: mqtt.Client, userdata: Any, flags: Any, reason_code: Any,
     client.subscribe(f"{PREFIX}/simulator/+/fault", qos=1)
     client.subscribe(f"{PREFIX}/discovery/scan", qos=1)
     client.subscribe(f"{PREFIX}/simulator/broadcast/scan", qos=1)
+    # Bi-directional bridge: Subscribe to real physical device topics
+    client.subscribe(f"{PREFIX}/devices/+/state", qos=1)
+    client.subscribe(f"{PREFIX}/devices/+/telemetry", qos=1)
+    client.subscribe(f"{PREFIX}/security/access_log", qos=1)
     publish_all_devices()
 
 
@@ -152,7 +160,103 @@ def on_message(client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage) ->
                 logger.warning("Simulator fault injection error for %s: %s", device_id, exc)
             return
 
-        # Command topic: homing/devices/{id}/command
+        # Mirror real physical device state: homing/devices/{id}/state (NOT /simulator/)
+        if topic.startswith(f"{PREFIX}/devices/") and topic.endswith("/state"):
+            parts = topic.split("/")
+            raw_id = parts[-2]
+            try:
+                device_id = validate_device_id(raw_id)
+            except ValueError:
+                return
+
+            _last_hardware_telemetry[device_id] = datetime.now(UTC).timestamp()
+
+            state_updates: dict[str, Any] = {}
+            # Case 1: Gateway packet format {"action": "...", "value": ..., "float_val": ...}
+            if "action" in payload or "float_val" in payload:
+                act = str(payload.get("action", "")).lower()
+                val = payload.get("value", 0)
+                fval = float(payload.get("float_val", 0.0))
+
+                if device_id in {"living-light", "bedroom-light", "kitchen-light"}:
+                    state_updates["power"] = (act == "on" or val == 1)
+                elif device_id in {"living-fan", "bedroom-fan", "kitchen-fan"}:
+                    state_updates["power"] = (act == "on" or val > 0)
+                    state_updates["speed"] = val if val > 0 else 0
+                elif device_id in {"entry-lock"}:
+                    state_updates["locked"] = not (act in {"unlocked", "open"} or val == 1)
+                elif device_id in {"window-servo", "living-blind"}:
+                    target_id = "living-blind"
+                    is_open = (act in {"open", "unlocked"} or val == 1)
+                    dev = storage.get_device(target_id)
+                    if dev:
+                        storage.update_device(target_id, {"state": {"position": 100 if is_open else 0, "power": is_open}})
+                        publish_state(target_id)
+                    return
+                elif device_id == "living-temperature":
+                    target_id = "living-temperature"
+                    dev = storage.get_device(target_id)
+                    if dev:
+                        curr = deepcopy(dev.get("state", {}))
+                        if fval > 0:
+                            curr["temperature"] = round(fval, 1)
+                        storage.update_device(target_id, {"state": curr})
+                        publish_state(target_id)
+                    return
+                elif device_id == "living-humidity":
+                    target_id = "living-temperature"
+                    dev = storage.get_device(target_id)
+                    if dev:
+                        curr = deepcopy(dev.get("state", {}))
+                        if fval > 0:
+                            curr["humidity"] = round(fval, 0)
+                        storage.update_device(target_id, {"state": curr})
+                        publish_state(target_id)
+                    return
+                elif device_id in {"living-ldr", "living-light-sensor"}:
+                    target_id = "living-light-sensor"
+                    dev = storage.get_device(target_id)
+                    if dev:
+                        lvl = int(fval if fval > 0 else val)
+                        storage.update_device(target_id, {"state": {"light_level": lvl, "is_dark": lvl < 500}})
+                        publish_state(target_id)
+                    return
+                elif device_id == "kitchen-gas":
+                    target_id = "kitchen-gas"
+                    dev = storage.get_device(target_id)
+                    if dev:
+                        ppm_val = int(fval if fval > 0 else val)
+                        is_leak = (ppm_val > 1000 or act == "gas_leak")
+                        storage.update_device(target_id, {"state": {"ppm": ppm_val, "gas_detected": is_leak, "alert": is_leak}})
+                        publish_state(target_id)
+                    return
+                elif device_id == "living-motion":
+                    target_id = "living-motion"
+                    dev = storage.get_device(target_id)
+                    if dev:
+                        detected = (act == "detected" or val == 1)
+                        storage.update_device(target_id, {"state": {"motion": detected}})
+                        publish_state(target_id)
+                    return
+            else:
+                # Case 2: Standard dictionary payload from classic firmware
+                state_updates = {
+                    k: v
+                    for k, v in payload.items()
+                    if k not in {"schema_version", "event", "device_id", "timestamp", "source", "online"}
+                }
+
+            if state_updates:
+                dev = storage.get_device(device_id)
+                if dev:
+                    curr = deepcopy(dev.get("state", {}))
+                    curr.update(state_updates)
+                    storage.update_device(device_id, {"state": curr})
+                    logger.info("Mirrored physical hardware state into simulator for %s: %s", device_id, state_updates)
+                    publish_state(device_id)
+            return
+
+        # Command topic: homing/devices/{id}/command or homing/simulator/devices/{id}/command
         if topic.endswith("/command"):
             device_id = payload.get("device_id")
             if not device_id:
@@ -234,6 +338,9 @@ def _auto_simulate_loop() -> None:
                 if not dev.get("auto_simulate", False):
                     continue
                 dev_id = dev["id"]
+                # Skip auto-simulation if real physical hardware telemetry was recently received
+                if datetime.now(UTC).timestamp() - _last_hardware_telemetry.get(dev_id, 0) < 60:
+                    continue
                 state = deepcopy(dev.get("state", {}))
                 changed = False
 
@@ -339,6 +446,7 @@ app.add_middleware(
 
 
 @app.get("/health")
+@app.get("/api/health")
 async def health() -> dict[str, Any]:
     return {
         "status": "ok",
@@ -410,6 +518,55 @@ async def perform_action(device_id: str, payload: dict[str, Any]) -> dict[str, A
     try:
         updated = storage.apply_action(device_id, action, value)
         publish_state(device_id)
+
+        # Forward command to physical ESP32 hardware via MQTT
+        if mqtt_client:
+            cmd_id = str(uuid4())
+            hw_action = action
+            hw_value = value
+            is_on = bool(updated.get("state", {}).get("power", False))
+
+            if action == "toggle":
+                if device_id == "entry-lock":
+                    is_locked = bool(updated.get("state", {}).get("locked", True))
+                    hw_action = "lock" if is_locked else "unlock"
+                    hw_value = 0 if is_locked else 1
+                elif device_id in {"living-blind", "window-servo"}:
+                    hw_action = "open" if is_on else "close"
+                    hw_value = 1 if is_on else 0
+                else:
+                    hw_action = "turn_on" if is_on else "turn_off"
+                    hw_value = 1 if is_on else 0
+            elif action in {"on", "turn_on"}:
+                hw_action = "turn_on"
+                hw_value = 1
+            elif action in {"off", "turn_off"}:
+                hw_action = "turn_off"
+                hw_value = 0
+            elif action in {"unlock", "open"} and device_id == "entry-lock":
+                hw_action = "unlock"
+                hw_value = 1
+            elif action in {"lock", "close"} and device_id == "entry-lock":
+                hw_action = "lock"
+                hw_value = 0
+
+            hw_payload = json.dumps(
+                {
+                    "device_id": device_id,
+                    "command_id": cmd_id,
+                    "action": hw_action,
+                    "value": hw_value if hw_value is not None else 1,
+                },
+                separators=(",", ":"),
+            )
+            try:
+                mqtt_client.publish(f"{PREFIX}/devices/{device_id}/command", hw_payload, qos=1)
+                logger.info("Forwarded command to real hardware %s: %s", f"{PREFIX}/devices/{device_id}/command", hw_payload)
+                if device_id == "living-blind":
+                    mqtt_client.publish(f"{PREFIX}/devices/window-servo/command", hw_payload, qos=1)
+            except Exception:
+                logger.warning("Failed to publish command to real hardware topic for %s", device_id)
+
         return updated
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -441,11 +598,15 @@ async def reset_simulator_state() -> dict[str, Any]:
 
 # Mount frontend dist assets if present
 frontend_dist = Path(__file__).parent.parent / "frontend-simulator" / "dist"
-if (frontend_dist / "assets").exists():
-    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
+assets_dir = frontend_dist / "assets"
+assets_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+app.mount("/simulator/assets", StaticFiles(directory=str(assets_dir)), name="simulator-assets")
 
 
 @app.get("/", response_class=HTMLResponse)
+@app.get("/simulator", response_class=HTMLResponse)
+@app.get("/simulator/", response_class=HTMLResponse)
 async def get_simulator_ui() -> HTMLResponse:
     index_file = frontend_dist / "index.html"
     if index_file.exists():

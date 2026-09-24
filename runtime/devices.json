@@ -1,17 +1,5 @@
 [
   {
-    "id": "living-light",
-    "name": "Đèn phòng khách",
-    "room": "Phòng khách",
-    "kind": "light",
-    "online": true,
-    "state": {
-      "power": false,
-      "brightness": 80
-    },
-    "capabilities": {}
-  },
-  {
     "id": "bedroom-light",
     "name": "Đèn phòng ngủ",
     "room": "Phòng ngủ",
@@ -19,19 +7,119 @@
     "online": true,
     "state": {
       "power": false,
-      "brightness": 45
+      "brightness": 100
     },
     "capabilities": {}
   },
   {
-    "id": "kitchen-light",
-    "name": "Đèn phòng bếp",
-    "room": "Phòng bếp",
-    "kind": "light",
+    "id": "bedroom-fan",
+    "name": "Quạt phòng ngủ",
+    "room": "Phòng ngủ",
+    "kind": "fan",
+    "online": true,
+    "state": {
+      "power": false,
+      "speed": 0
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "entry-sensor",
+    "name": "Màn hình & Bảng bấm",
+    "room": "Phòng ngủ",
+    "kind": "sensor",
+    "online": true,
+    "state": {
+      "open": false,
+      "battery": 100,
+      "keypad_active": true
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "hub-speaker",
+    "name": "Loa & Mic AI Xiaozhi Hub",
+    "room": "Phòng khách",
+    "kind": "speaker",
     "online": true,
     "state": {
       "power": true,
-      "brightness": 90
+      "volume": 50,
+      "playing": false
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-display",
+    "name": "Màn hình OLED SH1106",
+    "room": "Phòng khách",
+    "kind": "display",
+    "online": true,
+    "state": {
+      "power": true,
+      "message": "Homing Hub Ready"
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-light",
+    "name": "Đèn phòng khách",
+    "room": "Phòng khách",
+    "kind": "light",
+    "online": true,
+    "state": {
+      "power": false,
+      "brightness": 100
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-fan",
+    "name": "Quạt phòng khách",
+    "room": "Phòng khách",
+    "kind": "fan",
+    "online": true,
+    "state": {
+      "power": false,
+      "speed": 0
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-motion",
+    "name": "Cảm biến chuyển động PIR",
+    "room": "Phòng khách",
+    "kind": "sensor",
+    "online": true,
+    "state": {
+      "motion": false,
+      "battery": 100
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-temperature",
+    "name": "Cảm biến nhiệt độ DHT11",
+    "room": "Phòng khách",
+    "kind": "sensor",
+    "online": true,
+    "state": {
+      "temperature": 28.0,
+      "humidity": 65.0,
+      "battery": 100
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-light-sensor",
+    "name": "Cảm biến ánh sáng LDR",
+    "room": "Phòng khách",
+    "kind": "sensor",
+    "online": true,
+    "state": {
+      "light_level": 500,
+      "is_dark": false,
+      "battery": 100
     },
     "capabilities": {}
   },
@@ -42,7 +130,7 @@
     "kind": "aircon",
     "online": true,
     "state": {
-      "power": true,
+      "power": false,
       "target_temperature": 25,
       "mode": "cool"
     },
@@ -50,86 +138,75 @@
   },
   {
     "id": "living-blind",
-    "name": "Rèm phòng khách",
+    "name": "Cửa sổ thông gió",
     "room": "Phòng khách",
     "kind": "blind",
     "online": true,
     "state": {
-      "position": 0
-    },
-    "capabilities": {}
-  },
-  {
-    "id": "hub-speaker",
-    "name": "Loa Homing",
-    "room": "Phòng khách",
-    "kind": "speaker",
-    "online": true,
-    "state": {
-      "power": false,
-      "volume": 45,
-      "playing": false
+      "position": 0,
+      "power": false
     },
     "capabilities": {}
   },
   {
     "id": "entry-lock",
-    "name": "Khóa cửa chính",
-    "room": "Lối vào",
+    "name": "Cửa chính & Khóa servo",
+    "room": "Phòng khách",
     "kind": "lock",
     "online": true,
     "state": {
-      "locked": false
+      "locked": true
     },
     "capabilities": {}
   },
   {
-    "id": "entry-sensor",
-    "name": "Cảm biến cửa",
-    "room": "Lối vào",
-    "kind": "sensor",
+    "id": "kitchen-light",
+    "name": "Đèn phòng bếp",
+    "room": "Phòng bếp",
+    "kind": "light",
     "online": true,
     "state": {
-      "open": false,
-      "battery": 92
+      "power": false,
+      "brightness": 100
     },
     "capabilities": {}
   },
   {
-    "id": "living-temperature",
-    "name": "Cảm biến nhiệt độ",
-    "room": "Phòng khách",
-    "kind": "sensor",
+    "id": "kitchen-fan",
+    "name": "Quạt phòng bếp",
+    "room": "Phòng bếp",
+    "kind": "fan",
     "online": true,
     "state": {
-      "temperature": 27.8,
-      "humidity": 56.0,
-      "battery": 96
+      "power": false,
+      "speed": 0
     },
     "capabilities": {}
   },
   {
     "id": "kitchen-gas",
-    "name": "Cảm biến khí gas",
+    "name": "Cảm biến khí gas MQ2",
     "room": "Phòng bếp",
     "kind": "sensor",
     "online": true,
     "state": {
       "gas_detected": false,
-      "ppm": 114,
-      "battery": 98
+      "ppm": 120,
+      "battery": 100,
+      "alert": false
     },
     "capabilities": {}
   },
   {
-    "id": "living-motion",
-    "name": "Cảm biến chuyển động",
-    "room": "Phòng khách",
+    "id": "entry-rfid",
+    "name": "Đầu đọc thẻ RFID",
+    "room": "Phòng bếp",
     "kind": "sensor",
     "online": true,
     "state": {
-      "motion": true,
-      "battery": 94
+      "card_detected": false,
+      "last_uid": "",
+      "battery": 100
     },
     "capabilities": {}
   }

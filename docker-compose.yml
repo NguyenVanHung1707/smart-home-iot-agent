@@ -4,6 +4,7 @@ services:
     ports: ["8000:8000"]
     env_file: .env
     environment:
+      DATABASE_URL: postgresql://homing_user:homing_password@postgres:5432/homing_db
       MQTT_BROKER: mqtt
       MQTT_ENABLED: "true"
       LLM_ENABLED: ${LLM_ENABLED:-true}
@@ -27,6 +28,8 @@ services:
     depends_on:
       mqtt:
         condition: service_started
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -74,34 +77,25 @@ services:
       timeout: 5s
       retries: 5
 
-  # Start only when a GGUF model is mounted in ./models.
-  llama:
-    image: ghcr.io/ggml-org/llama.cpp:server
-    profiles: ["local-llm"]
-    command: ["-m", "/models/${LLAMA_MODEL_FILE:-qwen2.5-3b-instruct-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080", "-c", "8192", "-t", "4", "--parallel", "1"]
-    volumes:
-      - ./models:/models:ro
-    ports: ["8080:8080"]
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null"]
-      interval: 10s
-      timeout: 3s
-      retries: 12
+  # [DEPRECATED / REMOVED] Các model cục bộ (llama.cpp, piper, zipformer)
+  # đã được loại bỏ hoàn toàn để chuyển sang kiến trúc Cloud AI (Xiaozhi Cloud / Gemini / Groq).
 
-  piper:
-    build:
-      context: .
-      dockerfile: infra/piper/Dockerfile
-    profiles: ["voice"]
-    command: ["--host", "0.0.0.0", "--port", "5000", "--data-dir", "/voices", "-m", "${PIPER_VOICE:-vi_VN-vais1000-medium}"]
-    volumes:
-      - ./models/piper:/voices:ro
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/info')\""]
-      interval: 10s
-      timeout: 3s
-      retries: 12
+  postgres:
+    image: postgres:16-alpine
     restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: homing_user
+      POSTGRES_PASSWORD: homing_password
+      POSTGRES_DB: homing_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homing_user -d homing_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Cloudflare Tunnel for domain lophocso.io.vn (HTTPS & secure remote access)
   cloudflared:
@@ -116,3 +110,4 @@ services:
 
 volumes:
   mqtt-data:
+  postgres-data:

@@ -51,43 +51,119 @@ def sanitize_text(text: Any, max_length: int = 100) -> str:
 DEFAULT_STORAGE_PATH = os.getenv("SIMULATOR_STORAGE_PATH", "runtime/simulator_state.json")
 
 DEFAULT_WALLS: list[dict[str, float]] = [
-    {"x1": 50.0, "y1": 50.0, "x2": 450.0, "y2": 50.0},
-    {"x1": 450.0, "y1": 50.0, "x2": 450.0, "y2": 400.0},
-    {"x1": 450.0, "y1": 400.0, "x2": 50.0, "y2": 400.0},
-    {"x1": 50.0, "y1": 400.0, "x2": 50.0, "y2": 50.0},
-    {"x1": 250.0, "y1": 50.0, "x2": 250.0, "y2": 400.0},
-    {"x1": 250.0, "y1": 220.0, "x2": 450.0, "y2": 220.0},
+    # 4 tường bao quanh (Outer boundary: width 500, height 300, từ x:50..550, y:50..350)
+    {"x1": 50.0, "y1": 50.0, "x2": 550.0, "y2": 50.0},
+    {"x1": 550.0, "y1": 50.0, "x2": 550.0, "y2": 350.0},
+    {"x1": 550.0, "y1": 350.0, "x2": 50.0, "y2": 350.0},
+    {"x1": 50.0, "y1": 350.0, "x2": 50.0, "y2": 50.0},
+    # Vách ngăn 1 (Phòng ngủ & Phòng khách)
+    {"x1": 215.0, "y1": 50.0, "x2": 215.0, "y2": 350.0},
+    # Vách ngăn 2 (Phòng khách & Phòng bếp)
+    {"x1": 385.0, "y1": 50.0, "x2": 385.0, "y2": 350.0},
 ]
 
 DEFAULT_DEVICES: list[dict[str, Any]] = [
-    {
-        "id": "living-light",
-        "name": "Đèn phòng khách",
-        "kind": "light",
-        "room": "Phòng khách",
-        "x": 150.0,
-        "y": 140.0,
-        "state": {"power": True, "brightness": 80},
-        "auto_simulate": False,
-    },
+    # 1. Phòng ngủ (Bedroom: x 50..215, y 50..350)
     {
         "id": "bedroom-light",
         "name": "Đèn phòng ngủ",
         "kind": "light",
         "room": "Phòng ngủ",
-        "x": 350.0,
-        "y": 130.0,
-        "state": {"power": False, "brightness": 45},
+        "x": 132.5,
+        "y": 65.0,
+        "state": {"power": False, "brightness": 100},
         "auto_simulate": False,
     },
     {
-        "id": "kitchen-light",
-        "name": "Đèn phòng bếp",
+        "id": "bedroom-fan",
+        "name": "Quạt phòng ngủ",
+        "kind": "fan",
+        "room": "Phòng ngủ",
+        "x": 65.0,
+        "y": 140.0,
+        "state": {"power": False, "speed": 0},
+        "auto_simulate": False,
+    },
+    {
+        "id": "entry-sensor",
+        "name": "Màn hình & Bảng bấm",
+        "kind": "sensor",
+        "room": "Phòng ngủ",
+        "x": 132.5,
+        "y": 335.0,
+        "state": {"open": False, "battery": 100, "keypad_active": True},
+        "auto_simulate": False,
+    },
+
+    # 2. Phòng khách (Living Room: x 215..385, y 50..350)
+    {
+        "id": "hub-speaker",
+        "name": "Loa & Mic AI Xiaozhi Hub",
+        "kind": "speaker",
+        "room": "Phòng khách",
+        "x": 245.0,
+        "y": 65.0,
+        "state": {"power": True, "volume": 50, "playing": False},
+        "auto_simulate": False,
+    },
+    {
+        "id": "living-display",
+        "name": "Màn hình OLED SH1106",
+        "kind": "display",
+        "room": "Phòng khách",
+        "x": 260.0,
+        "y": 65.0,
+        "state": {"power": True, "message": "Homing Hub Ready"},
+        "auto_simulate": False,
+    },
+    {
+        "id": "living-light",
+        "name": "Đèn phòng khách",
         "kind": "light",
-        "room": "Phòng bếp",
-        "x": 350.0,
-        "y": 310.0,
-        "state": {"power": True, "brightness": 90},
+        "room": "Phòng khách",
+        "x": 300.0,
+        "y": 65.0,
+        "state": {"power": False, "brightness": 100},
+        "auto_simulate": False,
+    },
+    {
+        "id": "living-fan",
+        "name": "Quạt phòng khách",
+        "kind": "fan",
+        "room": "Phòng khách",
+        "x": 355.0,
+        "y": 75.0,
+        "state": {"power": False, "speed": 0},
+        "auto_simulate": False,
+    },
+    {
+        "id": "living-motion",
+        "name": "Cảm biến chuyển động PIR",
+        "kind": "sensor",
+        "room": "Phòng khách",
+        "x": 228.0,
+        "y": 200.0,
+        "state": {"motion": False, "battery": 100},
+        "auto_simulate": False,
+    },
+    {
+        "id": "living-temperature",
+        "name": "Cảm biến nhiệt độ DHT11",
+        "kind": "sensor",
+        "room": "Phòng khách",
+        "x": 372.0,
+        "y": 125.0,
+        "state": {"temperature": 28.0, "humidity": 65.0, "battery": 100},
+        "auto_simulate": False,
+    },
+    {
+        "id": "living-light-sensor",
+        "name": "Cảm biến ánh sáng LDR",
+        "kind": "sensor",
+        "room": "Phòng khách",
+        "x": 355.0,
+        "y": 140.0,
+        "state": {"light_level": 500, "is_dark": False, "battery": 100},
         "auto_simulate": False,
     },
     {
@@ -95,80 +171,72 @@ DEFAULT_DEVICES: list[dict[str, Any]] = [
         "name": "Điều hòa phòng khách",
         "kind": "aircon",
         "room": "Phòng khách",
-        "x": 90.0,
-        "y": 80.0,
-        "state": {"power": True, "target_temperature": 25, "mode": "cool"},
+        "x": 245.0,
+        "y": 140.0,
+        "state": {"power": False, "target_temperature": 25, "mode": "cool"},
         "auto_simulate": False,
     },
     {
         "id": "living-blind",
-        "name": "Rèm phòng khách",
+        "name": "Cửa sổ thông gió",
         "kind": "blind",
         "room": "Phòng khách",
-        "x": 70.0,
-        "y": 380.0,
-        "state": {"position": 0},
-        "auto_simulate": False,
-    },
-    {
-        "id": "hub-speaker",
-        "name": "Loa Homing",
-        "kind": "speaker",
-        "room": "Phòng khách",
-        "x": 220.0,
-        "y": 150.0,
-        "state": {"power": False, "volume": 45, "playing": False},
+        "x": 300.0,
+        "y": 170.0,
+        "state": {"position": 0, "power": False},
         "auto_simulate": False,
     },
     {
         "id": "entry-lock",
-        "name": "Khóa cửa chính",
+        "name": "Cửa chính & Khóa servo",
         "kind": "lock",
         "room": "Phòng khách",
-        "x": 50.0,
-        "y": 220.0,
+        "x": 300.0,
+        "y": 350.0,
         "state": {"locked": True},
         "auto_simulate": False,
     },
+
+    # 3. Phòng bếp (Kitchen: x 385..550, y 50..350)
     {
-        "id": "entry-sensor",
-        "name": "Cảm biến cửa",
-        "kind": "sensor",
-        "room": "Phòng khách",
-        "x": 60.0,
-        "y": 240.0,
-        "state": {"open": False, "battery": 92},
-        "auto_simulate": True,
+        "id": "kitchen-light",
+        "name": "Đèn phòng bếp",
+        "kind": "light",
+        "room": "Phòng bếp",
+        "x": 467.5,
+        "y": 65.0,
+        "state": {"power": False, "brightness": 100},
+        "auto_simulate": False,
     },
     {
-        "id": "living-temperature",
-        "name": "Cảm biến nhiệt độ",
-        "kind": "sensor",
-        "room": "Phòng khách",
-        "x": 150.0,
-        "y": 280.0,
-        "state": {"temperature": 27.0, "humidity": 65.0, "battery": 98},
-        "auto_simulate": True,
+        "id": "kitchen-fan",
+        "name": "Quạt phòng bếp",
+        "kind": "fan",
+        "room": "Phòng bếp",
+        "x": 535.0,
+        "y": 140.0,
+        "state": {"power": False, "speed": 0},
+        "auto_simulate": False,
     },
     {
         "id": "kitchen-gas",
-        "name": "Cảm biến khí gas",
+        "name": "Cảm biến khí gas MQ2",
         "kind": "sensor",
         "room": "Phòng bếp",
-        "x": 410.0,
-        "y": 360.0,
-        "state": {"gas_detected": False, "ppm": 120, "battery": 100},
-        "auto_simulate": True,
+        "x": 398.0,
+        "y": 125.0,
+        "state": {"gas_detected": False, "ppm": 120, "alert": False, "battery": 100},
+        "auto_simulate": False,
     },
     {
-        "id": "living-motion",
-        "name": "Cảm biến chuyển động",
+        "id": "entry-rfid",
+        "name": "Đầu đọc thẻ RFID",
         "kind": "sensor",
-        "room": "Phòng khách",
-        "x": 100.0,
-        "y": 330.0,
-        "state": {"motion": False, "battery": 94},
-        "auto_simulate": True,
+        "room": "Phòng bếp",
+        "x": 467.5,
+        "y": 335.0,
+        "state": {"card_detected": False, "last_uid": "", "battery": 100},
+        "auto_simulate": False,
     },
 ]
 
@@ -435,20 +503,43 @@ class SimulatorStorage:
                     else:
                         state["position"] = 100
                         state["power"] = True
+                elif dev.get("kind") == "lock":
+                    state["locked"] = not bool(state.get("locked", True))
+                elif dev.get("kind") == "fan":
+                    is_on = not bool(state.get("power", False))
+                    state["power"] = is_on
+                    state["speed"] = 1 if is_on else 0
                 else:
                     state["power"] = not bool(state.get("power", False))
-            elif action in {"on", "off"}:
-                state["power"] = action == "on"
-            elif action == "lock":
+            elif action in {"on", "off", "turn_on", "turn_off"}:
+                is_on = action in {"on", "turn_on"}
+                state["power"] = is_on
+                if dev.get("kind") == "fan":
+                    state["speed"] = (state.get("speed") or 1) if is_on else 0
+            elif action in {"set_speed", "set_value"}:
+                try:
+                    val = int(value)
+                    state["speed"] = val
+                    state["power"] = val > 0
+                except (ValueError, TypeError):
+                    state["speed"] = 1 if value else 0
+                    state["power"] = bool(value)
+            elif action in {"lock"}:
                 state["locked"] = True
-            elif action == "unlock":
+            elif action in {"unlock"}:
                 state["locked"] = False
             elif action == "open":
-                state["position"] = 100
-                state["power"] = True
+                if dev.get("kind") == "lock":
+                    state["locked"] = False
+                else:
+                    state["position"] = 100
+                    state["power"] = True
             elif action == "close":
-                state["position"] = 0
-                state["power"] = False
+                if dev.get("kind") == "lock":
+                    state["locked"] = True
+                else:
+                    state["position"] = 0
+                    state["power"] = False
             elif action == "play":
                 state["playing"] = True
                 state["power"] = True
@@ -460,6 +551,8 @@ class SimulatorStorage:
             elif action == "set":
                 if isinstance(value, dict):
                     state.update(deepcopy(value))
+                    if "speed" in value and dev.get("kind") == "fan":
+                        state["power"] = int(value["speed"]) > 0
                 else:
                     raise ValueError("invalid_set_value")
             else:

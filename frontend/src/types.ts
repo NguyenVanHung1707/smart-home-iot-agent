@@ -1,5 +1,5 @@
 export type Role = "member" | "homeadmin";
-export type Page = "Rooms" | "Presets" | "History" | "Requests" | "Approvals" | "Activity" | "Performance" | "MQTT" | "Settings";
+export type Page = "Rooms" | "Floorplan2D" | "Floorplan3D" | "Presets" | "History" | "Requests" | "Approvals" | "Activity" | "Performance" | "MQTT" | "Settings";
 export type ThemeMode = "dark" | "light";
 export type DeviceState = "on" | "off" | "offline" | "warning";
 export type HistoryStatus = "done" | "pending" | "declined";
@@ -15,7 +15,7 @@ export type IconName =
   | "power" | "powerOff" | "settings" | "shield" | "sofa" | "sparkles" | "sun" | "sunrise" | "moon"
   | "wifi" | "wifiOff" | "x" | "mqtt" | "cpu" | "lock" | "unlock" | "sliders" | "refresh"
   | "plus" | "trash" | "pencil" | "kitchen" | "desk" | "bulb" | "tv" | "fan"
-  | "ac" | "drop" | "thermo";
+  | "ac" | "drop" | "thermo" | "box";
 
 export interface DiscoveredDevice {
   device_id: string;

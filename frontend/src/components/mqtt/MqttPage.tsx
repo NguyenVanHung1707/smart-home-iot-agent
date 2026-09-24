@@ -3,6 +3,7 @@ import type { ApiDevice, ApiSimulatorEvent } from "../../api/types";
 import type { DataMode, Device } from "../../types";
 import { SectionHeading } from "../shared/SectionHeading";
 import { Icon } from "../shared/Icon";
+import { CloudMqttCard } from "./CloudMqttCard";
 
 function FlowNode({ label, detail, tone }: { label: string; detail: string; tone: string }) {
   return (
@@ -103,6 +104,9 @@ export function MqttPage({
           ? "Quan sát lộ trình gói tin trực tiếp từ AI Agent tới MQTT Broker và phản hồi ACK từ các bo mạch ESP32 thật."
           : "Quan sát lộ trình gói tin từ Llama Agent tới MQTT Broker, thiết bị mô phỏng Sandbox và ACK phản hồi về Dashboard."}
       </p>
+
+      {/* Cloud MQTT (WSS Serverless) Configuration */}
+      <CloudMqttCard />
 
       {/* MQTT Route Architecture Flow */}
       <section className="hm-mqtt-route-panel" aria-label="Lộ trình tin nhắn MQTT">

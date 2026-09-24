@@ -31,7 +31,28 @@ export const App: React.FC = () => {
   } | null>(null);
 
   // UI State
-  const [activeTab, setActiveTab] = useState<'2d' | '3d'>('2d');
+  const getInitialView = (): '2d' | '3d' => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get('view')?.toLowerCase();
+      if (v === '3d') return '3d';
+      if (v === '2d') return '2d';
+    }
+    return '2d';
+  };
+
+  const [activeTab, setActiveTab] = useState<'2d' | '3d'>(getInitialView);
+
+  useEffect(() => {
+    const checkView = () => {
+      const v = new URLSearchParams(window.location.search).get('view')?.toLowerCase();
+      if (v === '3d' || v === '2d') {
+        setActiveTab(v);
+      }
+    };
+    window.addEventListener('popstate', checkView);
+    return () => window.removeEventListener('popstate', checkView);
+  }, []);
   const [mobileTab, setMobileTab] = useState<'canvas' | 'rooms' | 'library' | 'logs'>('canvas');
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<string>('all');

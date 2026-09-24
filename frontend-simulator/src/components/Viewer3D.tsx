@@ -478,14 +478,14 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
     if (!camera || !controls) return;
 
     if (preset === 'iso') {
-      camera.position.set(250, 380, 480);
-      controls.target.set(250, 0, 220);
+      camera.position.set(300, 380, 460);
+      controls.target.set(300, 0, 200);
     } else if (preset === 'top') {
-      camera.position.set(250, 580, 220);
-      controls.target.set(250, 0, 220);
+      camera.position.set(300, 580, 200);
+      controls.target.set(300, 0, 200);
     } else if (preset === 'front') {
-      camera.position.set(250, 160, 600);
-      controls.target.set(250, 15, 220);
+      camera.position.set(300, 160, 580);
+      controls.target.set(300, 15, 200);
     }
     controls.update();
   }, []);
@@ -508,7 +508,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
 
     // 2. Perspective Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 1, 3000);
-    camera.position.set(250, 380, 480);
+    camera.position.set(300, 380, 460);
     cameraRef.current = camera;
 
     // 3. WebGL Renderer with PCF Shadow Mapping & Performance Optimization
@@ -529,7 +529,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
     controls.maxPolarAngle = Math.PI / 2 - 0.03; // Don't clip under floor
     controls.minDistance = 60;
     controls.maxDistance = 1400;
-    controls.target.set(250, 0, 220);
+    controls.target.set(300, 0, 200);
     controls.addEventListener('change', () => {
       needsRenderRef.current = true;
     });
@@ -583,7 +583,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
     });
     const baseFloor = new THREE.Mesh(floorGeo, floorMat);
     baseFloor.rotation.x = -Math.PI / 2;
-    baseFloor.position.set(250, -0.4, 220);
+    baseFloor.position.set(300, -0.4, 200);
     baseFloor.receiveShadow = true;
     scene.add(baseFloor);
     baseFloorMeshRef.current = baseFloor;
@@ -595,7 +595,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
       isNight ? 0x6e7b74 : 0xd2c9bd, 
       isNight ? 0x525e58 : 0xe2dcce
     );
-    grid.position.set(250, 0, 220);
+    grid.position.set(300, 0, 200);
     scene.add(grid);
     gridMeshRef.current = grid;
 
@@ -712,7 +712,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
         isNight ? 0x6e7b74 : 0xd2c9bd,
         isNight ? 0x525e58 : 0xe2dcce
       );
-      grid.position.set(250, 0, 220);
+      grid.position.set(300, 0, 200);
       grid.visible = showFloorGrid;
       scene.add(grid);
       gridMeshRef.current = grid;
@@ -1842,7 +1842,106 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
       }
 
       // =========================================================================
-      // F. MULTI-SENSOR DOME (Motion / Environmental / Gas / Contact Sensors)
+      // F. SMART FAN (Ceiling / Stand Fan with Rotating Aerofoil Blades)
+      // =========================================================================
+      else if (dev.kind === 'fan') {
+        const isPowerOn = state.power === true;
+        const fanSpeed = state.speed || (isPowerOn ? 1 : 0);
+
+        // Fan mounting base on floor
+        const fanBaseGeo = new THREE.CylinderGeometry(8.0, 9.5, 2.0, 24);
+        const fanBaseMat = new THREE.MeshStandardMaterial({
+          color: 0x2e3632,
+          roughness: 0.4,
+          metalness: 0.3,
+        });
+        const fanBase = new THREE.Mesh(fanBaseGeo, fanBaseMat);
+        fanBase.position.set(0, 1.0, 0);
+        fanBase.castShadow = true;
+        devContainer.add(fanBase);
+
+        // Stand pole (Height = 22)
+        const poleGeo = new THREE.CylinderGeometry(1.2, 1.2, 20, 16);
+        const poleMat = new THREE.MeshStandardMaterial({
+          color: 0x47554f,
+          metalness: 0.6,
+          roughness: 0.3,
+        });
+        const pole = new THREE.Mesh(poleGeo, poleMat);
+        pole.position.set(0, 11, 0);
+        pole.castShadow = true;
+        devContainer.add(pole);
+
+        // Motor housing
+        const motorGeo = new THREE.CylinderGeometry(3.8, 3.8, 5.0, 20);
+        const motorMat = new THREE.MeshStandardMaterial({
+          color: 0x2e3632,
+          roughness: 0.3,
+        });
+        const motor = new THREE.Mesh(motorGeo, motorMat);
+        motor.rotation.x = Math.PI / 2;
+        motor.position.set(0, 21, 0);
+        motor.castShadow = true;
+        devContainer.add(motor);
+
+        // Outer wireframe cage ring
+        const cageGeo = new THREE.TorusGeometry(12.5, 0.6, 12, 32);
+        const cageMat = new THREE.MeshStandardMaterial({
+          color: 0x64746b,
+          metalness: 0.5,
+          roughness: 0.4,
+        });
+        const cage = new THREE.Mesh(cageGeo, cageMat);
+        cage.position.set(0, 21, 2.5);
+        devContainer.add(cage);
+
+        // Rotating Blade Rotor Assembly
+        const rotorGroup = new THREE.Group();
+        rotorGroup.position.set(0, 21, 2.5);
+
+        // 3 Aerodynamic blades at 120° angles
+        const bladeGeo = new THREE.BoxGeometry(2.4, 11.0, 0.4);
+        const bladeMat = new THREE.MeshStandardMaterial({
+          color: isPowerOn ? 0x38bdf8 : 0x7a8a82,
+          roughness: 0.25,
+          metalness: 0.2,
+        });
+
+        for (let b = 0; b < 3; b++) {
+          const bladeMesh = new THREE.Mesh(bladeGeo, bladeMat);
+          const angle = (b * Math.PI * 2) / 3;
+          bladeMesh.rotation.z = angle;
+          bladeMesh.position.set(
+            Math.sin(angle) * 5.5,
+            Math.cos(angle) * 5.5,
+            0
+          );
+          rotorGroup.add(bladeMesh);
+        }
+
+        // Center spinner cap
+        const capGeo = new THREE.SphereGeometry(2.2, 16, 16);
+        const capMat = new THREE.MeshStandardMaterial({ color: 0x1e2924, metalness: 0.7 });
+        const cap = new THREE.Mesh(capGeo, capMat);
+        cap.position.set(0, 0, 0.6);
+        rotorGroup.add(cap);
+
+        devContainer.add(rotorGroup);
+
+        // Rotate blades dynamically when ON
+        if (isPowerOn) {
+          animatedObjectsRef.current.push({
+            id: `fan-spin-${dev.id}`,
+            update: (_time, delta) => {
+              const rotationSpeed = (fanSpeed || 1) * 16.0;
+              rotorGroup.rotation.z += delta * rotationSpeed;
+            },
+          });
+        }
+      }
+
+      // =========================================================================
+      // G. MULTI-SENSOR DOME (Motion / Environmental / Gas / Contact Sensors)
       // =========================================================================
       else {
         const isMotionSensor = state.motion !== undefined;

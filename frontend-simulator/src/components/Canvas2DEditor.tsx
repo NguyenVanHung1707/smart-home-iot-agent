@@ -406,13 +406,16 @@ export const Canvas2DEditor: React.FC<Canvas2DEditorProps> = ({
 
       let symbol = '●';
       if (dev.kind === 'light') symbol = '💡';
+      else if (dev.kind === 'fan') symbol = '💨';
       else if (dev.kind === 'aircon') symbol = '❄️';
       else if (dev.kind === 'blind') symbol = '🪟';
       else if (dev.kind === 'speaker') symbol = '🔊';
+      else if (dev.kind === 'display') symbol = '🖥️';
       else if (dev.kind === 'lock') symbol = dev.state?.locked ? '🔒' : '🔓';
       else if (dev.kind === 'sensor') {
         if (dev.state?.temperature !== undefined) symbol = '🌡️';
-        else if (dev.state?.gas_detected !== undefined) symbol = '🔥';
+        else if (dev.state?.gas_detected !== undefined || dev.state?.ppm !== undefined) symbol = '🔥';
+        else if (dev.state?.light_level !== undefined) symbol = '☀️';
         else if (dev.state?.motion !== undefined) symbol = '🚶';
         else if (dev.state?.open !== undefined) symbol = '🚪';
         else symbol = '📡';

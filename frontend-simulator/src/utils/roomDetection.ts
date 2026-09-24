@@ -18,6 +18,7 @@ export const DEFAULT_ROOM_NAMES = [
   'Phòng khách',
   'Phòng ngủ',
   'Phòng bếp',
+  'Lối vào',
   'Phòng tắm',
   'Phòng làm việc',
   'Ban công',
@@ -29,34 +30,58 @@ export const DEFAULT_ROOM_NAMES = [
 export function inferRoomNameFromDevices(devices: Device[]): string | null {
   if (!devices || devices.length === 0) return null;
 
+  // 1. If majority of devices have an explicit room assigned, use that!
+  const roomCounts: Record<string, number> = {};
+  for (const d of devices) {
+    if (d.room && d.room.trim()) {
+      const r = d.room.trim();
+      roomCounts[r] = (roomCounts[r] || 0) + 1;
+    }
+  }
+  let bestRoom: string | null = null;
+  let maxCount = 0;
+  for (const [r, count] of Object.entries(roomCounts)) {
+    if (count > maxCount) {
+      maxCount = count;
+      bestRoom = r;
+    }
+  }
+  if (bestRoom) {
+    return bestRoom;
+  }
+
   const matchKeyword = (kwList: string[]) => {
     return devices.some((d) => {
-      const target = `${d.name || ''} ${d.kind || ''} ${d.room || ''}`.toLowerCase();
+      const target = `${d.name || ''} ${d.kind || ''} ${d.room || ''} ${d.id || ''}`.toLowerCase();
       return kwList.some((kw) => target.includes(kw.toLowerCase()));
     });
   };
 
-  // 1. Bedroom keywords: "ngủ", "đèn ngủ", "bed"
+  // 2. Entrance / Gate keywords: "lối vào", "cổng", "entry", "gate"
+  if (matchKeyword(['lối vào', 'cổng', 'entry', 'gate', 'khoá cổng', 'khóa cổng', 'cửa chính', 'khóa'])) {
+    return 'Lối vào';
+  }
+  // 3. Bedroom keywords: "ngủ", "đèn ngủ", "bed"
   if (matchKeyword(['đèn ngủ', 'ngủ', 'bed'])) {
     return 'Phòng ngủ';
   }
-  // 2. Kitchen / Dining keywords: "bếp", "gas", "kitchen", "ăn", "dining"
+  // 4. Kitchen / Dining keywords: "bếp", "gas", "kitchen", "ăn", "dining"
   if (matchKeyword(['bếp', 'gas', 'kitchen', 'ăn', 'dining'])) {
     return 'Phòng bếp';
   }
-  // 3. Bathroom keywords: "tắm", "bath", "wc", "vệ sinh"
+  // 5. Living room keywords: "khách", "aircon", "loa", "speaker", "tivi", "living", "blind", "rèm"
+  if (matchKeyword(['khách', 'aircon', 'loa', 'speaker', 'tivi', 'tv', 'living', 'blind', 'rèm', 'cửa sổ'])) {
+    return 'Phòng khách';
+  }
+  // 6. Bathroom keywords: "tắm", "bath", "wc", "vệ sinh"
   if (matchKeyword(['tắm', 'bath', 'wc', 'vệ sinh'])) {
     return 'Phòng tắm';
   }
-  // 4. Living room keywords: "khách", "aircon", "loa", "speaker", "cửa chính", "khóa", "tivi", "living"
-  if (matchKeyword(['khách', 'aircon', 'loa', 'speaker', 'cửa chính', 'khóa', 'tivi', 'tv', 'living'])) {
-    return 'Phòng khách';
-  }
-  // 5. Work office keywords: "làm việc", "work", "office"
+  // 7. Work office keywords: "làm việc", "work", "office"
   if (matchKeyword(['làm việc', 'work', 'office'])) {
     return 'Phòng làm việc';
   }
-  // 6. Balcony keywords: "ban công", "balcony"
+  // 8. Balcony keywords: "ban công", "balcony"
   if (matchKeyword(['ban công', 'balcony'])) {
     return 'Ban công';
   }

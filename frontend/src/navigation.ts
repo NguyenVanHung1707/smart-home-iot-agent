@@ -2,6 +2,8 @@ import type { NavItem, Page, Role } from "./types";
 
 export const memberNav: NavItem[] = [
   { page: "Rooms", label: "Phòng & Thiết bị", icon: "house" },
+  { page: "Floorplan2D", label: "Mặt bằng 2D", icon: "desk" },
+  { page: "Floorplan3D", label: "Mô hình 3D", icon: "box" },
   { page: "Presets", label: "Ngữ cảnh", icon: "sparkles" },
   { page: "History", label: "Lịch sử điều khiển", icon: "clock" },
   { page: "Requests", label: "Yêu cầu (An ninh)", icon: "shield" },
@@ -9,6 +11,8 @@ export const memberNav: NavItem[] = [
 
 export const adminNav: NavItem[] = [
   { page: "Rooms", label: "Phòng & Thiết bị", icon: "house" },
+  { page: "Floorplan2D", label: "Mặt bằng 2D", icon: "desk" },
+  { page: "Floorplan3D", label: "Mô hình 3D", icon: "box" },
   { page: "Presets", label: "Ngữ cảnh & Preset", icon: "sparkles" },
   { page: "History", label: "Lịch sử điều khiển", icon: "clock" },
   { page: "Approvals", label: "Phê duyệt (An ninh)", icon: "shield" },

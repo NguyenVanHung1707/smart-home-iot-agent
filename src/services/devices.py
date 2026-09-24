@@ -106,6 +106,7 @@ _HARDWARE_NODE_GROUPS: dict[str, set[str]] = {
     "esp32_main_entrance": {
         "entry-lock",
         "entry-sensor",
+        "entry-rfid",
     },
 }
 
@@ -381,31 +382,44 @@ class DeviceRegistry:
 
     def load(self) -> None:
         with self._lock:
-            source = self.storage_path if self.storage_path.exists() else None
+            raw = None
+            try:
+                from src.database import db_load_devices, is_postgres_enabled
+
+                if is_postgres_enabled():
+                    db_devs = db_load_devices(self.mode)
+                    if db_devs:
+                        raw = db_devs
+            except Exception:
+                raw = None
+
             should_save_seed = False
-            if source is None and self._seed_defaults:
-                if self.mode == "real":
-                    raw = _DEFAULT_REAL_DEVICES
-                    should_save_seed = True
-                else:
-                    if Path("runtime/devices.json").exists():
-                        try:
-                            raw = json.loads(Path("runtime/devices.json").read_text(encoding="utf-8"))
-                            should_save_seed = True
-                        except Exception:
+            if raw is None:
+                source = self.storage_path if self.storage_path.exists() else None
+                if source is None and self._seed_defaults:
+                    if self.mode == "real":
+                        raw = _DEFAULT_REAL_DEVICES
+                        should_save_seed = True
+                    else:
+                        if Path("runtime/devices.json").exists():
+                            try:
+                                raw = json.loads(Path("runtime/devices.json").read_text(encoding="utf-8"))
+                                should_save_seed = True
+                            except Exception:
+                                raw = _DEFAULT_SIMULATOR_DEVICES
+                                should_save_seed = True
+                        else:
                             raw = _DEFAULT_SIMULATOR_DEVICES
                             should_save_seed = True
-                    else:
-                        raw = _DEFAULT_SIMULATOR_DEVICES
-                        should_save_seed = True
-            else:
-                try:
-                    raw = json.loads(source.read_text(encoding="utf-8")) if source else []
-                    if not isinstance(raw, list):
-                        raise ValueError("device storage must contain a list")
-                except (OSError, ValueError, TypeError):
-                    logger.warning("Failed to load device registry from %s", source or self.storage_path, exc_info=True)
-                    raw = []
+                else:
+                    try:
+                        raw = json.loads(source.read_text(encoding="utf-8")) if source else []
+                        if not isinstance(raw, list):
+                            raise ValueError("device storage must contain a list")
+                    except (OSError, ValueError, TypeError):
+                        logger.warning("Failed to load device registry from %s", source or self.storage_path, exc_info=True)
+                        raw = []
+
             self._devices = {
                 item["id"]: Device.model_validate(item) for item in raw if isinstance(item, dict) and item.get("id")
             }
@@ -434,6 +448,14 @@ class DeviceRegistry:
                 self._last_written_version = current_ver
             except OSError:
                 logger.warning("Failed to persist device registry to %s", self.storage_path, exc_info=True)
+
+            try:
+                from src.database import db_save_devices, is_postgres_enabled
+
+                if is_postgres_enabled():
+                    db_save_devices(payload, self.mode)
+            except Exception:
+                pass
 
     def list(self) -> list[Device]:
         with self._lock:

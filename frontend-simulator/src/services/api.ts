@@ -1,6 +1,7 @@
 import { Device, FaultMode, SimulatorState, Wall } from '../types';
 
-const API_BASE = '/api';
+const isEmbedded = typeof window !== 'undefined' && (window.location.pathname.includes('/simulator') || (window.location.port !== '8001' && window.location.port !== '5173'));
+const API_BASE = isEmbedded ? '/simulator-api' : '/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -85,6 +86,6 @@ export const api = {
   },
 
   async getHealth(): Promise<{ status: string; mqtt_connected: boolean; broker: string; topic_prefix: string }> {
-    return request<{ status: string; mqtt_connected: boolean; broker: string; topic_prefix: string }>(`/health`);
+    return request<{ status: string; mqtt_connected: boolean; broker: string; topic_prefix: string }>(`${API_BASE}/health`);
   },
 };

@@ -211,8 +211,8 @@ export const DeviceInspector: React.FC<DeviceInspectorProps> = ({
 
       {/* Main Control Body */}
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        {/* General Power Switch (for light, aircon, speaker) */}
-        {['light', 'aircon', 'speaker'].includes(device.kind) && (
+        {/* General Power Switch (for light, fan, aircon, speaker) */}
+        {['light', 'fan', 'aircon', 'speaker'].includes(device.kind) && (
           <div className="bg-surface-container/60 p-3.5 rounded-xl border border-outline-variant flex items-center justify-between">
             <div className="flex items-center space-x-2.5">
               <div
@@ -241,6 +241,51 @@ export const DeviceInspector: React.FC<DeviceInspectorProps> = ({
             >
               {isPowerOn ? 'Tắt Thiết Bị' : 'Bật Thiết Bị'}
             </button>
+          </div>
+        )}
+
+        {/* Fan Speed Controls */}
+        {device.kind === 'fan' && (
+          <div className="bg-surface-container/60 p-3.5 rounded-xl border border-outline-variant space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-earth-dark">
+              <span className="flex items-center space-x-1.5">
+                <span className="text-sm">💨</span>
+                <span>Tốc độ quạt (Fan Speed)</span>
+              </span>
+              <span className="font-mono font-bold text-primary">
+                {isPowerOn ? `Mức ${state.speed || 1}` : 'Tắt'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-1.5 text-xs font-bold">
+              {[
+                { label: 'Tắt', val: 0 },
+                { label: 'Số 1', val: 1 },
+                { label: 'Số 2', val: 2 },
+                { label: 'Số 3', val: 3 },
+              ].map((item) => {
+                const isSelected = item.val === 0 ? !isPowerOn : (isPowerOn && (state.speed || 1) === item.val);
+                return (
+                  <button
+                    key={item.val}
+                    onClick={async () => {
+                      if (item.val === 0) {
+                        await onPerformAction(device.id, 'turn_off', 0);
+                      } else {
+                        await onPerformAction(device.id, 'set_speed', item.val);
+                      }
+                    }}
+                    className={`py-2 rounded-xl text-center transition-all ${
+                      isSelected
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'bg-surface text-earth-dark border border-outline-variant hover:bg-surface-variant'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 

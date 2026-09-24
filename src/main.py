@@ -18,6 +18,12 @@ from src.services.users import users
 async def lifespan(app: FastAPI):
     settings = get_settings()
     print(f"Starting {settings.app_name} in {settings.app_env} mode")
+    try:
+        from src.database import init_db
+        init_db()
+        users.load()
+    except Exception as e:
+        print(f"Database initialization error: {e}")
     bootstrap_password = users.bootstrap_admin(settings)
     if bootstrap_password:
         print(f"Bootstrap admin created: {settings.bootstrap_admin_email} password={bootstrap_password}")

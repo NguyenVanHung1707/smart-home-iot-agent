@@ -68,9 +68,11 @@ node_modules/
 out/
 .nuxt/
 
-# Build
+# Build / Firmware
 *.pyc
 *.pyo
+*.bin
+xiaozhi_custom_firmware/
 
 # AI logs — tracked structure, ignored content
 .ai-log/*.jsonl
