@@ -9,6 +9,8 @@
 
 > **Homing** là giải pháp nhà thông minh AI Agent điều khiển bằng giọng nói tiếng Việt cục bộ (On-Device / Edge AI). Dự án tích hợp nhận diện tiếng nói (sherpa-onnx Zipformer `sherpa-onnx-zipformer-vi-int8-2025-04-20`), tổng hợp giọng nói (Piper TTS `vi_VN-vais1000-medium`), bộ điều phối suy luận đa bước LangGraph, giao thức MQTT (QoS 1) và phần cứng vi điều khiển ESP32 kèm bộ giả lập 8 thiết bị ảo.
 
+> 📖 **Tài liệu hướng dẫn mới:** Xem [Hướng dẫn tải model AI, chạy Docker và kích hoạt GPU NVIDIA chi tiết tại đây](HUONG_DAN_CAI_DAT_VA_CHAY_MODEL.md).
+
 ---
 
 ## Tính năng Nổi bật
