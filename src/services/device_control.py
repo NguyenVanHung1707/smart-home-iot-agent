@@ -39,13 +39,7 @@ def control_device(
     else:
         active_registry = devices_mod.get_registry(mode)
         if active_registry.get(device_id) is None:
-            for candidate in devices_mod.list_all_active_registries():
-                if candidate.get(device_id) is not None:
-                    active_registry = candidate
-                    cand_mode = getattr(candidate, "mode", None)
-                    if cand_mode in {"real", "simulator"}:
-                        mode = cand_mode
-                    break
+            return None, f"device_not_found_in_{mode}"
 
     identity = command_id or (approval.approval_id if approval is not None else uuid4())
     try:

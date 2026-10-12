@@ -142,7 +142,7 @@ function useHomeAppController(role: Role) {
 
     try {
       if (home.isUsingFallback) {
-        const replyText = assistantReply(clean);
+        const replyText = assistantReply(clean, currentMode);
         addHistory(clean, replyText);
         if (source === "voice") {
           appendVoiceMessage(
@@ -160,13 +160,13 @@ function useHomeAppController(role: Role) {
       const currentSessionId = sessionIdsByModeRef.current[currentMode];
       const data = await processVoice(clean, currentSessionId);
       sessionIdsByModeRef.current[currentMode] = data.session_id;
-      addHistory(clean, data.response || "Hub đã lập kế hoạch và thực thi.");
+      addHistory(clean, data.response || (currentMode === "real" ? "Xiaozhi AI đã tiếp nhận và thực thi." : "Hub đã lập kế hoạch và thực thi."));
 
       if (source === "voice") {
         appendVoiceMessage(
           currentMode,
           { id: createId("u"), role: "user", text: clean },
-          { id: createId("a"), role: "assistant", text: data.response || assistantReply(clean) },
+          { id: createId("a"), role: "assistant", text: data.response || assistantReply(clean, currentMode) },
         );
       }
 
@@ -203,7 +203,7 @@ function useHomeAppController(role: Role) {
 
     try {
       if (home.isUsingFallback) {
-        const replyText = assistantReply(clean);
+        const replyText = assistantReply(clean, currentMode);
         appendChatMessage(
           currentMode,
           { id: createId("cu"), role: "user", text: clean },
@@ -221,7 +221,7 @@ function useHomeAppController(role: Role) {
       appendChatMessage(
         currentMode,
         { id: createId("cu"), role: "user", text: clean },
-        { id: createId("ca"), role: "assistant", text: data.response || assistantReply(clean) },
+        { id: createId("ca"), role: "assistant", text: data.response || assistantReply(clean, currentMode) },
       );
 
       if (ttsEnabled && data.response) {
@@ -463,8 +463,22 @@ function HomeAdminApp({ theme, onToggleTheme, userName, onSignOut }: SessionShel
         />
       ) : null}
 
-      {app.page === "Floorplan2D" ? <FloorplanPage view="2d" /> : null}
-      {app.page === "Floorplan3D" ? <FloorplanPage view="3d" /> : null}
+      {app.page === "Floorplan2D" ? (
+        <FloorplanPage
+          view="2d"
+          dataMode={app.home.dataMode}
+          onCommand={app.handleDeviceCommand}
+          onRefreshDevices={() => app.home.refresh({ silent: true })}
+        />
+      ) : null}
+      {app.page === "Floorplan3D" ? (
+        <FloorplanPage
+          view="3d"
+          dataMode={app.home.dataMode}
+          onCommand={app.handleDeviceCommand}
+          onRefreshDevices={() => app.home.refresh({ silent: true })}
+        />
+      ) : null}
 
       {app.page === "History" ? (
         <HistoryPage
@@ -688,6 +702,7 @@ function HomeAppFrame({
 
       <VoiceOverlay
         open={app.voice.open}
+        dataMode={app.home.dataMode}
         mode={app.voice.mode}
         listening={app.voice.listening}
         busy={app.submittingVoice}

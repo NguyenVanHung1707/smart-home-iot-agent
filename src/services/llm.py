@@ -23,7 +23,7 @@ def get_llm() -> ChatOpenAI:
 
 def _is_local_endpoint(url: str) -> bool:
     hostname = (urlparse(url).hostname or "").casefold()
-    if hostname in {"localhost", "llama", "127.0.0.1", "::1"}:
+    if hostname in {"localhost", "llama", "ollama", "host.docker.internal", "127.0.0.1", "::1"}:
         return True
     try:
         return ip_address(hostname).is_private

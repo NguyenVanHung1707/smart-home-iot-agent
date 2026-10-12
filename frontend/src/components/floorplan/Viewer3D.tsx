@@ -7,10 +7,12 @@ import {
   Box, 
   RotateCcw, 
   Compass, 
+  Layers, 
   Sun, 
   Moon, 
   Thermometer, 
   Activity,
+  Armchair,
   Sparkles
 } from 'lucide-react';
 
@@ -20,6 +22,7 @@ interface Viewer3DProps {
   faults?: Record<string, FaultMode>;
   selectedDeviceId: string | null;
   onSelectDevice: (device: Device | null) => void;
+  dataMode?: 'real' | 'simulator';
 }
 
 interface AnimatedObject {
@@ -175,9 +178,10 @@ function getSharedMaterial<T extends THREE.Material>(key: string, factory: () =>
 export const Viewer3D: React.FC<Viewer3DProps> = ({
   walls,
   devices,
-  faults,
+  faults = {},
   selectedDeviceId,
   onSelectDevice,
+  dataMode = 'simulator',
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -192,6 +196,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
   const devicesGroupRef = useRef<THREE.Group>(new THREE.Group());
   const lightsGroupRef = useRef<THREE.Group>(new THREE.Group());
   const climateOverlayGroupRef = useRef<THREE.Group>(new THREE.Group());
+  const architecturalDecorGroupRef = useRef<THREE.Group>(new THREE.Group());
   
   // Animation registry
   const animatedObjectsRef = useRef<AnimatedObject[]>([]);
@@ -200,8 +205,11 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
   // Lighting & Environment States (Default to 'day' per Terra Organic Design)
   const [lightingMode, setLightingMode] = useState<'night' | 'day'>('day');
 
-  // Layer Visibility State
+  // Layer Visibility States
   const [showClimateOverlay, setShowClimateOverlay] = useState<boolean>(true);
+  const [showDynamicLights, setShowDynamicLights] = useState<boolean>(true);
+  const [showFloorGrid, setShowFloorGrid] = useState<boolean>(true);
+  const [showDecor, setShowDecor] = useState<boolean>(true);
 
   // Tooltip & hover (ref-based mouse pos to avoid React re-renders on pointermove)
   const [hoveredDev, setHoveredDev] = useState<Device | null>(null);
@@ -318,8 +326,8 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
       });
 
       const count = data.devices.length;
-      data.centerX = count > 0 ? sumX / count : (data.minX + data.maxX) / 2 || 0;
-      data.centerY = count > 0 ? sumY / count : (data.minY + data.maxY) / 2 || 0;
+      data.centerX = sumX / count;
+      data.centerY = sumY / count;
 
       if (tempCount > 0) data.avgTemp = Number((sumTemp / tempCount).toFixed(1));
       if (humCount > 0) data.avgHumidity = Number((sumHum / humCount).toFixed(0));
@@ -385,29 +393,28 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
       const avgTemp = tempCount > 0 ? Number((sumTemp / tempCount).toFixed(1)) : undefined;
       const avgHumidity = humCount > 0 ? Number((sumHum / humCount).toFixed(0)) : undefined;
 
-      const xs = room.corners && room.corners.length > 0 ? room.corners.map((c) => c.x) : [0];
-      const ys = room.corners && room.corners.length > 0 ? room.corners.map((c) => c.y) : [0];
+      const xs = room.corners.map((c) => c.x);
+      const ys = room.corners.map((c) => c.y);
       const minX = Math.min(...xs);
       const maxX = Math.max(...xs);
       const minY = Math.min(...ys);
       const maxY = Math.max(...ys);
       const width = Math.max(96, maxX - minX);
       const depth = Math.max(96, maxY - minY);
-      const centroid = room.centroid || { x: (minX + maxX) / 2 || 0, y: (minY + maxY) / 2 || 0 };
 
       return {
         id: room.id,
         room: room.name,
-        corners: room.corners || [],
-        centroid: centroid,
-        area: room.area || 0,
+        corners: room.corners,
+        centroid: room.centroid,
+        area: room.area,
         devices: roomDevs,
         avgTemp,
         avgHumidity,
         hasGasWarning: gasWarn,
         hasMotion: motionActive,
-        centerX: centroid.x,
-        centerY: centroid.y,
+        centerX: room.centroid.x,
+        centerY: room.centroid.y,
         minX,
         maxX,
         minY,
@@ -494,10 +501,8 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
     const mount = mountRef.current;
     if (!mount) return;
 
-    const rect = mount.getBoundingClientRect();
-    const width = Math.max(300, rect.width || mount.clientWidth || 800);
-    const height = Math.max(300, rect.height || mount.clientHeight || 560);
-    const aspect = height > 0 ? width / height : 16 / 9;
+    const width = mount.clientWidth;
+    const height = mount.clientHeight;
 
     // 1. Scene with Dynamic Environmental Background & Fog
     const scene = new THREE.Scene();
@@ -508,7 +513,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
     sceneRef.current = scene;
 
     // 2. Perspective Camera
-    const camera = new THREE.PerspectiveCamera(45, aspect, 1, 3000);
+    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 3000);
     camera.position.set(300, 380, 460);
     cameraRef.current = camera;
 
@@ -603,6 +608,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
     // Add Object Groups
     scene.add(floorPlatesGroupRef.current);
     scene.add(climateOverlayGroupRef.current);
+    scene.add(architecturalDecorGroupRef.current);
     scene.add(wallsGroupRef.current);
     scene.add(devicesGroupRef.current);
     scene.add(lightsGroupRef.current);
@@ -610,9 +616,9 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
     // Resize Handler
     const handleResize = () => {
       if (!mountRef.current || !cameraRef.current || !rendererRef.current) return;
-      const rect = mountRef.current.getBoundingClientRect();
-      const w = Math.max(300, rect.width || mountRef.current.clientWidth || 800);
-      const h = Math.max(300, rect.height || mountRef.current.clientHeight || 560);
+      const w = mountRef.current.clientWidth;
+      const h = mountRef.current.clientHeight;
+      if (w === 0 || h === 0) return;
       cameraRef.current.aspect = w / h;
       cameraRef.current.updateProjectionMatrix();
       rendererRef.current.setSize(w, h);
@@ -652,13 +658,8 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
       resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
       if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
-      if (controlsRef.current) {
-        controlsRef.current.dispose();
-      }
       if (rendererRef.current && rendererRef.current.domElement) {
-        if (mount && mount.contains(rendererRef.current.domElement)) {
-          mount.removeChild(rendererRef.current.domElement);
-        }
+        mount.removeChild(rendererRef.current.domElement);
         rendererRef.current.dispose();
       }
     };
@@ -718,15 +719,26 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
         isNight ? 0x525e58 : 0xe2dcce
       );
       grid.position.set(300, 0, 200);
+      grid.visible = showFloorGrid;
       scene.add(grid);
       gridMeshRef.current = grid;
     }
-  }, [lightingMode]);
+  }, [lightingMode, showFloorGrid]);
+
+  // Update Dynamic Lights Visibility
+  useEffect(() => {
+    lightsGroupRef.current.visible = showDynamicLights;
+  }, [showDynamicLights]);
 
   // Update Climate Overlay Visibility
   useEffect(() => {
     climateOverlayGroupRef.current.visible = showClimateOverlay;
   }, [showClimateOverlay]);
+
+  // Update Decor Visibility
+  useEffect(() => {
+    architecturalDecorGroupRef.current.visible = showDecor;
+  }, [showDecor]);
 
   // =========================================================================
   // 1. ARCHITECTURAL CUTAWAY WALLS & SMART DOOR OPENINGS
@@ -1063,6 +1075,306 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
 
     needsRenderRef.current = true;
   }, [roomTelemetry, lightingMode]);
+
+  // =========================================================================
+  // 3. MINIMALIST ARCHITECTURAL DECOR SILHOUETTES (Design.md Terra Aesthetic)
+  // =========================================================================
+  useEffect(() => {
+    const group = architecturalDecorGroupRef.current;
+    while (group.children.length > 0) {
+      const obj = group.children[0] as THREE.Mesh;
+      group.remove(obj);
+      if (obj.geometry) obj.geometry.dispose();
+    }
+
+    const oakMat = getSharedMaterial('decor_oak', () => new THREE.MeshStandardMaterial({ color: 0xa88358, roughness: 0.7, metalness: 0.05 }));
+    const darkWoodMat = getSharedMaterial('decor_darkwood', () => new THREE.MeshStandardMaterial({ color: 0x5a4836, roughness: 0.65 }));
+    const sofaFabricMat = getSharedMaterial('decor_sofa_fabric', () => new THREE.MeshStandardMaterial({ color: 0xe2dcd2, roughness: 0.9 }));
+    const sageMat = getSharedMaterial('decor_sage', () => new THREE.MeshStandardMaterial({ color: 0x7a9182, roughness: 0.85 }));
+    const terracottaMat = getSharedMaterial('decor_terracotta', () => new THREE.MeshStandardMaterial({ color: 0xb36f56, roughness: 0.8 }));
+    const rugMat = getSharedMaterial('decor_rug', () => new THREE.MeshStandardMaterial({ color: 0xede6db, roughness: 0.95 }));
+    const metalDarkMat = getSharedMaterial('decor_metal_dark', () => new THREE.MeshStandardMaterial({ color: 0x242826, roughness: 0.4, metalness: 0.6 }));
+    const screenMat = getSharedMaterial('decor_screen', () => new THREE.MeshStandardMaterial({ color: 0x181c1a, roughness: 0.2, metalness: 0.8 }));
+    const lampShadeMat = getSharedMaterial('decor_lamp_shade', () => new THREE.MeshStandardMaterial({ color: 0xfbf8f2, roughness: 0.5 }));
+    const lampStemMat = getSharedMaterial('decor_lamp_stem', () => new THREE.MeshStandardMaterial({ color: 0x8a7238, metalness: 0.8, roughness: 0.3 }));
+    const countertopMat = getSharedMaterial('decor_countertop', () => new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.4, metalness: 0.05 }));
+    const cooktopMat = getSharedMaterial('decor_cooktop', () => new THREE.MeshStandardMaterial({ color: 0x222624, roughness: 0.3, metalness: 0.7 }));
+
+    roomTelemetry.forEach((roomData) => {
+      const rName = roomData.room.toLowerCase();
+      const cX = roomData.centerX;
+      const cZ = roomData.centerY;
+
+      // 1. LIVING ROOM (Phòng khách)
+      if (rName.includes('khách') || rName.includes('living')) {
+        // Living room area rug: width ~110 - 135, depth ~80 - 95
+        const rugGeo = new THREE.BoxGeometry(120, 0.2, 88);
+        const rug = new THREE.Mesh(rugGeo, rugMat);
+        rug.position.set(cX, 0.28, cZ + 6);
+        rug.receiveShadow = true;
+        group.add(rug);
+
+        // Comfortable 3-seater sofa: width ~80 - 95, depth ~32 - 38, height ~18 - 22
+        // Seat base
+        const sofaBaseGeo = new THREE.BoxGeometry(86, 7.0, 32);
+        const sofaBase = new THREE.Mesh(sofaBaseGeo, sofaFabricMat);
+        sofaBase.position.set(cX, 4.0, cZ + 24);
+        sofaBase.castShadow = true;
+        group.add(sofaBase);
+
+        // Backrest
+        const sofaBackGeo = new THREE.BoxGeometry(86, 13.0, 8.0);
+        const sofaBack = new THREE.Mesh(sofaBackGeo, sofaFabricMat);
+        sofaBack.position.set(cX, 12.0, cZ + 36);
+        sofaBack.castShadow = true;
+        group.add(sofaBack);
+
+        // Left armrest
+        const armLeftGeo = new THREE.BoxGeometry(6.5, 10.0, 34);
+        const armLeft = new THREE.Mesh(armLeftGeo, sofaFabricMat);
+        armLeft.position.set(cX - 43, 8.0, cZ + 25);
+        armLeft.castShadow = true;
+        group.add(armLeft);
+
+        // Right armrest
+        const armRightGeo = new THREE.BoxGeometry(6.5, 10.0, 34);
+        const armRight = new THREE.Mesh(armRightGeo, sofaFabricMat);
+        armRight.position.set(cX + 43, 8.0, cZ + 25);
+        armRight.castShadow = true;
+        group.add(armRight);
+
+        // Accent cushions (2 cushions: Sage and Terracotta)
+        const cush1Geo = new THREE.BoxGeometry(14, 10, 5.0);
+        const cush1 = new THREE.Mesh(cush1Geo, sageMat);
+        cush1.position.set(cX - 24, 11.5, cZ + 31);
+        group.add(cush1);
+
+        const cush2Geo = new THREE.BoxGeometry(14, 10, 5.0);
+        const cush2 = new THREE.Mesh(cush2Geo, terracottaMat);
+        cush2.position.set(cX + 24, 11.5, cZ + 31);
+        group.add(cush2);
+
+        // Modern coffee table: width ~48 - 60, depth ~28 - 34, height ~9 - 11
+        const tableBaseGeo = new THREE.BoxGeometry(46, 7.5, 26);
+        const tableBase = new THREE.Mesh(tableBaseGeo, darkWoodMat);
+        tableBase.position.set(cX, 4.0, cZ - 2);
+        tableBase.castShadow = true;
+        group.add(tableBase);
+
+        const tableTopGeo = new THREE.BoxGeometry(54, 2.0, 30);
+        const tableTop = new THREE.Mesh(tableTopGeo, oakMat);
+        tableTop.position.set(cX, 8.8, cZ - 2);
+        tableTop.castShadow = true;
+        group.add(tableTop);
+
+        // TV entertainment credenza with TV screen: credenza width ~65 - 80, flat TV screen width ~45 - 55, height ~26
+        const credenzaGeo = new THREE.BoxGeometry(72, 10.0, 18);
+        const credenzaMesh = new THREE.Mesh(credenzaGeo, darkWoodMat);
+        credenzaMesh.position.set(cX, 5.2, cZ - 36);
+        credenzaMesh.castShadow = true;
+        group.add(credenzaMesh);
+
+        // Flat TV Screen
+        const tvStandGeo = new THREE.BoxGeometry(16, 2.0, 8.0);
+        const tvStand = new THREE.Mesh(tvStandGeo, metalDarkMat);
+        tvStand.position.set(cX, 11.2, cZ - 36);
+        group.add(tvStand);
+
+        const tvScreenGeo = new THREE.BoxGeometry(50, 26, 2.5);
+        const tvScreen = new THREE.Mesh(tvScreenGeo, screenMat);
+        tvScreen.position.set(cX, 24.5, cZ - 36);
+        tvScreen.castShadow = true;
+        group.add(tvScreen);
+
+        // Floor plant pot: cylinder radius ~6.5, foliage sphere radius ~8.5, height ~22
+        const potGeo = new THREE.CylinderGeometry(6.5, 5.0, 10, 20);
+        const pot = new THREE.Mesh(potGeo, terracottaMat);
+        pot.position.set(cX + 48, 5.2, cZ + 24);
+        pot.castShadow = true;
+        group.add(pot);
+
+        const plantGeo = new THREE.SphereGeometry(8.5, 16, 16);
+        const plant = new THREE.Mesh(plantGeo, sageMat);
+        plant.position.set(cX + 48, 16.5, cZ + 24);
+        plant.castShadow = true;
+        group.add(plant);
+      }
+
+      // 2. BEDROOM (Phòng ngủ)
+      else if (rName.includes('ngủ') || rName.includes('bed')) {
+        // Bedroom rug under bed: width ~110 - 130, depth ~110 - 130
+        const bedRugGeo = new THREE.BoxGeometry(120, 0.2, 120);
+        const bedRug = new THREE.Mesh(bedRugGeo, rugMat);
+        bedRug.position.set(cX, 0.28, cZ + 4);
+        bedRug.receiveShadow = true;
+        group.add(bedRug);
+
+        // Large double bed: width ~75 - 90, length ~95 - 115, height ~18 - 22
+        // Bed platform frame
+        const bedFrameGeo = new THREE.BoxGeometry(84, 9.0, 106);
+        const bedFrame = new THREE.Mesh(bedFrameGeo, oakMat);
+        bedFrame.position.set(cX, 4.8, cZ + 4);
+        bedFrame.castShadow = true;
+        group.add(bedFrame);
+
+        // Headboard: width ~80 - 95, height ~32 - 36, thickness ~4
+        const headGeo = new THREE.BoxGeometry(88, 34, 4.0);
+        const head = new THREE.Mesh(headGeo, oakMat);
+        head.position.set(cX, 17.2, cZ - 48);
+        head.castShadow = true;
+        group.add(head);
+
+        // Mattress & Duvet
+        const duvetGeo = new THREE.BoxGeometry(78, 8.5, 96);
+        const duvet = new THREE.Mesh(duvetGeo, sofaFabricMat);
+        duvet.position.set(cX, 12.0, cZ + 7);
+        duvet.castShadow = true;
+        group.add(duvet);
+
+        // Pillows (2x)
+        const pillow1Geo = new THREE.BoxGeometry(26, 5.0, 16);
+        const pillow1 = new THREE.Mesh(pillow1Geo, sofaFabricMat);
+        pillow1.position.set(cX - 20, 17.0, cZ - 26);
+        pillow1.castShadow = true;
+        group.add(pillow1);
+
+        const pillow2Geo = new THREE.BoxGeometry(26, 5.0, 16);
+        const pillow2 = new THREE.Mesh(pillow2Geo, sofaFabricMat);
+        pillow2.position.set(cX + 20, 17.0, cZ - 26);
+        pillow2.castShadow = true;
+        group.add(pillow2);
+
+        // Folded duvet runner (Sage Green)
+        const runnerGeo = new THREE.BoxGeometry(78.5, 1.0, 26);
+        const runner = new THREE.Mesh(runnerGeo, sageMat);
+        runner.position.set(cX, 16.5, cZ + 36);
+        group.add(runner);
+
+        // Two bedside nightstands (left & right): width ~16 - 20, depth ~16 - 20, height ~14 with bedside table lamps
+        // Left nightstand
+        const standLeftGeo = new THREE.BoxGeometry(18, 14, 18);
+        const standLeft = new THREE.Mesh(standLeftGeo, darkWoodMat);
+        standLeft.position.set(cX - 54, 7.2, cZ - 40);
+        standLeft.castShadow = true;
+        group.add(standLeft);
+
+        // Left lamp
+        const lampLeftBaseGeo = new THREE.CylinderGeometry(2.8, 3.2, 1.8, 16);
+        const lampLeftBase = new THREE.Mesh(lampLeftBaseGeo, lampStemMat);
+        lampLeftBase.position.set(cX - 54, 15.1, cZ - 40);
+        group.add(lampLeftBase);
+
+        const lampLeftShadeGeo = new THREE.ConeGeometry(4.2, 5.5, 16);
+        const lampLeftShade = new THREE.Mesh(lampLeftShadeGeo, lampShadeMat);
+        lampLeftShade.position.set(cX - 54, 19.5, cZ - 40);
+        group.add(lampLeftShade);
+
+        // Right nightstand
+        const standRightGeo = new THREE.BoxGeometry(18, 14, 18);
+        const standRight = new THREE.Mesh(standRightGeo, darkWoodMat);
+        standRight.position.set(cX + 54, 7.2, cZ - 40);
+        standRight.castShadow = true;
+        group.add(standRight);
+
+        // Right lamp
+        const lampRightBaseGeo = new THREE.CylinderGeometry(2.8, 3.2, 1.8, 16);
+        const lampRightBase = new THREE.Mesh(lampRightBaseGeo, lampStemMat);
+        lampRightBase.position.set(cX + 54, 15.1, cZ - 40);
+        group.add(lampRightBase);
+
+        const lampRightShadeGeo = new THREE.ConeGeometry(4.2, 5.5, 16);
+        const lampRightShade = new THREE.Mesh(lampRightShadeGeo, lampShadeMat);
+        lampRightShade.position.set(cX + 54, 19.5, cZ - 40);
+        group.add(lampRightShade);
+      }
+
+      // 3. KITCHEN & DINING (Phòng bếp & Phòng ăn)
+      else if (rName.includes('bếp') || rName.includes('kitchen') || rName.includes('ăn') || rName.includes('dining')) {
+        // Kitchen island / counter: width ~85 - 110, depth ~32 - 40, height ~18 - 20 (countertop, cooktop stove surface)
+        const islandBaseGeo = new THREE.BoxGeometry(95, 17, 36);
+        const islandBase = new THREE.Mesh(islandBaseGeo, darkWoodMat);
+        islandBase.position.set(cX, 8.8, cZ + 26);
+        islandBase.castShadow = true;
+        group.add(islandBase);
+
+        const islandTopGeo = new THREE.BoxGeometry(100, 2.4, 40);
+        const islandTop = new THREE.Mesh(islandTopGeo, countertopMat);
+        islandTop.position.set(cX, 18.2, cZ + 26);
+        islandTop.castShadow = true;
+        group.add(islandTop);
+
+        // Cooktop stove surface
+        const cooktopGeo = new THREE.BoxGeometry(34, 0.4, 22);
+        const cooktop = new THREE.Mesh(cooktopGeo, cooktopMat);
+        cooktop.position.set(cX - 24, 19.5, cZ + 26);
+        group.add(cooktop);
+
+        // Dining table: width ~60 - 75, depth ~35 - 45, height ~16 with dining chairs
+        const tableBaseGeo = new THREE.BoxGeometry(56, 14, 30);
+        const tableBase = new THREE.Mesh(tableBaseGeo, darkWoodMat);
+        tableBase.position.set(cX, 7.2, cZ - 26);
+        tableBase.castShadow = true;
+        group.add(tableBase);
+
+        const tableTopGeo = new THREE.BoxGeometry(68, 2.0, 42);
+        const tableTop = new THREE.Mesh(tableTopGeo, oakMat);
+        tableTop.position.set(cX, 15.2, cZ - 26);
+        tableTop.castShadow = true;
+        group.add(tableTop);
+
+        // 4 Dining Chairs around table
+        [
+          { x: cX - 20, z: cZ - 8, backZ: cZ - 2 },
+          { x: cX + 20, z: cZ - 8, backZ: cZ - 2 },
+          { x: cX - 20, z: cZ - 44, backZ: cZ - 50 },
+          { x: cX + 20, z: cZ - 44, backZ: cZ - 50 },
+        ].forEach((pos) => {
+          const seatGeo = new THREE.BoxGeometry(12, 8.5, 12);
+          const seat = new THREE.Mesh(seatGeo, oakMat);
+          seat.position.set(pos.x, 4.5, pos.z);
+          seat.castShadow = true;
+          group.add(seat);
+
+          const backGeo = new THREE.BoxGeometry(12, 10, 2.5);
+          const back = new THREE.Mesh(backGeo, oakMat);
+          back.position.set(pos.x, 12.0, pos.backZ);
+          back.castShadow = true;
+          group.add(back);
+        });
+      }
+
+      // 4. OTHER / ENTRY / BALCONY (Lối vào / Hành lang / Ban công)
+      else {
+        // Entry bench: width ~38 - 48, depth ~14 - 18, height ~9 - 11
+        const benchBaseGeo = new THREE.BoxGeometry(42, 8.0, 16);
+        const benchBase = new THREE.Mesh(benchBaseGeo, oakMat);
+        benchBase.position.set(cX - 10, 4.2, cZ - 12);
+        benchBase.castShadow = true;
+        group.add(benchBase);
+
+        const benchCushGeo = new THREE.BoxGeometry(40, 2.0, 15);
+        const benchCush = new THREE.Mesh(benchCushGeo, sofaFabricMat);
+        benchCush.position.set(cX - 10, 9.2, cZ - 12);
+        benchCush.castShadow = true;
+        group.add(benchCush);
+
+        // Ceramic planter pot: cylinder radius ~7.5, foliage radius ~9.5
+        const potGeo = new THREE.CylinderGeometry(7.5, 5.8, 14, 20);
+        const pot = new THREE.Mesh(potGeo, terracottaMat);
+        pot.position.set(cX + 18, 7.2, cZ + 14);
+        pot.castShadow = true;
+        group.add(pot);
+
+        const plantGeo = new THREE.SphereGeometry(9.5, 16, 16);
+        const plant = new THREE.Mesh(plantGeo, sageMat);
+        plant.position.set(cX + 18, 19.5, cZ + 14);
+        plant.castShadow = true;
+        group.add(plant);
+      }
+    });
+
+    needsRenderRef.current = true;
+  }, [roomTelemetry]);
 
   // =========================================================================
   // 4. INTERACTIVE 3D DEVICES, LIGHT FIXTURES, SMART DOORS & CONTROLS
@@ -1758,6 +2070,26 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
         devContainer.add(hoverRing);
       }
 
+      // =========================================================================
+      // H. FAULT WARNING BEACON PILLAR
+      // =========================================================================
+      if (fault !== 'none') {
+        const faultColor = fault === 'offline' ? 0xef4444 : fault === 'timeout' ? 0xf59e0b : 0xa855f7;
+        const faultBeaconGeo = new THREE.ConeGeometry(5.0, 10.0, 16);
+        const faultBeaconMat = new THREE.MeshBasicMaterial({ color: faultColor });
+        const faultBeacon = new THREE.Mesh(faultBeaconGeo, faultBeaconMat);
+        faultBeacon.rotation.x = Math.PI;
+        faultBeacon.position.set(0, 40, 0);
+        devContainer.add(faultBeacon);
+
+        animatedObjectsRef.current.push({
+          id: `fault-beacon-${dev.id}`,
+          update: (time) => {
+            faultBeacon.position.y = 40 + Math.sin(time * 4.0) * 2.5;
+          },
+        });
+      }
+
       devGroup.add(devContainer);
       deviceMeshesMap.current.set(dev.id, devContainer);
     });
@@ -1780,10 +2112,8 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
     if (!mount || !camera || !scene) return;
 
     const rect = mount.getBoundingClientRect();
-    const rw = Math.max(1, rect.width);
-    const rh = Math.max(1, rect.height);
-    mouseVecRef.current.x = ((e.clientX - rect.left) / rw) * 2 - 1;
-    mouseVecRef.current.y = -((e.clientY - rect.top) / rh) * 2 + 1;
+    mouseVecRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouseVecRef.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycasterRef.current.setFromCamera(mouseVecRef.current, camera);
 
@@ -1820,10 +2150,8 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
         const scene = sceneRef.current;
         if (!camera || !scene || !mountRef.current) return;
 
-        const rw = Math.max(1, rect.width);
-        const rh = Math.max(1, rect.height);
-        mouseVecRef.current.x = (mousePosRef.current.x / rw) * 2 - 1;
-        mouseVecRef.current.y = -(mousePosRef.current.y / rh) * 2 + 1;
+        mouseVecRef.current.x = (mousePosRef.current.x / rect.width) * 2 - 1;
+        mouseVecRef.current.y = -(mousePosRef.current.y / rect.height) * 2 + 1;
 
         raycasterRef.current.setFromCamera(mouseVecRef.current, camera);
 
@@ -1857,33 +2185,9 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
   };
 
   return (
-    <div 
-      className="hm-viewer3d-root relative w-full h-full flex flex-col bg-background rounded-xl overflow-hidden shadow-soft border border-outline-variant select-none min-h-0 min-w-0 flex-1"
-      style={{
-        width: "100%",
-        height: "100%",
-        minHeight: "560px",
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+    <div className="relative w-full h-full flex flex-col bg-background rounded-xl overflow-hidden shadow-soft border border-outline-variant select-none min-h-0 min-w-0 flex-1">
       {/* Top 3D Control Bar */}
-      <div 
-        className="hm-viewer3d-toolbar flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 bg-surface border-b border-outline-variant z-10"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "0.5rem",
-          padding: "0.5rem 0.85rem",
-          background: "var(--hm-card-bg, #222924)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          zIndex: 10,
-        }}
-      >
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 bg-surface border-b border-outline-variant z-10">
         <div className="flex items-center flex-wrap gap-2">
           <span className="text-xs font-bold text-primary flex items-center space-x-1.5 bg-primary-light px-2.5 py-1 rounded-lg">
             <Box size={14} />
@@ -1905,6 +2209,13 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
               title="Góc nhìn thẳng từ trên xuống Top-Down"
             >
               Top-Down
+            </button>
+            <button
+              onClick={() => setCameraPreset('front')}
+              className="px-2.5 py-1 text-xs font-semibold rounded-lg hover:bg-surface-variant text-earth-dark transition-all"
+              title="Góc nhìn chính diện Front"
+            >
+              Chính diện
             </button>
           </div>
         </div>
@@ -1943,6 +2254,48 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
             <span className="hidden sm:inline">Khí hậu phòng</span>
           </button>
 
+          {/* Architectural Decor Toggle */}
+          <button
+            onClick={() => setShowDecor((v) => !v)}
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border ${
+              showDecor
+                ? 'bg-primary-light border-primary/30 text-primary'
+                : 'bg-surface-container border-outline-variant text-earth-muted hover:bg-surface-variant'
+            }`}
+            title="Bật/Tắt Nội thất kiến trúc tối giản gợi ý không gian"
+          >
+            <Armchair size={13} />
+            <span className="hidden sm:inline">Nội thất</span>
+          </button>
+
+          {/* Dynamic 3D Lights Toggle */}
+          <button
+            onClick={() => setShowDynamicLights((v) => !v)}
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border ${
+              showDynamicLights
+                ? 'bg-amber-50 border-amber-300 text-amber-800'
+                : 'bg-surface-container border-outline-variant text-earth-muted hover:bg-surface-variant'
+            }`}
+            title="Bật/Tắt Ánh sáng vật lý 3D động"
+          >
+            <Sun size={13} />
+            <span className="hidden sm:inline">Ánh sáng 3D</span>
+          </button>
+
+          {/* Floor Grid Toggle */}
+          <button
+            onClick={() => setShowFloorGrid((v) => !v)}
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border ${
+              showFloorGrid
+                ? 'bg-surface-variant border-outline text-earth-dark'
+                : 'bg-surface-container border-outline-variant text-earth-muted hover:bg-surface-variant'
+            }`}
+            title="Bật/Tắt Lưới toạ độ sàn"
+          >
+            <Layers size={13} />
+            <span className="hidden sm:inline">Lưới sàn</span>
+          </button>
+
           {/* Reset Camera */}
           <button
             onClick={() => setCameraPreset('iso')}
@@ -1960,16 +2313,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({
         ref={mountRef}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        className="hm-viewer3d-canvas-wrap relative flex-1 w-full h-full cursor-grab active:cursor-grabbing min-h-0 min-w-0 overflow-hidden"
-        style={{
-          position: "relative",
-          flex: 1,
-          width: "100%",
-          height: "100%",
-          minHeight: "500px",
-          overflow: "hidden",
-          cursor: "grab",
-        }}
+        className="relative flex-1 w-full h-full cursor-grab active:cursor-grabbing min-h-0 min-w-0 overflow-hidden"
       >
         {/* Floating 3D Hover Tooltip adhering to Terra Organic Design */}
         {hoveredDev && (

@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock, RLock
 from typing import Any
+from uuid import uuid4
 
 from src.models.schemas import Device
 from src.services.device_types import default_capabilities
@@ -442,7 +443,7 @@ class DeviceRegistry:
                 return
             try:
                 self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-                temporary_path = self.storage_path.with_suffix(".tmp")
+                temporary_path = self.storage_path.with_name(f"{self.storage_path.name}.{uuid4().hex}.tmp")
                 temporary_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
                 temporary_path.replace(self.storage_path)
                 self._last_written_version = current_ver

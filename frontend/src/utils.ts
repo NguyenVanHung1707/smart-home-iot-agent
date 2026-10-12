@@ -8,21 +8,37 @@ export function formatTime(date = new Date()) {
   return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function assistantReply(message: string) {
+export function assistantReply(message: string, dataMode: DataMode = "simulator") {
+  const isReal = dataMode === "real";
   const normalized = message.toLowerCase();
   if (normalized.includes("mở") && (normalized.includes("cửa") || normalized.includes("khóa"))) {
-    return "Yêu cầu mở khóa cửa an toàn cần xác thực mã PIN hoặc quản trị viên phê duyệt.";
+    return isReal
+      ? "Trợ lý Xiaozhi: Yêu cầu mở khóa cửa ESP32 an toàn cần xác thực mã PIN hoặc thẻ RFID."
+      : "Local Model: Yêu cầu mở khóa cửa cần xác thực mã PIN hoặc phê duyệt.";
   }
   if (normalized.includes("đèn")) {
-    return "Đã thực hiện điều chỉnh hệ thống đèn theo yêu cầu.";
+    return isReal
+      ? "Trợ lý Xiaozhi: Đã gửi lệnh điều khiển Relay đèn ESP32."
+      : "Local Model: Đã điều chỉnh trạng thái đèn mô phỏng.";
+  }
+  if (normalized.includes("quạt")) {
+    return isReal
+      ? "Trợ lý Xiaozhi: Đã gửi lệnh điều khiển quạt phần cứng thật."
+      : "Local Model: Đã điều chỉnh quạt mô phỏng.";
   }
   if (normalized.includes("điều hòa") || normalized.includes("nhiệt độ")) {
-    return "Đã điều chỉnh nhiệt độ điều hòa phù hợp với không gian.";
+    return isReal
+      ? "Trợ lý Xiaozhi: Cảm biến nhiệt độ phòng khách đang hoạt động ổn định."
+      : "Local Model: Đã điều chỉnh nhiệt độ điều hòa mô phỏng.";
   }
   if (normalized.includes("rèm")) {
-    return "Đã điều khiển đóng/mở rèm cửa.";
+    return isReal
+      ? "Trợ lý Xiaozhi: Đã gửi lệnh rèm cửa qua sóng ESP-NOW."
+      : "Local Model: Đã điều khiển rèm cửa ảo.";
   }
-  return "Đã ghi nhận và xử lý yêu cầu của bạn tại HomeMind Hub.";
+  return isReal
+    ? "Trợ lý Xiaozhi đã ghi nhận và điều phối tới hệ thống phần cứng ESP32."
+    : "Local Model đã ghi nhận và cập nhật trạng thái mô phỏng.";
 }
 
 export function historyStatusLabel(status: HistoryStatus) {

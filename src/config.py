@@ -95,11 +95,11 @@ class Settings(BaseSettings):
 
     # LLM
     openai_api_key: str = ""
-    model_name: str = "qwen2.5-3b-instruct-q4_k_m.gguf"
+    model_name: str = "qwen2.5:7b"
     llm_temperature: float = Field(default=0.1, ge=0.0, le=2.0)
-    llama_base_url: str = "http://llama:8080/v1"
+    llama_base_url: str = "http://ollama:11434/v1"
     llm_enabled: bool = False
-    llm_timeout_seconds: float = Field(default=60.0, ge=1.0, le=120.0)
+    llm_timeout_seconds: float = Field(default=120.0, ge=1.0, le=180.0)
     llm_max_retries: int = Field(default=0, ge=0, le=3)
     llm_max_tool_call_iterations: int = Field(default=3, ge=1, le=8)
     llm_tool_transport: Literal["homeassistant_protocol", "native"] = "homeassistant_protocol"

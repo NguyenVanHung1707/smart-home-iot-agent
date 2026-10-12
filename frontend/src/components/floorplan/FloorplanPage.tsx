@@ -17,16 +17,23 @@ import {
   Minimize2, 
   Cpu, 
   Home, 
-  SlidersHorizontal,
-  Layers,
-  Sparkles
+  Sparkles,
+  Radio
 } from "lucide-react";
 
 interface FloorplanPageProps {
   view?: "2d" | "3d";
+  dataMode?: "real" | "simulator";
+  onCommand?: (device: any, command: any, pin?: string) => Promise<void>;
+  onRefreshDevices?: () => Promise<void>;
 }
 
-export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => {
+export const FloorplanPage: React.FC<FloorplanPageProps> = ({
+  view = "3d",
+  dataMode = "simulator",
+  onCommand,
+  onRefreshDevices,
+}) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [currentView, setCurrentView] = useState<"2d" | "3d">(view);
   const [state, setState] = useState<SimulatorState>({
@@ -45,11 +52,11 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
     setCurrentView(view);
   }, [view]);
 
-  // Load simulator state from backend
+  // Load distinct floorplan state (Real or Simulator)
   const fetchState = useCallback(async (silent = false) => {
     if (!silent) setIsRefreshing(true);
     try {
-      const data = await floorplanApi.getState();
+      const data = await floorplanApi.getState(dataMode);
       setState(data);
     } catch (err) {
       console.warn("Lỗi tải dữ liệu mặt bằng:", err);
@@ -57,16 +64,17 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
       setLoading(false);
       if (!silent) setIsRefreshing(false);
     }
-  }, []);
+  }, [dataMode]);
 
-  // Initial load and polling every 2.5s for real-time telemetry from physical ESP32
+  // Initial load and polling every 2.5s for real-time telemetry
   useEffect(() => {
     fetchState(false);
+    setSelectedDeviceId(null);
     const interval = setInterval(() => {
       fetchState(true);
     }, 2500);
     return () => clearInterval(interval);
-  }, [fetchState]);
+  }, [fetchState, dataMode]);
 
   // Handle Fullscreen
   const toggleFullscreen = () => {
@@ -122,7 +130,14 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
     });
 
     try {
-      await floorplanApi.performAction(deviceId, action, value);
+      if (dataMode === "real" && onCommand && selectedDevice) {
+        await onCommand(selectedDevice, { action, value });
+      } else {
+        await floorplanApi.performAction(deviceId, action, value, dataMode);
+      }
+      if (onRefreshDevices) {
+        await onRefreshDevices();
+      }
     } catch (err) {
       console.error("Lỗi gửi lệnh điều khiển:", err);
       fetchState(true);
@@ -130,6 +145,7 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
   };
 
   const handleSetFault = async (deviceId: string, mode: FaultMode) => {
+    if (dataMode === "real") return;
     setState((prev) => ({
       ...prev,
       faults: { ...prev.faults, [deviceId]: mode },
@@ -142,7 +158,7 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
       ...prev,
       devices: prev.devices.map((d) => (d.id === deviceId ? { ...d, ...updates } : d)),
     }));
-    await floorplanApi.updateDevice(deviceId, updates);
+    await floorplanApi.updateDevice(deviceId, updates, dataMode);
   };
 
   const handleDeleteDevice = async (deviceId: string) => {
@@ -151,7 +167,9 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
       devices: prev.devices.filter((d) => d.id !== deviceId),
     }));
     setSelectedDeviceId(null);
-    await floorplanApi.deleteDevice(deviceId);
+    if (dataMode === "simulator") {
+      await floorplanApi.deleteDevice(deviceId);
+    }
   };
 
   const handleUpdatePosition = async (deviceId: string, x: number, y: number, room?: string) => {
@@ -161,21 +179,25 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
         d.id === deviceId ? { ...d, x, y, ...(room ? { room } : {}) } : d
       ),
     }));
-    await floorplanApi.updateDevice(deviceId, { x, y, ...(room ? { room } : {}) });
+    await floorplanApi.updateDevice(deviceId, { x, y, ...(room ? { room } : {}) }, dataMode);
   };
 
   const handleSaveWalls = async (newWalls: Wall[]) => {
     setState((prev) => ({ ...prev, walls: newWalls }));
-    await floorplanApi.saveWalls(newWalls);
+    await floorplanApi.saveWalls(newWalls, dataMode);
   };
 
   const handleResetLayout = async () => {
-    if (!window.confirm("Bạn có chắc muốn khôi phục mặt bằng và toạ độ thiết bị về mặc định sơ đồ 3 phòng?")) {
+    const confirmMsg =
+      dataMode === "real"
+        ? "Bạn có chắc muốn khôi phục mặt bằng mô hình nhà thật về sơ đồ 3 phòng chuẩn của ESP32?"
+        : "Bạn có chắc muốn khôi phục mặt bằng và toạ độ thiết bị mô phỏng P-140 về mặc định?";
+    if (!window.confirm(confirmMsg)) {
       return;
     }
     setLoading(true);
     try {
-      const resetData = await floorplanApi.resetState();
+      const resetData = await floorplanApi.resetState(dataMode);
       setState(resetData);
       setSelectedDeviceId(null);
       setStatusMessage("Đã khôi phục mặt bằng thành công!");
@@ -186,6 +208,8 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
       setLoading(false);
     }
   };
+
+  const isReal = dataMode === "real";
 
   return (
     <div 
@@ -212,8 +236,8 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
         }}
       >
         <SectionHeading
-          eyebrow="Không gian số"
-          title={currentView === "3d" ? "Mô hình nhà 3D" : "Mặt bằng nhà 2D"}
+          eyebrow={isReal ? "Mô hình nhà thật (ESP32)" : "Không gian mô phỏng (P-140)"}
+          title={currentView === "3d" ? "Mô hình kiến trúc 3D" : "Mặt bằng kiến trúc 2D"}
         />
 
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -276,7 +300,7 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
             type="button"
             className="hm-btn hm-btn-secondary"
             onClick={() => fetchState(false)}
-            title="Làm mới trạng thái từ MQTT & ESP32"
+            title="Làm mới trạng thái từ MQTT"
             disabled={isRefreshing}
             style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.45rem 0.75rem", fontSize: "0.85rem" }}
           >
@@ -288,7 +312,7 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
             type="button"
             className="hm-btn hm-btn-secondary"
             onClick={handleResetLayout}
-            title="Khôi phục mặt bằng chuẩn 3 phòng"
+            title={isReal ? "Khôi phục mặt bằng nhà thật chuẩn" : "Khôi phục mặt bằng P-140"}
             style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0.45rem 0.75rem", fontSize: "0.85rem" }}
           >
             <RotateCcw size={15} />
@@ -310,22 +334,24 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
 
       {/* Status & Summary Badges */}
       <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
+        {/* Flow Mode Indicator Badge */}
         <div 
           className="hm-chip"
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "0.35rem",
-            padding: "0.3rem 0.7rem",
-            background: "rgba(74, 124, 89, 0.15)",
-            color: "var(--hm-primary, #4a7c59)",
+            gap: "0.4rem",
+            padding: "0.3rem 0.8rem",
+            background: isReal ? "rgba(74, 124, 89, 0.22)" : "rgba(59, 130, 246, 0.22)",
+            color: isReal ? "var(--hm-primary, #5c996e)" : "#60a5fa",
             borderRadius: "999px",
-            fontSize: "0.8rem",
-            fontWeight: 600,
+            fontSize: "0.82rem",
+            fontWeight: 700,
+            border: isReal ? "1px solid rgba(74, 124, 89, 0.4)" : "1px solid rgba(59, 130, 246, 0.4)",
           }}
         >
-          <Home size={13} />
-          <span>{detectedRooms.length} Phòng nhận diện ({detectedRooms.map(r => r.name).join(", ") || "3 phòng"})</span>
+          {isReal ? <Radio size={14} className="text-emerald-400" /> : <Sparkles size={14} className="text-sky-400" />}
+          <span>{isReal ? "Luồng Thật: ESP32 Hardware MQTT" : "Luồng Ảo: P-140 3D Sandbox"}</span>
         </div>
 
         <div 
@@ -335,15 +361,33 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
             alignItems: "center",
             gap: "0.35rem",
             padding: "0.3rem 0.7rem",
-            background: "rgba(59, 130, 246, 0.15)",
-            color: "#3b82f6",
+            background: "rgba(255, 255, 255, 0.06)",
+            color: "var(--hm-text, #f5f2eb)",
+            borderRadius: "999px",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+          }}
+        >
+          <Home size={13} />
+          <span>{detectedRooms.length} Phòng ({detectedRooms.map(r => r.name).join(", ") || "3 phòng"})</span>
+        </div>
+
+        <div 
+          className="hm-chip"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.35rem",
+            padding: "0.3rem 0.7rem",
+            background: "rgba(255, 255, 255, 0.06)",
+            color: "var(--hm-text, #f5f2eb)",
             borderRadius: "999px",
             fontSize: "0.8rem",
             fontWeight: 600,
           }}
         >
           <Cpu size={13} />
-          <span>{state.devices.length} Thiết bị IoT</span>
+          <span>{state.devices.length} Thiết bị {isReal ? "thật" : "mô phỏng"}</span>
         </div>
 
         {statusMessage && (
@@ -380,7 +424,7 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
           <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center", color: "var(--hm-muted, #94a39b)" }}>
             <div style={{ textAlign: "center" }}>
               <RefreshCw size={28} className="spin-animation" style={{ marginBottom: "0.5rem" }} />
-              <div>Đang khởi tạo không gian số...</div>
+              <div>Đang khởi tạo không gian {isReal ? "thực tế" : "mô phỏng P-140"}...</div>
             </div>
           </div>
         ) : (
@@ -392,15 +436,16 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
               <Viewer3D
                 walls={state.walls}
                 devices={state.devices}
-                faults={state.faults}
+                faults={isReal ? {} : state.faults}
                 selectedDeviceId={selectedDeviceId}
                 onSelectDevice={(dev) => setSelectedDeviceId(dev ? dev.id : null)}
+                dataMode={dataMode}
               />
             ) : (
               <Canvas2DEditor
                 walls={state.walls}
                 devices={state.devices}
-                faults={state.faults}
+                faults={isReal ? {} : state.faults}
                 selectedDeviceId={selectedDeviceId}
                 onSelectDevice={(dev) => setSelectedDeviceId(dev ? dev.id : null)}
                 onUpdateDevicePosition={handleUpdatePosition}
@@ -432,8 +477,10 @@ export const FloorplanPage: React.FC<FloorplanPageProps> = ({ view = "3d" }) => 
           >
             <DeviceInspector
               device={selectedDevice}
+              fault={isReal ? undefined : state.faults[selectedDevice.id]}
               onClose={() => setSelectedDeviceId(null)}
               onPerformAction={handlePerformAction}
+              onSetFault={isReal ? undefined : handleSetFault}
               onUpdateDevice={handleUpdateDevice}
               onDeleteDevice={handleDeleteDevice}
             />

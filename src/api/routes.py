@@ -34,6 +34,7 @@ from src.services.device_control import control_device
 from src.services.devices import registry, set_active_data_mode
 from src.services.mqtt import get_mqtt_hub
 from src.services.rag import search_device_guides
+from src.services.xiaozhi import xiaozhi_service
 from src.services.speech import (
     InvalidAudioError,
     NoSpeechDetectedError,
@@ -48,26 +49,37 @@ logger = logging.getLogger(__name__)
 
 
 async def _invoke_agent(query: str, session_id: str | None = None, mode: str | None = None) -> dict:
-    """Use the ReAct agent, then fall back without exposing LLM failures."""
+    """Use Xiaozhi AI for real hardware or the Local Model ReAct agent for simulator."""
     conversation_id = session_id or str(uuid4())
+    active_mode = (mode or "simulator").strip().lower()
+
+    if active_mode in {"real", "live", "hardware"}:
+        result = await xiaozhi_service.process(query, session_id=conversation_id)
+        result["session_id"] = conversation_id
+        return result
+
     history = [
         HumanMessage(content=content) if role == "user" else AIMessage(content=content)
-        for role, content in conversations.snapshot(conversation_id, mode=mode).messages
+        for role, content in conversations.snapshot(conversation_id, mode=active_mode).messages
     ]
     state = {
         "messages": [*history, HumanMessage(content=query)],
         "query": query,
         "session_id": conversation_id,
-        "data_mode": mode or "simulator",
+        "data_mode": "simulator",
     }
     try:
         result = await agent.ainvoke(state)
         if result.get("fallback_required"):
             result = await fallback_node(state)
     except Exception:
-        logger.warning("LLM agent unavailable; using deterministic fallback", exc_info=True)
+        logger.warning("Local LLM agent unavailable; using deterministic fallback", exc_info=True)
         result = await fallback_node(state)
     result["session_id"] = conversation_id
+    if "metadata" not in result:
+        result["metadata"] = {}
+    result["metadata"]["ai_engine"] = "local_model"
+    result["metadata"]["mode"] = "simulator"
     conversations.add_turn(conversation_id, query, result.get("response", ""))
     return result
 
@@ -94,7 +106,19 @@ async def agent_status(
     mode: str | None = Query(None),
 ):
     active_mode = (mode or x_data_mode or "simulator").strip().lower()
-    return {"status": "ready", "agent": "Homing LangGraph controller", "mode": active_mode}
+    if active_mode in {"real", "live", "hardware"}:
+        return {
+            "status": "ready",
+            "agent": "Trợ lý AI Xiaozhi Gateway",
+            "ai_engine": "xiaozhi_ai",
+            "mode": "real",
+        }
+    return {
+        "status": "ready",
+        "agent": "Homing Local Model (Qwen/Llama)",
+        "ai_engine": "local_model",
+        "mode": "simulator",
+    }
 
 
 @router.get("/devices", response_model=list[Device])
@@ -388,12 +412,15 @@ async def process_voice(
     set_active_data_mode(active_mode)
     result = await _invoke_agent(request.transcript, request.session_id, mode=active_mode)
     settings = get_settings()
+    ai_engine = "xiaozhi_ai" if active_mode in {"real", "live", "hardware"} else "local_model"
     return {
         "transcript": request.transcript,
         "response": result.get("response", ""),
         "analysis": result.get("analysis", ""),
         "plan": result.get("metadata", {}).get("commands", []),
         "session_id": result["session_id"],
+        "ai_engine": ai_engine,
+        "mode": active_mode,
         "tts": {"engine": "piper", "voice": settings.piper_voice, "enabled": settings.voice_enabled},
     }
 
@@ -447,3 +474,52 @@ async def synthesize_voice(request: VoiceSynthesisRequest) -> StreamingResponse:
 @router.get("/voice/status")
 async def voice_status():
     return await get_speech_runtime().status()
+
+
+# --- Floorplan 2D & 3D Architectural State Routes ---
+
+@router.get("/floorplan")
+async def get_floorplan(
+    x_data_mode: str | None = Header(None, alias="X-Data-Mode"),
+    mode: str | None = Query(None),
+):
+    from src.services.floorplan import get_floorplan_state
+    active_mode = (mode or x_data_mode or "simulator").strip().lower()
+    return get_floorplan_state(active_mode)
+
+
+@router.post("/floorplan/walls")
+async def save_floorplan_walls_route(
+    payload: dict[str, Any] | list[dict[str, Any]],
+    x_data_mode: str | None = Header(None, alias="X-Data-Mode"),
+    mode: str | None = Query(None),
+):
+    from src.services.floorplan import save_floorplan_walls
+    active_mode = (mode or x_data_mode or "simulator").strip().lower()
+    walls = payload.get("walls", []) if isinstance(payload, dict) else payload
+    return save_floorplan_walls(walls, mode=active_mode)
+
+
+@router.put("/floorplan/devices/{device_id}")
+async def update_floorplan_device_route(
+    device_id: str,
+    payload: dict[str, Any],
+    x_data_mode: str | None = Header(None, alias="X-Data-Mode"),
+    mode: str | None = Query(None),
+):
+    from src.services.floorplan import update_floorplan_device
+    active_mode = (mode or x_data_mode or "simulator").strip().lower()
+    updated = update_floorplan_device(device_id, payload, mode=active_mode)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="device_not_found")
+    return updated
+
+
+@router.post("/floorplan/reset")
+async def reset_floorplan_route(
+    x_data_mode: str | None = Header(None, alias="X-Data-Mode"),
+    mode: str | None = Query(None),
+):
+    from src.services.floorplan import reset_floorplan_state
+    active_mode = (mode or x_data_mode or "simulator").strip().lower()
+    return reset_floorplan_state(active_mode)

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useDialogFocus } from "../../hooks/useDialogFocus";
-import type { ChatMessage, VoiceMode } from "../../types";
+import type { ChatMessage, DataMode, VoiceMode } from "../../types";
 import { Icon } from "../shared/Icon";
 import { VoiceComposer } from "./VoiceComposer";
 import { VoiceFallbackInput } from "./VoiceFallbackInput";
@@ -8,6 +8,7 @@ import { VoiceTranscript } from "./VoiceTranscript";
 
 export function VoiceOverlay({
   open,
+  dataMode = "simulator",
   mode,
   listening,
   busy,
@@ -27,6 +28,7 @@ export function VoiceOverlay({
   onSend,
 }: {
   open: boolean;
+  dataMode?: DataMode;
   mode: VoiceMode;
   listening: boolean;
   busy: boolean;
@@ -56,15 +58,19 @@ export function VoiceOverlay({
 
   if (!open) return null;
 
+  const isReal = dataMode === "real";
+  const agentSubTitle = isReal ? "TRỢ LÝ AI XIAOZHI (PHẦN CỨNG THẬT)" : "TRỢ LÝ AI LOCAL MODEL (MÔ PHỎNG)";
+  const assistantName = isReal ? "Trợ lý Xiaozhi (ESP32)" : "Trợ lý Local Model (Qwen/Llama)";
+
   const statusText =
     error ||
     (busy
-      ? "Xiaozhi AI đang phân tích ý định và lập kế hoạch..."
+      ? (isReal ? "Xiaozhi AI đang phân tích ý định và điều khiển ESP32..." : "Local Model đang phân tích ý định và lập kế hoạch...")
       : listening
         ? "Đang lắng nghe tiếng Việt (Realtime VAD)..."
         : voiceStatusReady
-          ? "Chạm vào biểu tượng micro để bắt đầu nói với Xiaozhi."
-          : "Trợ lý Xiaozhi sẵn sàng nhận diện; bạn cũng có thể nhập tay câu lệnh.");
+          ? (isReal ? "Chạm vào biểu tượng micro để bắt đầu nói với Xiaozhi." : "Chạm vào biểu tượng micro để bắt đầu nói với Local Model.")
+          : (isReal ? "Trợ lý Xiaozhi sẵn sàng; lệnh sẽ gửi trực tiếp đến phần cứng ESP32." : "Local Model sẵn sàng nhận diện trên môi trường giả lập."));
 
   const canSend = !busy && Boolean(transcript.trim() || manualValue.trim());
 
@@ -89,9 +95,9 @@ export function VoiceOverlay({
             <Icon name="close" />
           </button>
           <div className="hm-voice-header-info">
-            <span className="hm-voice-sub">TRỢ LÝ AI XIAOZHI</span>
+            <span className="hm-voice-sub">{agentSubTitle}</span>
             <strong id="hm-voice-title">
-              {mode === "chat" ? "Trò chuyện AI Xiaozhi" : "Điều khiển nhà bằng giọng nói"}
+              {mode === "chat" ? (isReal ? "Trò chuyện AI Xiaozhi" : "Trò chuyện Local Model") : "Điều khiển nhà bằng giọng nói"}
             </strong>
           </div>
           <button
@@ -155,7 +161,7 @@ export function VoiceOverlay({
                   <div className="hm-voice-msg-header">
                     <span className="hm-voice-msg-sender">
                       <Icon name={msg.role === "user" ? "mic" : "sparkles"} />
-                      {msg.role === "user" ? "Bạn (Giọng nói / STT)" : "Trợ lý Xiaozhi"}
+                      {msg.role === "user" ? "Bạn (Giọng nói / STT)" : assistantName}
                     </span>
                     <span className="hm-voice-msg-seq">#{idx + 1}</span>
                   </div>
@@ -168,7 +174,7 @@ export function VoiceOverlay({
             <div className="hm-voice-last-reply" aria-live="polite">
               <div className="hm-reply-header">
                 <Icon name="sparkles" />
-                <span>Phản hồi từ Trợ lý Xiaozhi</span>
+                <span>Phản hồi từ {assistantName}</span>
               </div>
               <p>{latestAssistant}</p>
             </div>

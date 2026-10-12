@@ -162,6 +162,9 @@ def on_message(client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage) ->
 
         # Mirror real physical device state: homing/devices/{id}/state (NOT /simulator/)
         if topic.startswith(f"{PREFIX}/devices/") and topic.endswith("/state"):
+            if not os.getenv("SIMULATOR_MIRROR_REAL_HARDWARE", "false").lower() in ("true", "1", "yes"):
+                return
+
             parts = topic.split("/")
             raw_id = parts[-2]
             try:
