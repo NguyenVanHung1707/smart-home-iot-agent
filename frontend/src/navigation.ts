@@ -17,9 +17,7 @@ export const adminNav: NavItem[] = [
   { page: "History", label: "Lịch sử điều khiển", icon: "clock" },
   { page: "Approvals", label: "Phê duyệt (An ninh)", icon: "shield" },
   { page: "Activity", label: "Nhật ký hệ thống", icon: "list" },
-  { page: "Performance", label: "Hiệu năng & Mô hình", icon: "chart" },
   { page: "MQTT", label: "Giám sát MQTT", icon: "mqtt" },
-  { page: "Settings", label: "Cấu hình hệ thống", icon: "settings" },
 ];
 
 export const adminAllowedPages = new Set<Page>(adminNav.map((item) => item.page));

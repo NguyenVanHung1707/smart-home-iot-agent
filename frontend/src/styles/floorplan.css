@@ -1,0 +1,265 @@
+/* ==========================================================================
+   HOMEMIND HUB - NATIVE 2D & 3D FLOORPLAN STYLES
+   Adhering to Terra Organic Design & HomeMind Theme Tokens
+   ========================================================================== */
+
+.hm-floorplan-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  position: relative;
+}
+
+.hm-floorplan-viewport {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 270px);
+  min-height: 580px;
+  background: var(--hm-card-bg, #1a221d);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.hm-floorplan-fullscreen .hm-floorplan-viewport {
+  height: calc(100vh - 120px);
+  border-radius: 12px;
+}
+
+/* 3D Root Container */
+.hm-viewer3d-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--hm-bg, #1e2421);
+  overflow: hidden;
+  user-select: none;
+}
+
+.hm-viewer3d-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--hm-card-bg, #222924);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 10;
+}
+
+.hm-viewer3d-canvas-wrap {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 480px;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.hm-viewer3d-canvas-wrap:active {
+  cursor: grabbing;
+}
+
+/* 2D Canvas Root Container */
+.hm-canvas2d-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--hm-bg, #1e2421);
+  overflow: hidden;
+  user-select: none;
+}
+
+.hm-canvas2d-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--hm-card-bg, #222924);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 10;
+}
+
+/* Button & Tool Groups */
+.hm-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hm-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--hm-muted, #94a39b);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hm-toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--hm-text, #e6eee8);
+}
+
+.hm-toolbar-btn.active {
+  background: var(--hm-primary, #4a7c59);
+  color: #ffffff;
+}
+
+/* Floating Device Inspector Panel */
+.hm-device-inspector-drawer {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  z-index: 50;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
+  border-radius: 16px;
+  overflow-y: auto;
+  background: rgba(26, 34, 29, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  animation: hmFadeIn 0.2s ease-out;
+}
+
+@keyframes hmFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Floating 3D Tooltip */
+.hm-3d-tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background: rgba(26, 34, 29, 0.94);
+  color: var(--hm-text, #e6eee8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.6rem 0.85rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  font-size: 0.82rem;
+  z-index: 30;
+  will-change: transform;
+}
+
+/* ==========================================================================
+   SUPPORT UTILITIES FOR FLOORPLAN COMPONENTS (Tailwind-like polyfill)
+   ========================================================================== */
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-1 { flex: 1 1 0%; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+.overflow-hidden { overflow: hidden; }
+.overflow-y-auto { overflow-y: auto; }
+.select-none { user-select: none; }
+.min-h-0 { min-height: 0px; }
+.min-w-0 { min-width: 0px; }
+.pointer-events-none { pointer-events: none; }
+.cursor-grab { cursor: grab; }
+.cursor-pointer { cursor: pointer; }
+.active\:cursor-grabbing:active { cursor: grabbing; }
+
+.space-x-1 > * + * { margin-left: 0.25rem; }
+.space-x-1\.5 > * + * { margin-left: 0.375rem; }
+.space-x-2 > * + * { margin-left: 0.5rem; }
+.space-y-1 > * + * { margin-top: 0.25rem; }
+.space-y-1\.5 > * + * { margin-top: 0.375rem; }
+.space-y-2 > * + * { margin-top: 0.5rem; }
+.space-y-3 > * + * { margin-top: 0.75rem; }
+.space-y-4 > * + * { margin-top: 1rem; }
+
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+
+.p-1 { padding: 0.25rem; }
+.p-2 { padding: 0.5rem; }
+.p-2\.5 { padding: 0.625rem; }
+.p-3 { padding: 0.75rem; }
+.p-3\.5 { padding: 0.875rem; }
+.p-4 { padding: 1rem; }
+.px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
+.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.px-3\.5 { padding-left: 0.875rem; padding-right: 0.875rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.py-2\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+
+.rounded-lg { border-radius: 8px; }
+.rounded-xl { border-radius: 12px; }
+.rounded-2xl { border-radius: 16px; }
+.rounded-full { border-radius: 9999px; }
+
+.border { border: 1px solid rgba(255, 255, 255, 0.08); }
+.border-b { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.border-t { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.border-outline-variant { border-color: rgba(255, 255, 255, 0.08); }
+
+.bg-surface { background-color: var(--hm-card-bg, #222924); }
+.bg-surface-container { background-color: rgba(0, 0, 0, 0.28); }
+.bg-surface-variant { background-color: rgba(255, 255, 255, 0.08); }
+.bg-background { background-color: var(--hm-bg, #1a221d); }
+.bg-primary { background-color: var(--hm-primary, #4a7c59); }
+.bg-primary-light { background-color: rgba(74, 124, 89, 0.18); }
+
+.text-primary { color: var(--hm-primary, #5c996e); }
+.text-earth-dark { color: var(--hm-text, #f5f2eb); }
+.text-earth-muted { color: var(--hm-muted, #94a39b); }
+.text-white { color: #ffffff; }
+
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.transition-all { transition: all 0.15s ease; }
+
+.shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); }
+.shadow-soft { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22); }
+.backdrop-blur { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.grid { display: grid; }
+.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

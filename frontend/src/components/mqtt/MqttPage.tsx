@@ -225,26 +225,6 @@ export function MqttPage({
                         Gửi lệnh
                       </button>
                     )}
-                    {!isReal ? (
-                      <>
-                        <button
-                          type="button"
-                          className="hm-btn-fault warn"
-                          onClick={() => void onSetFault(device.id, device.online ? "timeout" : "none")}
-                          title="Mô phỏng thiết bị phản hồi trễ > 2.5s gây Timeout"
-                        >
-                          {device.online ? "Timeout" : "Khôi phục"}
-                        </button>
-                        <button
-                          type="button"
-                          className={`hm-btn-fault ${device.online ? "danger" : "success"}`}
-                          onClick={() => void onSetFault(device.id, device.online ? "offline" : "none")}
-                          title="Mô phỏng ngắt kết nối vật lý thiết bị"
-                        >
-                          {device.online ? "Offline" : "Khôi phục"}
-                        </button>
-                      </>
-                    ) : null}
                   </div>
                 </article>
               );

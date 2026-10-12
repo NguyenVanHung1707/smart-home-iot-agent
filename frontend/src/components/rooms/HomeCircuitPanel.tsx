@@ -233,14 +233,14 @@ export function HomeCircuitPanel({
         className={`assistant-mic ${listening ? "is-listening" : ""}`}
         type="button"
         onClick={onVoice}
-        aria-label="Trợ lý giọng nói"
+        aria-label="Trợ lý giọng nói Xiaozhi"
       >
         <span className="mic-orbit">
           <span className="mic-core">
             <Icon name="mic" />
           </span>
         </span>
-        <span>Trợ lý</span>
+        <span>Trợ lý Xiaozhi</span>
       </button>
     </section>
   );

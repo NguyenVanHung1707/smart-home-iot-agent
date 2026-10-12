@@ -59,12 +59,12 @@ export function VoiceOverlay({
   const statusText =
     error ||
     (busy
-      ? "Llama AI đang phân tích ý định và lập kế hoạch..."
+      ? "Xiaozhi AI đang phân tích ý định và lập kế hoạch..."
       : listening
         ? "Đang lắng nghe tiếng Việt (Realtime VAD)..."
         : voiceStatusReady
-          ? "Chạm vào biểu tượng micro để bắt đầu nói."
-          : "Đang sẵn sàng nhận diện; bạn cũng có thể nhập tay câu lệnh.");
+          ? "Chạm vào biểu tượng micro để bắt đầu nói với Xiaozhi."
+          : "Trợ lý Xiaozhi sẵn sàng nhận diện; bạn cũng có thể nhập tay câu lệnh.");
 
   const canSend = !busy && Boolean(transcript.trim() || manualValue.trim());
 
@@ -89,9 +89,9 @@ export function VoiceOverlay({
             <Icon name="close" />
           </button>
           <div className="hm-voice-header-info">
-            <span className="hm-voice-sub">HOMEMIND LOCAL ASSISTANT</span>
+            <span className="hm-voice-sub">TRỢ LÝ AI XIAOZHI</span>
             <strong id="hm-voice-title">
-              {mode === "chat" ? "Trò chuyện thông minh" : "Điều khiển nhà bằng giọng nói"}
+              {mode === "chat" ? "Trò chuyện AI Xiaozhi" : "Điều khiển nhà bằng giọng nói"}
             </strong>
           </div>
           <button
@@ -155,7 +155,7 @@ export function VoiceOverlay({
                   <div className="hm-voice-msg-header">
                     <span className="hm-voice-msg-sender">
                       <Icon name={msg.role === "user" ? "mic" : "sparkles"} />
-                      {msg.role === "user" ? "Bạn (Giọng nói / STT)" : "HomeMind Hub"}
+                      {msg.role === "user" ? "Bạn (Giọng nói / STT)" : "Trợ lý Xiaozhi"}
                     </span>
                     <span className="hm-voice-msg-seq">#{idx + 1}</span>
                   </div>
@@ -168,7 +168,7 @@ export function VoiceOverlay({
             <div className="hm-voice-last-reply" aria-live="polite">
               <div className="hm-reply-header">
                 <Icon name="sparkles" />
-                <span>Phản hồi từ HomeMind Hub</span>
+                <span>Phản hồi từ Trợ lý Xiaozhi</span>
               </div>
               <p>{latestAssistant}</p>
             </div>

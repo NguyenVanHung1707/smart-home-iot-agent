@@ -13,7 +13,7 @@ import {
   Footprints, 
   DoorOpen, 
   BatteryCharging, 
-  AlertTriangle, 
+  AlertTriangle,
   Trash2, 
   X, 
   Sparkles,
@@ -23,20 +23,19 @@ import {
 
 interface DeviceInspectorProps {
   device: Device;
-  fault: FaultMode;
+  fault?: FaultMode;
   onClose: () => void;
   onPerformAction: (deviceId: string, action: string, value?: any) => Promise<void>;
-  onSetFault: (deviceId: string, mode: FaultMode) => Promise<void>;
+  onSetFault?: (deviceId: string, mode: FaultMode) => Promise<void>;
   onUpdateDevice: (deviceId: string, updates: Partial<Device>) => Promise<void>;
   onDeleteDevice: (deviceId: string) => Promise<void>;
 }
 
 export const DeviceInspector: React.FC<DeviceInspectorProps> = ({
   device,
-  fault,
+  fault = 'none',
   onClose,
   onPerformAction,
-  onSetFault,
   onUpdateDevice,
   onDeleteDevice,
 }) => {
@@ -91,10 +90,6 @@ export const DeviceInspector: React.FC<DeviceInspectorProps> = ({
 
   const handlePlayToggle = async () => {
     await onPerformAction(device.id, 'set', { playing: !state.playing });
-  };
-
-  const handleFaultChange = async (mode: FaultMode) => {
-    await onSetFault(device.id, mode);
   };
 
   const handleAutoSimToggle = async () => {
@@ -589,69 +584,6 @@ export const DeviceInspector: React.FC<DeviceInspectorProps> = ({
               }`}
             />
           </button>
-        </div>
-
-        {/* Fault Injection Panel */}
-        <div className="p-3.5 bg-surface-container/60 rounded-xl border border-outline-variant space-y-3">
-          <div>
-            <div className="text-xs font-bold text-earth-dark flex items-center space-x-1.5">
-              <AlertTriangle size={14} className="text-rose-600" />
-              <span>Tiêm Lỗi Thử Nghiệm (Fault Injection)</span>
-            </div>
-            <div className="text-[11px] text-earth-muted">
-              Kiểm tra tính ổn định của hệ thống khi thiết bị gặp sự cố
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              onClick={() => handleFaultChange('none')}
-              className={`p-2 rounded-xl font-bold border transition-all text-left ${
-                fault === 'none'
-                  ? 'bg-primary text-white border-primary shadow-sm'
-                  : 'bg-surface text-earth-dark border-outline-variant hover:bg-surface-variant'
-              }`}
-            >
-              <div>Bình thường (None)</div>
-              <div className="text-[10px] font-normal opacity-80">Hoạt động chuẩn xác</div>
-            </button>
-
-            <button
-              onClick={() => handleFaultChange('offline')}
-              className={`p-2 rounded-xl font-bold border transition-all text-left ${
-                fault === 'offline'
-                  ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
-                  : 'bg-surface text-rose-700 border-outline-variant hover:bg-rose-50'
-              }`}
-            >
-              <div>Mất mạng (Offline)</div>
-              <div className="text-[10px] font-normal opacity-80">Bỏ qua lệnh điều khiển</div>
-            </button>
-
-            <button
-              onClick={() => handleFaultChange('timeout')}
-              className={`p-2 rounded-xl font-bold border transition-all text-left ${
-                fault === 'timeout'
-                  ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                  : 'bg-surface text-amber-700 border-outline-variant hover:bg-amber-50'
-              }`}
-            >
-              <div>Timeout (Mất ACK)</div>
-              <div className="text-[10px] font-normal opacity-80">Không gửi phản hồi</div>
-            </button>
-
-            <button
-              onClick={() => handleFaultChange('error')}
-              className={`p-2 rounded-xl font-bold border transition-all text-left ${
-                fault === 'error'
-                  ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                  : 'bg-surface text-purple-700 border-outline-variant hover:bg-purple-50'
-              }`}
-            >
-              <div>Lỗi (Hardware Err)</div>
-              <div className="text-[10px] font-normal opacity-80">Trả mã lỗi ACK error</div>
-            </button>
-          </div>
         </div>
       </div>
     </div>

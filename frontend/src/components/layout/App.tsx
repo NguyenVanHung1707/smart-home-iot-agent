@@ -14,8 +14,6 @@ import { assistantReply } from "../../utils";
 import { createId } from "../../utils/id";
 import { ActivityPage } from "../admin/ActivityPage";
 import { ApprovalsPage } from "../admin/ApprovalsPage";
-import { PerformancePage } from "../admin/PerformancePage";
-import { SettingsPage } from "../admin/SettingsPage";
 import { FloorplanPage } from "../floorplan/FloorplanPage";
 import { HistoryPage } from "../history/HistoryPage";
 import { MqttPage } from "../mqtt/MqttPage";
@@ -25,7 +23,6 @@ import { RoomsPage } from "../rooms/RoomsPage";
 import { ModePinModal } from "../security/ModePinModal";
 import { PinModal } from "../security/PinModal";
 import { VoiceOverlay } from "../voice/VoiceOverlay";
-import { XiaozhiWebModal } from "../voice/XiaozhiWebModal";
 import { NotificationCenterModal } from "./NotificationCenterModal";
 import { PageShell } from "./PageShell";
 import { Sidebar } from "./Sidebar";
@@ -60,7 +57,6 @@ function useHomeAppController(role: Role) {
   const [requestCancelled, setRequestCancelled] = useState(false);
   const [notifCenterOpen, setNotifCenterOpen] = useState(false);
   const [modePinModalOpen, setModePinModalOpen] = useState(false);
-  const [xiaozhiModalOpen, setXiaozhiModalOpen] = useState(false);
 
   // Tự động kết nối Cloud MQTT (HiveMQ Cloud WSS)
   useEffect(() => {
@@ -371,8 +367,6 @@ function useHomeAppController(role: Role) {
     setCommand,
     setChatCommand,
     setTtsEnabled,
-    xiaozhiModalOpen,
-    setXiaozhiModalOpen,
     setActionError,
     setActionNotice,
     closeVoice,
@@ -490,8 +484,6 @@ function HomeAdminApp({ theme, onToggleTheme, userName, onSignOut }: SessionShel
 
       {app.page === "Activity" ? <ActivityPage activity={app.home.activity} /> : null}
 
-      {app.page === "Performance" ? <PerformancePage /> : null}
-
       {app.page === "MQTT" ? (
         <MqttPage
           devices={app.home.rawDevices}
@@ -501,8 +493,6 @@ function HomeAdminApp({ theme, onToggleTheme, userName, onSignOut }: SessionShel
           onSetFault={app.home.setSimulatorFault}
         />
       ) : null}
-
-      {app.page === "Settings" ? <SettingsPage /> : null}
 
       {app.page === "Presets" ? (
         <PresetsPage
@@ -667,7 +657,6 @@ function HomeAppFrame({
               onToggleTheme={onToggleTheme}
               onToggleSidebar={() => app.setSidebarOpen((open) => !open)}
               onOpenNotifications={() => app.setNotifCenterOpen(true)}
-              onOpenXiaozhi={() => app.setXiaozhiModalOpen(true)}
               onSignOut={onSignOut}
             />
 
@@ -727,44 +716,6 @@ function HomeAppFrame({
         onSuccess={app.handleModePinSuccess}
       />
 
-      {/* Xiaozhi AI Web Assistant Modal */}
-      <XiaozhiWebModal
-        open={app.xiaozhiModalOpen}
-        onClose={() => app.setXiaozhiModalOpen(false)}
-        onDeviceCommand={(deviceId, action) => {
-          app.notify(`Xiaozhi \u0111i\u1ec1u khi\u1ec3n: ${action} \u2794 ${deviceId}`);
-        }}
-      />
-
-      {/* Floating Action Button for Xiaozhi */}
-      <button
-        type="button"
-        onClick={() => app.setXiaozhiModalOpen(true)}
-        className="hm-floating-xiaozhi"
-        title="Tr\u00f2 chuy\u1ec7n v\u1edbi Xiaozhi AI"
-        style={{
-          position: "fixed",
-          bottom: "24px",
-          right: "24px",
-          width: "52px",
-          height: "52px",
-          borderRadius: "50%",
-          border: "none",
-          background: "linear-gradient(135deg, #6366f1, #a855f7)",
-          color: "#fff",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 6px 20px rgba(99, 102, 241, 0.45)",
-          cursor: "pointer",
-          zIndex: 80,
-          transition: "transform 0.2s ease",
-        }}
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z" />
-        </svg>
-      </button>
     </main>
   );
 }
