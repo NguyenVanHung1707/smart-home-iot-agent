@@ -1,0 +1,29 @@
+# Mosquitto Access Control List (ACL) for Homing Hub Smart Home System
+
+# ==============================================================================
+# 1. Homing Hub Backend Service
+# Full administrative read/write access to all homing & homeassistant topics
+# ==============================================================================
+user homing_backend
+topic readwrite homing/#
+topic readwrite homeassistant/#
+topic read $SYS/#
+
+# ==============================================================================
+# 2. ESP32 Physical Hardware Devices (Common device account or per-device user)
+# ==============================================================================
+user esp32_device
+topic read homing/devices/+/command
+topic write homing/devices/+/state
+topic write homing/devices/+/ack
+topic write homing/devices/+/lwt
+topic write homing/nodes/+/lwt
+topic write homing/discovery
+
+# ==============================================================================
+# 3. Read-Only Viewer / Web Dashboard Client (Optional)
+# ==============================================================================
+user homing_viewer
+topic read homing/devices/+/state
+topic read homing/simulator/devices/+/state
+topic read homeassistant/+/+/state

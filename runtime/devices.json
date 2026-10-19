@@ -1,38 +1,24 @@
 [
   {
-    "id": "living-aircon",
-    "name": "Điều hòa phòng khách",
-    "room": "Phòng khách",
-    "kind": "aircon",
-    "online": true,
-    "state": {
-      "power": false,
-      "target_temperature": 25,
-      "mode": "cool"
-    },
-    "capabilities": {}
-  },
-  {
-    "id": "living-blind",
-    "name": "Rèm phòng khách",
-    "room": "Phòng khách",
-    "kind": "blind",
-    "online": true,
-    "state": {
-      "position": 0,
-      "power": false
-    },
-    "capabilities": {}
-  },
-  {
-    "id": "living-display",
-    "name": "Màn hình phòng khách",
-    "room": "Phòng khách",
-    "kind": "display",
+    "id": "bedroom-light",
+    "name": "Đèn phòng ngủ",
+    "room": "Phòng ngủ",
+    "kind": "light",
     "online": false,
     "state": {
-      "power": true,
-      "message": "Homing Hub Ready"
+      "power": false,
+      "brightness": 50
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "entry-lock",
+    "name": "Khóa cửa chính",
+    "room": "Lối vào",
+    "kind": "lock",
+    "online": false,
+    "state": {
+      "locked": false
     },
     "capabilities": {}
   },
@@ -43,8 +29,8 @@
     "kind": "light",
     "online": false,
     "state": {
-      "power": false,
-      "brightness": 100
+      "power": true,
+      "brightness": 65
     },
     "capabilities": {}
   },
@@ -67,32 +53,9 @@
     "kind": "sensor",
     "online": false,
     "state": {
-      "temperature": 31.5,
-      "humidity": 72.0,
+      "temperature": 28.0,
+      "humidity": 65.0,
       "battery": 100
-    },
-    "capabilities": {}
-  },
-  {
-    "id": "bedroom-light",
-    "name": "Đèn phòng ngủ",
-    "room": "Phòng ngủ",
-    "kind": "light",
-    "online": false,
-    "state": {
-      "power": false,
-      "brightness": 100
-    },
-    "capabilities": {}
-  },
-  {
-    "id": "entry-lock",
-    "name": "Khóa cửa chính",
-    "room": "Lối vào",
-    "kind": "lock",
-    "online": false,
-    "state": {
-      "locked": true
     },
     "capabilities": {}
   },
@@ -117,8 +80,10 @@
     "online": true,
     "state": {
       "power": true,
-      "volume": 45,
-      "playing": false
+      "volume": 50,
+      "playing": true,
+      "track": "CHÚNG TA CỦA HIỆN TẠI | SƠN TÙNG M-TP | AUDIO",
+      "media_url": "https://www.youtube.com/watch?v=Z8pMSslQpKM"
     },
     "capabilities": {}
   },
@@ -145,6 +110,44 @@
     "state": {
       "power": false,
       "brightness": 100
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-aircon",
+    "name": "Điều hòa phòng khách",
+    "room": "Phòng khách",
+    "kind": "aircon",
+    "online": true,
+    "state": {
+      "power": true,
+      "target_temperature": 23,
+      "mode": "cool"
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-blind",
+    "name": "Rèm phòng khách",
+    "room": "Phòng khách",
+    "kind": "blind",
+    "online": true,
+    "state": {
+      "position": 100,
+      "power": true
+    },
+    "capabilities": {}
+  },
+  {
+    "id": "living-display",
+    "name": "Màn hình phòng khách",
+    "room": "Phòng khách",
+    "kind": "display",
+    "online": false,
+    "state": {
+      "power": true,
+      "message": "Homing Hub Ready",
+      "text": "Homing Hub Verification OK"
     },
     "capabilities": {}
   }

@@ -261,6 +261,14 @@ class MqttHub:
             client.subscribe(f"{prefix}/simulator/discovery", qos=self.settings.mqtt_qos)
             client.subscribe(f"{prefix}/simulator/discovery/+", qos=self.settings.mqtt_qos)
 
+            try:
+                import src.services.devices as devices_mod
+                from src.services.homeassistant_discovery import publish_all_devices_discovery
+
+                publish_all_devices_discovery(devices_mod.registry.list_all(), mqtt_client=self)
+            except Exception as e:
+                logger.debug("Failed publishing Home Assistant discovery on connect: %s", e)
+
     def _on_message(self, client: Any, userdata: Any, message: Any) -> None:
         try:
             import src.services.devices as devices_mod

@@ -15,6 +15,7 @@ import { createId } from "../../utils/id";
 import { ActivityPage } from "../admin/ActivityPage";
 import { ApprovalsPage } from "../admin/ApprovalsPage";
 import { FloorplanPage } from "../floorplan/FloorplanPage";
+import { SimulatorPage } from "../simulator/SimulatorPage";
 import { HistoryPage } from "../history/HistoryPage";
 import { MqttPage } from "../mqtt/MqttPage";
 import { PresetsPage } from "../rooms/PresetsPage";
@@ -463,21 +464,8 @@ function HomeAdminApp({ theme, onToggleTheme, userName, onSignOut }: SessionShel
         />
       ) : null}
 
-      {app.page === "Floorplan2D" ? (
-        <FloorplanPage
-          view="2d"
-          dataMode={app.home.dataMode}
-          onCommand={app.handleDeviceCommand}
-          onRefreshDevices={() => app.home.refresh({ silent: true })}
-        />
-      ) : null}
-      {app.page === "Floorplan3D" ? (
-        <FloorplanPage
-          view="3d"
-          dataMode={app.home.dataMode}
-          onCommand={app.handleDeviceCommand}
-          onRefreshDevices={() => app.home.refresh({ silent: true })}
-        />
+      {app.page === "Simulator" || app.page === "Floorplan2D" || app.page === "Floorplan3D" ? (
+        <SimulatorPage />
       ) : null}
 
       {app.page === "History" ? (
@@ -576,8 +564,9 @@ function MemberApp({ theme, onToggleTheme, userName, onSignOut }: SessionShellPr
         />
       ) : null}
 
-      {app.page === "Floorplan2D" ? <FloorplanPage view="2d" /> : null}
-      {app.page === "Floorplan3D" ? <FloorplanPage view="3d" /> : null}
+      {app.page === "Simulator" || app.page === "Floorplan2D" || app.page === "Floorplan3D" ? (
+        <SimulatorPage />
+      ) : null}
 
       {app.page === "History" ? (
         <HistoryPage

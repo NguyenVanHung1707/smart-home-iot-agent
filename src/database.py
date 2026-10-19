@@ -58,6 +58,18 @@ class DeviceDB(Base):
     updated_at = Column(String(64), nullable=True)
 
 
+class UserPreferenceDB(Base):
+    __tablename__ = "user_preferences"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(64), index=True, default="default", nullable=False)
+    key = Column(String(128), index=True, nullable=False)
+    value = Column(JSON, nullable=False)
+    category = Column(String(64), default="general", index=True, nullable=False)
+    description = Column(String(255), nullable=True)
+    updated_at = Column(String(64), nullable=False)
+
+
 _engine = None
 _SessionLocal = None
 
@@ -72,6 +84,13 @@ def get_engine():
             connect_args["check_same_thread"] = False
             _engine = create_engine(db_url, connect_args=connect_args)
         else:
+            # Normalize driver for PostgreSQL so both psycopg2 and psycopg v3 work reliably
+            if db_url.startswith("postgresql://"):
+                try:
+                    import psycopg2  # noqa: F401
+                    db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+                except ImportError:
+                    pass
             _engine = create_engine(db_url, pool_pre_ping=True, pool_size=10, max_overflow=20)
         _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
     return _engine
@@ -299,3 +318,79 @@ def db_save_devices(devices: list[dict[str, Any]], mode: str = "simulator") -> N
                         updated_at=datetime.now(UTC).isoformat(),
                     )
                 )
+
+
+def db_save_preference(
+    key: str,
+    value: Any,
+    user_id: str = "default",
+    category: str = "general",
+    description: str | None = None,
+) -> dict[str, Any]:
+    """Upsert a user preference or habit into long-term memory."""
+    now = datetime.now(UTC).isoformat()
+    with get_db_session() as session:
+        row = session.query(UserPreferenceDB).filter_by(user_id=user_id, key=key).first()
+        if row:
+            row.value = value
+            row.category = category
+            if description is not None:
+                row.description = description
+            row.updated_at = now
+        else:
+            row = UserPreferenceDB(
+                user_id=user_id,
+                key=key,
+                value=value,
+                category=category,
+                description=description or "",
+                updated_at=now,
+            )
+            session.add(row)
+        return {
+            "key": key,
+            "value": value,
+            "category": category,
+            "description": description or (row.description if row else ""),
+            "user_id": user_id,
+            "updated_at": now,
+        }
+
+
+def db_get_preferences(user_id: str = "default", category: str | None = None) -> list[dict[str, Any]]:
+    """Retrieve all preferences for the specified user, optionally filtered by category."""
+    with get_db_session() as session:
+        query = session.query(UserPreferenceDB).filter_by(user_id=user_id)
+        if category:
+            query = query.filter_by(category=category)
+        rows = query.order_by(UserPreferenceDB.category, UserPreferenceDB.key).all()
+        return [
+            {
+                "id": r.id,
+                "user_id": r.user_id,
+                "key": r.key,
+                "value": r.value,
+                "category": r.category,
+                "description": r.description,
+                "updated_at": r.updated_at,
+            }
+            for r in rows
+        ]
+
+
+def db_get_preference(key: str, user_id: str = "default") -> Any | None:
+    """Retrieve a single preference value by key."""
+    with get_db_session() as session:
+        row = session.query(UserPreferenceDB).filter_by(user_id=user_id, key=key).first()
+        return row.value if row else None
+
+
+def db_delete_preference(key: str, user_id: str = "default") -> bool:
+    """Delete a preference from long-term memory."""
+    with get_db_session() as session:
+        row = session.query(UserPreferenceDB).filter_by(user_id=user_id, key=key).first()
+        if row:
+            session.delete(row)
+            return True
+        return False
+

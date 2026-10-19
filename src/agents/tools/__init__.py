@@ -18,8 +18,17 @@ from src.agents.tools.display import ControlDisplayInput, control_display
 from src.agents.tools.home_guides import SearchHomeGuidesInput, search_home_guides
 from src.agents.tools.light import ControlLightInput, control_light
 from src.agents.tools.lock import ControlLockInput, control_lock
+from src.agents.tools.internet_search import SearchInternetInput, search_internet
+from src.agents.tools.media_player import PlayYoutubeMusicInput, play_youtube_music
+from src.agents.tools.preferences import (
+    GetUserPreferencesInput,
+    SaveUserPreferenceInput,
+    get_user_preferences,
+    save_user_preference,
+)
 from src.agents.tools.room_devices import GetRoomDevicesInput, get_room_devices
 from src.agents.tools.runtime import CONTROL_TOOL_NAMES, TOOLS, _control_for_kind, get_runtime_tools
+
 from src.agents.tools.scene import ActivateSceneInput, activate_scene
 from src.agents.tools.schedules import GetSchedulesInput, get_schedules
 from src.agents.tools.security import GetSecurityReportInput, get_security_report
@@ -53,10 +62,15 @@ __all__ = [
     "GetSchedulesInput",
     "GetSecurityReportInput",
     "GetSensorDataInput",
+    "GetUserPreferencesInput",
     "ListDeviceTimersInput",
+    "PlayYoutubeMusicInput",
     "RequestUnlockApprovalInput",
+    "SaveUserPreferenceInput",
     "ScalarValue",
+
     "SearchHomeGuidesInput",
+    "SearchInternetInput",
     "SetDeviceTimerInput",
     "TOOLS",
     "_StrictToolInput",
@@ -81,7 +95,9 @@ __all__ = [
     "get_security_report",
     "get_sensor_data",
     "list_device_timers",
+    "play_youtube_music",
     "request_unlock_approval",
     "search_home_guides",
+    "search_internet",
     "set_device_timer",
 ]

@@ -79,6 +79,7 @@ Select the most appropriate tool for each intent:
    - `control_aircon(room, action, mode, target_temperature)`: Control air conditioning power, mode (cool/heat/dry/auto), and temperature (16-30°C).
    - `control_blind(room, action, position)`: Control smart blinds / curtains (0=closed, 100=open).
    - `control_speaker(room, action, volume)`: Control smart speaker power, playback, and volume (0-100).
+   - `play_youtube_music(query, room, action)`: Search YouTube and play music/songs or videos on smart speaker in room ('play', 'pause', 'resume', 'stop').
    - `control_display(room, action, message)`: Control smart screen power and display text messages.
    - `control_lock(room, action)`: Lock doors securely (action="lock"). Direct "unlock" is strictly forbidden on control_lock.
 2. Batch & Scene Tools:
@@ -96,8 +97,13 @@ Select the most appropriate tool for each intent:
    - `get_security_report(include_sensors, include_locks)`: Comprehensive security overview.
    - `get_schedules()`: View automated schedules and timers.
    - `search_home_guides(query)`: Search user manuals and troubleshooting guides for smart devices.
+   - `search_internet(query, max_results)`: Search general Internet information (news, weather, real-world events, general knowledge).
 6. Universal Tool:
    - `control_smart_device(device_id, action, value)`: Low-level targeted device control tool.
+7. Long-Term Memory & User Habit Preferences:
+   - `save_user_preference(key, value, category, description)`: Remember user habits, preferred temperature, favorite music genre, lighting levels, or routines into long-term memory.
+   - `get_user_preferences(category)`: Retrieve saved habits and personal preferences.
+
 
 # HIGH-CONFIDENCE INFORMATION TOOL ROUTING
 - For a whole-home inventory request (for example, asking for all rooms and registered devices), call
@@ -259,11 +265,30 @@ def build_system_prompt(mode: str | None = None, *, profile: str | None = None, 
     )
     env_section = f"\n# CURRENT OPERATING ENVIRONMENT\n- Mode: {env_name}\n- Description: {env_desc}\n"
 
+    memory_section = ""
+    try:
+        from src.database import db_get_preferences
+
+        stored_prefs = db_get_preferences()
+        if stored_prefs:
+            pref_lines = [
+                "\n# USER HABITS & PREFERENCES (LONG-TERM MEMORY)",
+                "The user has saved the following habits and default preferences. Respect these defaults unless instructed otherwise:",
+            ]
+            for p in stored_prefs:
+                desc = f" ({p['description']})" if p.get("description") else ""
+                pref_lines.append(f"- [{p.get('category', 'general')}] {p['key']}: {p['value']}{desc}")
+            memory_section = "\n".join(pref_lines) + "\n"
+    except Exception:
+        memory_section = ""
+
     prompt = (
         _SYSTEM_TEMPLATE.replace("{topology_overview}", topology_overview).replace("{devices_json}", devices_json)
         + env_section
+        + memory_section
     )
     runtime_tools = ", ".join(tool.name for tool in get_runtime_tools()) or "không có"
+
     base_prompt = f"{prompt}\n# RUNTIME TOOLS\n{runtime_tools}\n"
     prompt_with_contract = base_prompt + (
         "# LEGACY TOOL CALL CONTRACT\n"

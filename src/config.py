@@ -149,6 +149,9 @@ class Settings(BaseSettings):
     voice_max_audio_seconds: float = Field(default=20.0, ge=1.0, le=60.0)
     voice_max_audio_bytes: int = Field(default=1_000_000, ge=44, le=10_000_000)
     voice_max_tts_chars: int = Field(default=1000, ge=1, le=5000)
+    voice_fallback_chime_enabled: bool = False
+
+
 
     # Database
     database_url: str = "sqlite:///./data/app.db"

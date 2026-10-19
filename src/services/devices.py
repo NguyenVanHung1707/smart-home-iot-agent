@@ -462,6 +462,11 @@ class DeviceRegistry:
         with self._lock:
             return deepcopy(list(self._devices.values()))
 
+    def list_all(self) -> list[Device]:
+        """Convenience alias for list()"""
+        return self.list()
+
+
     def get(self, device_id: str) -> Device | None:
         with self._lock:
             device = self._devices.get(device_id)

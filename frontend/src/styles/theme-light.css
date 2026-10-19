@@ -36,7 +36,8 @@
 }
 
 :root[data-theme="light"] .hm-sidebar nav button:hover,
-:root[data-theme="light"] .hm-sidebar nav button.active {
+:root[data-theme="light"] .hm-sidebar nav button.active,
+:root[data-theme="light"] .hm-sidebar nav a:hover {
   border-color: #0f8778;
   color: #ffffff;
   background: #0f8778;

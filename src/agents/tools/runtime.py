@@ -18,15 +18,19 @@ from src.agents.tools.display import control_display
 from src.agents.tools.home_guides import search_home_guides
 from src.agents.tools.light import control_light
 from src.agents.tools.lock import control_lock
+from src.agents.tools.preferences import get_user_preferences, save_user_preference
 from src.agents.tools.room_devices import get_room_devices
 from src.agents.tools.scene import activate_scene
 from src.agents.tools.schedules import get_schedules
 from src.agents.tools.security import get_security_report
+from src.agents.tools.internet_search import search_internet
+from src.agents.tools.media_player import play_youtube_music
 from src.agents.tools.sensor_data import get_sensor_data
 from src.agents.tools.smart_device import ControlSmartDeviceInput, control_smart_device
 from src.agents.tools.speaker import control_speaker
 from src.agents.tools.timer import cancel_device_timer, list_device_timers, set_device_timer
 from src.agents.tools.unlock_approval import request_unlock_approval
+
 
 CONTROL_TOOL_NAMES: frozenset[str] = frozenset(
     {
@@ -51,6 +55,7 @@ TOOLS = [
     control_speaker,
     control_display,
     control_lock,
+    play_youtube_music,
     batch_control_devices,
     activate_scene,
     request_unlock_approval,
@@ -62,7 +67,11 @@ TOOLS = [
     get_security_report,
     get_schedules,
     search_home_guides,
+    search_internet,
+    save_user_preference,
+    get_user_preferences,
 ]
+
 
 
 def _control_for_kind(

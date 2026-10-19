@@ -291,8 +291,10 @@ class SimulatorStorage:
                                     "auto_simulate": bool(meta.get("auto_simulate", False)),
                                 }
                             )
-            except Exception:
-                logger.warning("Failed to load seed devices from %s", seed_file, exc_info=True)
+            except (OSError, ValueError, TypeError) as e:
+                logger.info("Could not load seed devices from %s (%s), falling back to defaults.", seed_file, e)
+            except Exception as e:
+                logger.warning("Unexpected error loading seed devices from %s: %s", seed_file, e)
 
         if not devices:
             devices = deepcopy(DEFAULT_DEVICES)

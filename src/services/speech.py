@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import io
+import logging
+import math
+import struct
 import sys
 import threading
 import time
@@ -18,7 +21,31 @@ import httpx
 
 from src.config import Settings, get_settings
 
+logger = logging.getLogger(__name__)
+
 ZIPFORMER_MODEL = "sherpa-onnx-zipformer-vi-int8-2025-04-20"
+
+
+def generate_fallback_chime(duration_s: float = 0.4) -> bytes:
+    """Generate a pleasant 2-tone melodic chime WAV (16kHz, 16-bit mono) as offline fallback."""
+    sample_rate = 16000
+    n_samples = int(sample_rate * duration_s)
+    buf = bytearray()
+    half = n_samples // 2
+    for i in range(n_samples):
+        freq = 523.25 if i < half else 659.25  # Note C5 then E5
+        t = i / sample_rate
+        fade = min(1.0, (n_samples - i) / (sample_rate * 0.08))
+        sample = int(0.25 * 32767.0 * math.sin(2.0 * math.pi * freq * t) * fade)
+        buf.extend(struct.pack("<h", max(-32768, min(32767, sample))))
+
+    out = io.BytesIO()
+    with wave.open(out, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(buf)
+    return out.getvalue()
 
 
 class SpeechError(RuntimeError):
@@ -216,10 +243,29 @@ class SpeechRuntime:
                         data = response.json()
             except (NoSpeechDetectedError, InvalidAudioError):
                 raise
-            except httpx.TimeoutException as exc:
-                raise SpeechTimeoutError("stt_timeout") from exc
-            except httpx.HTTPError as exc:
-                raise SpeechUnavailableError("stt_unavailable") from exc
+            except (httpx.TimeoutException, httpx.HTTPError) as exc:
+                logger.warning("Remote Zipformer STT unreachable (%s). Trying local offline fallback.", exc)
+                try:
+                    info, samples = decode_wav(audio, self.settings)
+                    voiced_samples = apply_vad(samples)
+                    async with self._inference_lock:
+                        text = await asyncio.to_thread(self._transcribe_sync, voiced_samples)
+                    if not text:
+                        raise NoSpeechDetectedError("no_speech_detected")
+                    return Transcription(
+                        text=text,
+                        language="vi",
+                        duration_ms=info.duration_ms,
+                        latency_ms=round((time.perf_counter() - started) * 1000),
+                        model=f"{ZIPFORMER_MODEL}-local-fallback",
+                        vad_applied=True,
+                    )
+                except (NoSpeechDetectedError, InvalidAudioError):
+                    raise
+                except Exception:
+                    if isinstance(exc, httpx.TimeoutException):
+                        raise SpeechTimeoutError("stt_timeout") from exc
+                    raise SpeechUnavailableError("stt_unavailable") from exc
 
             text = str(data.get("text", "")).strip()
             if not text:
@@ -271,10 +317,30 @@ class SpeechRuntime:
                     )
                     response.raise_for_status()
         except httpx.TimeoutException as exc:
+            if getattr(self.settings, "voice_fallback_chime_enabled", False):
+                logger.warning("Piper TTS timeout (%s). Using fallback audio chime.", exc)
+                return Synthesis(
+                    audio=generate_fallback_chime(),
+                    latency_ms=round((time.perf_counter() - started) * 1000),
+                    voice="fallback-chime",
+                )
             raise SpeechTimeoutError("piper_timeout") from exc
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, SpeechUnavailableError) as exc:
+            if getattr(self.settings, "voice_fallback_chime_enabled", False):
+                logger.warning("Piper TTS unreachable (%s). Using fallback audio chime.", exc)
+                return Synthesis(
+                    audio=generate_fallback_chime(),
+                    latency_ms=round((time.perf_counter() - started) * 1000),
+                    voice="fallback-chime",
+                )
             raise SpeechUnavailableError("piper_unavailable") from exc
         if not response.content:
+            if getattr(self.settings, "voice_fallback_chime_enabled", False):
+                return Synthesis(
+                    audio=generate_fallback_chime(),
+                    latency_ms=round((time.perf_counter() - started) * 1000),
+                    voice="fallback-chime",
+                )
             raise SpeechUnavailableError("empty_piper_response")
         return Synthesis(
             audio=response.content,

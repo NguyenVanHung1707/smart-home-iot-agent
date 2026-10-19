@@ -7,8 +7,8 @@ import re
 _NEGATED = re.compile(r"\b(đừng|chớ|khỏi|không cần|đừng có)\b", re.I)
 _HYPOTHETICAL = re.compile(r"\b(nếu|giả sử|ví dụ|nghĩa là|có thể)\b", re.I)
 _QUESTION_OR_STATUS = re.compile(r"[?]|\b(đang|trạng thái|bao nhiêu|thế nào|có .* không)\b", re.I)
-_ACTION = re.compile(r"\b(bật|tắt|mở|đóng|khóa|khoá|kéo|hạ|nâng|chỉnh|đặt|tăng|giảm)\b", re.I)
-_DEVICE = re.compile(r"\b(đèn|máy lạnh|điều hòa|rèm|loa|màn hình|cửa|khóa|chốt)\b", re.I)
+_ACTION = re.compile(r"\b(bật|tắt|mở|đóng|khóa|khoá|kéo|hạ|nâng|chỉnh|đặt|tăng|giảm|phát)\b", re.I)
+_DEVICE = re.compile(r"\b(đèn|máy lạnh|điều hòa|rèm|loa|màn hình|cửa|khóa|chốt|nhạc|bài hát|youtube)\b", re.I)
 _LOCATION = re.compile(r"\b(phòng|lối vào|cửa chính|nhà bếp|ban công)\b", re.I)
 _RELATIVE_COUNTDOWN = re.compile(
     r"(?:\b(?:sau|trong)\s+\d+(?:[.,]\d+)?\s*(?:phút|giờ|tiếng|giây|ngày)(?:\s+nữa)?\b|"

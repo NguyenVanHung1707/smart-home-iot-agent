@@ -6,6 +6,20 @@ from src.models.schemas import Device
 from src.services import natural_language_control as nlu
 
 
+@pytest.fixture(autouse=True)
+def _reset_devices_state():
+    import src.services.devices as devices_mod
+
+    for reg in [devices_mod.registry, devices_mod.get_registry("simulator"), devices_mod.get_registry("real")]:
+        try:
+            reg.update("hub-speaker", {"state": {"volume": 45}}, save=False)
+        except Exception:
+            pass
+
+
+
+
+
 @pytest.mark.parametrize(
     ("query", "device_id", "action", "value"),
     [

@@ -523,3 +523,60 @@ async def reset_floorplan_route(
     from src.services.floorplan import reset_floorplan_state
     active_mode = (mode or x_data_mode or "simulator").strip().lower()
     return reset_floorplan_state(active_mode)
+
+
+# --- Home Assistant Integration Routes ---
+
+@router.post("/integrations/homeassistant/sync")
+async def sync_homeassistant_discovery():
+    """Publish Home Assistant MQTT Discovery configuration for all registered devices."""
+    from src.services.devices import registry
+    from src.services.homeassistant_discovery import publish_all_devices_discovery
+
+    devices = registry.list_all()
+    count = publish_all_devices_discovery(devices)
+    return {
+        "status": "success",
+        "message": f"Đã đồng bộ khám phá Home Assistant cho {len(devices)} thiết bị ({count} thực thể).",
+        "device_count": len(devices),
+        "entities_published": count,
+    }
+
+
+# --- User Preferences & Long-Term Memory Routes ---
+
+@router.get("/preferences")
+async def list_preferences_route(category: str | None = Query(None)):
+    """List all long-term memory preferences for the user."""
+    from src.database import db_get_preferences
+
+    return db_get_preferences(category=category)
+
+
+@router.post("/preferences")
+async def save_preference_route(payload: dict[str, Any]):
+    """Create or update a user habit preference in long-term memory."""
+    key = payload.get("key")
+    if not key:
+        raise HTTPException(status_code=400, detail="missing_key")
+    from src.database import db_save_preference
+
+    return db_save_preference(
+        key=str(key),
+        value=payload.get("value"),
+        category=payload.get("category", "general"),
+        description=payload.get("description"),
+    )
+
+
+@router.delete("/preferences/{key}")
+async def delete_preference_route(key: str):
+    """Delete a user preference from long-term memory."""
+    from src.database import db_delete_preference
+
+    deleted = db_delete_preference(key)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="preference_not_found")
+    return {"status": "success", "deleted_key": key}
+
+

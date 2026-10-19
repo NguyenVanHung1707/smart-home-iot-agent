@@ -58,6 +58,10 @@ artifacts/
 eval/results/
 tmp/
 pytest-cache-files-*/
+backups/
+*.zip
+infra/pwfile
+infra/aclfile
 
 # Docker
 docker-compose.override.yml

@@ -211,12 +211,14 @@ async def agent_node(state: AgentState) -> dict:
             response = await _get_bound_llm().ainvoke(messages)
 
     content = response.content if isinstance(response.content, str) else str(response.content)
+    logger.info("Raw LLM output content: %r", content)
     if injection_attempt:
         return {"messages": [AIMessage(content=_PROMPT_INJECTION_RESPONSE)]}
     try:
-        local_calls = parse_local_tool_calls(content) if settings.llm_local_generic_tool_protocol_enabled else None
-        legacy_call = parse_homeassistant_call(content)
-    except HomeAssistantProtocolError:
+        local_calls = parse_local_tool_calls(content)
+        legacy_call = parse_homeassistant_call(content) if local_calls is None else None
+    except HomeAssistantProtocolError as error:
+        logger.warning("Protocol error encountered: %s", error)
         return {"messages": [AIMessage(content=_PROTOCOL_ERROR_RESPONSE)]}
     if local_calls is not None:
         if absolute_calendar_schedule and any(call["name"] == "set_device_timer" for call in local_calls):
@@ -228,7 +230,8 @@ async def agent_node(state: AgentState) -> dict:
             return {"messages": [AIMessage(content=_DEVICE_COMMAND_LIMIT_RESPONSE)]}
         return {"messages": [AIMessage(content="", tool_calls=local_calls)]}
     if legacy_call is not None:
-        if transport == "homeassistant_protocol" and query and not tool_needed(query):
+        is_control_call = legacy_call.tool_name is None or legacy_call.tool_name in CONTROL_TOOL_NAMES or legacy_call.tool_name == "control_smart_device"
+        if is_control_call and transport == "homeassistant_protocol" and query and not tool_needed(query):
             return {"messages": [AIMessage(content=_PROTOCOL_ERROR_RESPONSE)]}
         return {"messages": [AIMessage(content=""), execute_homeassistant_call(legacy_call)]}
 

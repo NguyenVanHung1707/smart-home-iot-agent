@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1716"/>
+      <stop offset="100%" stop-color="#06090d"/>
+    </linearGradient>
+    <linearGradient id="primaryG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14f1d9"/>
+      <stop offset="100%" stop-color="#0f8778"/>
+    </linearGradient>
+    <linearGradient id="glowG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14f1d9" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#0f8778" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="url(#primaryG)" stroke-width="4" stroke-opacity="0.35"/>
+
+  <!-- Subtle glow -->
+  <circle cx="256" cy="256" r="180" fill="url(#glowG)"/>
+
+  <!-- Smart Home Geometric Roof & Structure -->
+  <path d="M256 108 L112 228 C104 235 104 247 114 253 L132 264 C140 269 150 268 156 261 L256 176 L356 261 C362 268 372 269 380 264 L398 253 C408 247 408 235 400 228 Z" fill="url(#primaryG)"/>
+  
+  <!-- Home Body & Connected Nodes -->
+  <path d="M152 260 L152 388 C152 401 163 412 176 412 L336 412 C349 412 360 401 360 388 L360 260" fill="none" stroke="url(#primaryG)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Central AI Pulse / Core Node -->
+  <circle cx="256" cy="316" r="38" fill="url(#primaryG)"/>
+  <circle cx="256" cy="316" r="62" fill="none" stroke="#14f1d9" stroke-width="8" stroke-dasharray="14 10" opacity="0.8"/>
+  <circle cx="256" cy="316" r="16" fill="#ffffff"/>
+
+  <!-- Connection Links -->
+  <line x1="256" y1="210" x2="256" y2="254" stroke="#14f1d9" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="256" cy="204" r="8" fill="#14f1d9"/>
+</svg>

@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from typing import Any, Final
+
+logger = logging.getLogger(__name__)
 
 from langchain_core.messages import ToolMessage
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -48,20 +51,24 @@ _SERVICE_ACTIONS: Final[dict[str, _ServiceMapping]] = {
 
 
 class _RawCall(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="ignore", frozen=True)
 
     service: str | None = None
     target_device: str | None = None
     service_data: dict[str, ScalarValue] | None = None
     tool: str | None = None
     arguments: dict[str, Any] | None = None
+    name: str | None = None
+    args: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class HomeAssistantCall:
-    device_id: str
-    action: LocalAction
-    value: dict[str, ScalarValue] | None
+    device_id: str | None = None
+    action: LocalAction | None = None
+    value: dict[str, ScalarValue] | None = None
+    tool_name: str | None = None
+    tool_args: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,21 +126,45 @@ def parse_homeassistant_call(content: str) -> HomeAssistantCall | None:
         if _PROTOCOL_MARKER in trimmed:
             raise HomeAssistantProtocolError(reason="protocol block must be entire output")
         return None
+    logger.warning("Raw payload string: %r", match.group("payload"))
     try:
-        raw = _RawCall.model_validate_json(match.group("payload"))
-    except ValidationError as error:
+        payload_dict = json.loads(match.group("payload"))
+        raw = _RawCall.model_validate(payload_dict)
+    except (json.JSONDecodeError, ValidationError) as error:
+        logger.warning("ValidationError on payload: %s", error)
         raise HomeAssistantProtocolError(reason="malformed protocol payload") from error
 
-    if raw.tool is not None:
-        if raw.tool not in {"control_device", "control_smart_device"} and not raw.tool.startswith("control_"):
+    from src.agents.tools.runtime import get_runtime_tools
+
+    runtime_tools = {tool.name: tool for tool in get_runtime_tools()}
+
+    tool_key = raw.tool or raw.name
+    arguments = raw.arguments or raw.args or {}
+    if not tool_key and raw.service and raw.service in runtime_tools:
+        tool_key = raw.service
+        arguments = raw.service_data or arguments
+    if not arguments and isinstance(payload_dict, dict):
+        arguments = {k: v for k, v in payload_dict.items() if k not in {"service", "tool", "name", "target_device"}}
+
+    if tool_key is not None:
+        if tool_key in runtime_tools and not (
+            tool_key.startswith("control_") or tool_key in {"control_device", "control_smart_device"}
+        ):
+            try:
+                validated = runtime_tools[tool_key].args_schema.model_validate(arguments).model_dump(exclude_none=False)
+            except Exception as error:
+                raise HomeAssistantProtocolError(reason=f"tool arguments violate runtime schema: {error}") from error
+            return HomeAssistantCall(tool_name=tool_key, tool_args=validated)
+
+        if tool_key not in {"control_device", "control_smart_device"} and not tool_key.startswith("control_"):
             raise HomeAssistantProtocolError(reason="unknown tool")
-        arguments = raw.arguments or {}
+        arguments = raw.arguments or raw.args or {}
         device_id = arguments.get("device_id")
         action = arguments.get("action")
         if not isinstance(device_id, str) or not isinstance(action, str):
             raise HomeAssistantProtocolError(reason="tool arguments require device_id and action")
         expected_kind = (
-            raw.tool.removeprefix("control_") if raw.tool not in {"control_device", "control_smart_device"} else None
+            tool_key.removeprefix("control_") if tool_key not in {"control_device", "control_smart_device"} else None
         )
         return _validate_runtime_call(device_id, action, arguments.get("value"), expected_kind)
 
@@ -148,8 +179,27 @@ def parse_homeassistant_call(content: str) -> HomeAssistantCall | None:
 
 def execute_homeassistant_call(call: HomeAssistantCall) -> ToolMessage:
     """Execute through the existing safety authority and retain its result."""
-    content = control_smart_device.invoke({"device_id": call.device_id, "action": call.action, "value": call.value})
-    return ToolMessage(name="control_smart_device", tool_call_id="homeassistant-local-call", content=str(content))
+    if call.tool_name:
+        from src.agents.tools.runtime import get_runtime_tools
+
+        runtime_tools = {tool.name: tool for tool in get_runtime_tools()}
+        tool = runtime_tools.get(call.tool_name)
+        if tool:
+            content = tool.invoke(call.tool_args or {})
+            return ToolMessage(name=call.tool_name, tool_call_id="homeassistant-local-call", content=str(content))
+        return ToolMessage(
+            name=call.tool_name,
+            tool_call_id="homeassistant-local-call",
+            content=json.dumps({"status": "failed", "message": f"Tool '{call.tool_name}' not found."}),
+        )
+    if call.device_id and call.action:
+        content = control_smart_device.invoke({"device_id": call.device_id, "action": call.action, "value": call.value})
+        return ToolMessage(name="control_smart_device", tool_call_id="homeassistant-local-call", content=str(content))
+    return ToolMessage(
+        name="control_smart_device",
+        tool_call_id="homeassistant-local-call",
+        content=json.dumps({"status": "failed", "message": "Missing device_id or action."}),
+    )
 
 
 def protocol_example() -> str:

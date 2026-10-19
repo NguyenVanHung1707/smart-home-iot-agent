@@ -89,7 +89,8 @@
   border-radius: 14px;
   background: var(--hm-sidebar-nav-bg);
 }
-.hm-sidebar nav button {
+.hm-sidebar nav button,
+.hm-sidebar nav a {
   display: flex;
   width: 100%;
   align-items: center;
@@ -103,14 +104,28 @@
   font-size: 14px;
   font-weight: 700;
   text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
   transition: all 0.15s ease;
 }
 .hm-sidebar nav button:hover,
-.hm-sidebar nav button.active {
+.hm-sidebar nav button.active,
+.hm-sidebar nav a:hover {
   border-color: rgba(18, 216, 193, 0.72);
   background: var(--hm-sidebar-active-bg);
   color: var(--hm-primary);
   box-shadow: 0 0 0 1px rgba(18, 216, 193, 0.14), 0 0 24px rgba(18, 216, 193, 0.16);
+}
+.hm-sidebar-external-badge {
+  margin-left: auto;
+  font-size: 14px;
+  opacity: 0.75;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.hm-sidebar nav a:hover .hm-sidebar-external-badge {
+  transform: translate(2px, -2px);
+  opacity: 1;
 }
 
 .hm-sidebar-note {

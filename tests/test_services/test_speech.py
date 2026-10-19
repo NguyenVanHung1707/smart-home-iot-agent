@@ -229,3 +229,34 @@ def test_disabled_status_keeps_text_fallback_available():
         "vad": False,
     }
     assert status["limits"]["max_audio_seconds"] == 17
+
+
+def test_generate_fallback_chime_produces_valid_wav():
+    chime_bytes = speech.generate_fallback_chime(duration_s=0.2)
+    assert len(chime_bytes) > 44
+    info = validate_wav(chime_bytes, settings())
+    assert info.duration_ms == 200
+
+
+def test_piper_offline_falls_back_to_chime_when_enabled(monkeypatch):
+    class FailingClient:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return False
+
+        async def post(self, *_args, **_kwargs):
+            raise speech.httpx.ConnectError("Connection refused")
+
+    monkeypatch.setattr(speech.httpx, "AsyncClient", FailingClient)
+    runtime = SpeechRuntime(settings(voice_enabled=True, voice_fallback_chime_enabled=True))
+    result = asyncio.run(runtime.synthesize("Xin chào"))
+    assert result.voice == "fallback-chime"
+    assert len(result.audio) > 0
+    info = validate_wav(result.audio, settings())
+    assert info.duration_ms > 0
+

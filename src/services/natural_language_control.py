@@ -410,7 +410,9 @@ def _clarification_reply(text: str) -> str:
     ):
         return "Mức hoặc giá trị yêu cầu chưa hợp lệ; bạn vui lòng chọn giá trị trong phạm vi thiết bị hỗ trợ."
     if _contains(text, "den", "bong den", "anh sang", "sang len", "toi di"):
-        rooms = list(dict.fromkeys(device.room for device in _active_registry().list() if device.kind == "light"))
+        all_rooms = list(dict.fromkeys(device.room for device in _active_registry().list() if device.kind == "light"))
+        canonical_order = ["Phòng khách", "Phòng ngủ"]
+        rooms = [r for r in canonical_order if r in all_rooms] + [r for r in all_rooms if r not in canonical_order]
         if rooms:
             room_choices = rooms[0].lower() if len(rooms) == 1 else f"{rooms[0].lower()} hay {rooms[1].lower()}"
             if len(rooms) > 2:

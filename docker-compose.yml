@@ -4,7 +4,7 @@ services:
     ports: ["8000:8000"]
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://homing_user:homing_password@postgres:5432/homing_db
+      DATABASE_URL: postgresql+psycopg2://homing_user:homing_password@postgres:5432/homing_db
       MQTT_BROKER: mqtt
       MQTT_ENABLED: "true"
       LLM_ENABLED: ${LLM_ENABLED:-true}
@@ -117,9 +117,9 @@ services:
   # Cloudflare Tunnel for domain lophocso.io.vn (HTTPS & secure remote access)
   cloudflared:
     image: cloudflare/cloudflared:latest
-    profiles: ["tunnel", "cloudflare"]
     restart: unless-stopped
-    command: tunnel --no-autoupdate run
+    network_mode: "service:frontend"
+    command: ["tunnel", "--no-autoupdate", "--protocol", "http2", "run"]
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:

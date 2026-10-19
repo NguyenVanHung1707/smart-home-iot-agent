@@ -46,6 +46,27 @@ export const defaultPresets: HomePreset[] = [
       { id: "leave-lock", deviceId: "entry-lock", action: "lock" },
     ],
   },
+  {
+    id: "guest-welcome",
+    name: "Tiếp khách",
+    icon: "sparkles",
+    actions: [
+      { id: "guest-living-light", deviceId: "living-light", action: "set", value: { power: true, brightness: 100 } },
+      { id: "guest-aircon", deviceId: "living-aircon", action: "set", value: { power: true, target_temperature: 23, mode: "cool" } },
+      { id: "guest-speaker", deviceId: "hub-speaker", action: "set", value: { power: true, volume: 45 } },
+      { id: "guest-blind", deviceId: "living-blind", action: "set", value: { position: 100 } },
+    ],
+  },
+  {
+    id: "emergency-secure",
+    name: "An ninh / Khóa chặt",
+    icon: "shield",
+    actions: [
+      { id: "secure-lock", deviceId: "entry-lock", action: "lock" },
+      { id: "secure-light", deviceId: "living-light", action: "on" },
+      { id: "secure-blind", deviceId: "living-blind", action: "set", value: { position: 0 } },
+    ],
+  },
 ];
 
 export function cloneDefaultPresets() {

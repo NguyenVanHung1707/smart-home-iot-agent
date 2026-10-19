@@ -1,5 +1,5 @@
 export type Role = "member" | "homeadmin";
-export type Page = "Rooms" | "Floorplan2D" | "Floorplan3D" | "Presets" | "History" | "Requests" | "Approvals" | "Activity" | "MQTT";
+export type Page = "Rooms" | "Simulator" | "Floorplan2D" | "Floorplan3D" | "Presets" | "History" | "Requests" | "Approvals" | "Activity" | "MQTT";
 export type ThemeMode = "dark" | "light";
 export type DeviceState = "on" | "off" | "offline" | "warning";
 export type HistoryStatus = "done" | "pending" | "declined";
@@ -120,6 +120,8 @@ export interface NavItem {
   page: Page;
   label: string;
   icon: IconName;
+  isExternal?: boolean;
+  href?: string;
 }
 
 export interface VoiceState {

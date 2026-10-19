@@ -159,8 +159,9 @@ export function SignInPage({
                 type="button"
                 className="hm-quick-login-btn"
                 disabled={busy}
-                onClick={() => void handleQuickLogin("admin@homing.dev", "Admin@123456")}
+                onClick={() => void handleQuickLogin("admin@homing.dev", "admin123456")}
               >
+
                 <div className="hm-quick-login-btn-head">
                   <Icon name="shield" />
                   <span>Chủ nhà</span>

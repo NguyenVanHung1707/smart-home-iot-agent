@@ -65,3 +65,16 @@ createRoot(root).render(
     <Root />
   </React.StrictMode>,
 );
+
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        console.log("HomeMind PWA Service Worker registered successfully:", reg.scope);
+      })
+      .catch((err) => {
+        console.warn("HomeMind Service Worker registration ignored:", err);
+      });
+  });
+}

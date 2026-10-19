@@ -28,18 +28,33 @@ export function Sidebar({
 
       <p className="hm-sidebar-section">Điều khiển</p>
       <nav>
-        {navItems.map((item) => (
-          <button
-            key={item.page}
-            type="button"
-            className={page === item.page ? "active" : ""}
-            aria-current={page === item.page ? "page" : undefined}
-            onClick={() => onNavigate(item.page)}
-          >
-            <Icon name={item.icon} />
-            <span>{item.label}</span>
-          </button>
-        ))}
+        {navItems.map((item) =>
+          item.isExternal ? (
+            <a
+              key={item.label}
+              href={item.href || "/simulator/"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hm-sidebar-nav-btn hm-sidebar-external-btn"
+              title="Mở trang Mô phỏng Simulator (Tab mới)"
+            >
+              <Icon name={item.icon} />
+              <span>{item.label}</span>
+              <span className="hm-sidebar-external-badge" aria-hidden="true">↗</span>
+            </a>
+          ) : (
+            <button
+              key={item.page}
+              type="button"
+              className={page === item.page ? "active" : ""}
+              aria-current={page === item.page ? "page" : undefined}
+              onClick={() => onNavigate(item.page)}
+            >
+              <Icon name={item.icon} />
+              <span>{item.label}</span>
+            </button>
+          )
+        )}
       </nav>
 
       <div className="hm-sidebar-note">
