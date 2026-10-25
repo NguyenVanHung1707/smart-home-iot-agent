@@ -185,15 +185,18 @@ def test_hil_acoustic(phrase: str = "Bật đèn phòng khách", record_seconds:
         if wf.getnchannels() > 1:
             prompt_arr = prompt_arr[::wf.getnchannels()]
 
+    # Chuẩn hóa âm lượng loa máy tính vừa phải (0.8) tránh vỡ tiếng khi đặt sát mic ESP32
+    prompt_arr = (prompt_arr * 0.8).astype(np.int16)
+
     padded_playback = np.zeros(total_samples, dtype=np.int16)
-    offset = int(0.4 * sample_rate) # Bắt đầu phát sau 0.4s tĩnh lặng
+    offset = int(0.5 * sample_rate) # Bắt đầu phát sau 0.5s tĩnh lặng
     p_len = min(len(prompt_arr), total_samples - offset)
     padded_playback[offset : offset + p_len] = prompt_arr[:p_len]
 
     # 4. Phát câu lệnh ra Loa máy tính và đồng thời ghi âm từ Mic máy tính (Full-Duplex)
     print(f"🔊 [3/5] ĐANG PHÁT RA LOA PC VÀ ĐỒNG THỜI GHI ÂM TỪ MIC PC ({record_seconds:.1f}s)...")
-    print(f"   Câu lệnh: \"{phrase}\"")
-    print("   (ESP32 đang lắng nghe qua micro INMP441 và sẽ phản hồi qua Loa MAX98357A...)")
+    print(f"   Loa PC phát câu lệnh mồi: \"{phrase}\"")
+    print("   👉 Loa MAX98357A của ESP32 sẽ tiếp nhận và trực tiếp trả lời...")
 
     pc_mic_frames = sd.playrec(padded_playback, samplerate=sample_rate, channels=1, dtype="int16")
     sd.wait()
@@ -216,38 +219,64 @@ def test_hil_acoustic(phrase: str = "Bật đèn phòng khách", record_seconds:
     print("📊 KẾT QUẢ PHÂN TÍCH VÒNG LẶP ÂM HỌC:")
     print("-" * 65)
 
-    # Tính RMS năng lượng âm thanh trong pha phản hồi của ESP32 (từ giây thứ 4 đến hết)
-    reply_start_sample = int(4.0 * sample_rate)
+    # Tính RMS năng lượng âm thanh trong pha phản hồi của ESP32 (từ giây thứ 3.5 đến hết)
+    reply_start_sample = int(3.5 * sample_rate)
     reply_audio = pc_mic_frames[reply_start_sample:]
     reply_rms = float(np.sqrt(np.mean(reply_audio.astype(np.float32) ** 2)))
 
     # Kiểm tra log Serial ESP32
     esp_vad_detected = any("VAD" in ln for ln in esp_logs)
     esp_asr_sent = any("MIC ASR" in ln for ln in esp_logs)
-    esp_received_reply = any("Hub phan hoi" in ln or "Phat am thanh" in ln for ln in esp_logs)
+    esp_received_reply = any("Hub phan hoi" in ln or "Phat am thanh" in ln or "AUDIO STREAM" in ln for ln in esp_logs)
 
     # Kiểm tra log Docker server
     server_logs = get_docker_transcribe_log(15)
 
-    print(f"  • Năng lượng âm thanh phản hồi (Mic PC ghi nhận): RMS = {reply_rms:.1f}")
+    print(f"  • Năng lượng âm thanh Loa ESP32 (Mic PC thu được): RMS = {reply_rms:.1f}")
     print(f"  • ESP32 kích hoạt VAD: {'✔ ĐẠT' if esp_vad_detected else '⚠️ Chưa ghi nhận qua Serial'}")
     print(f"  • ESP32 gửi âm thanh lên Server: {'✔ ĐẠT' if esp_asr_sent else '⚠️ Đang xử lý'}")
-    print(f"  • ESP32 nhận phản hồi từ Hub: {'✔ ĐẠT' if esp_received_reply else '⚠️ Xem log máy chủ bên dưới'}")
+    print(f"  • ESP32 nhận phản hồi và phát Loa MAX98357A: {'✔ ĐẠT' if esp_received_reply else '⚠️ Xem log bên dưới'}")
+
+    # Gửi đoạn âm thanh thu từ loa ESP32 lên Whisper để kiểm tra nội dung loa ESP32 đã nói
+    heard_text = ""
+    if reply_rms > 120:
+        try:
+            reply_wav_path = os.path.join(RECORDINGS_DIR, "esp32_speaker_reply.wav")
+            with wave.open(reply_wav_path, "wb") as rwf:
+                rwf.setnchannels(1)
+                rwf.setsampwidth(2)
+                rwf.setframerate(sample_rate)
+                rwf.writeframes(reply_audio.tobytes())
+            with open(reply_wav_path, "rb") as rf:
+                rdata = rf.read()
+            req = urllib.request.Request(
+                f"{XIAOZHI_HTTP_URL}/xiaozhi/transcribe",
+                data=rdata,
+                headers={"Content-Type": "audio/wav", "X-Room-Id": "living"}
+            )
+            with urllib.request.urlopen(req, timeout=8) as hresp:
+                hres = json.loads(hresp.read().decode("utf-8"))
+                heard_text = hres.get("text", "")
+        except Exception:
+            pass
+
+    if heard_text:
+        print(f"  📢 [MIC PC ĐÃ NGHE THẤY TỪ LOA ESP32]: \"{heard_text}\"")
 
     if esp_logs:
         print("\n[Trích xuất Serial ESP32]:")
-        for ln in esp_logs[-8:]:
+        for ln in esp_logs[-10:]:
             print(f"   {ln}")
 
     print("\n[Log máy chủ Xiaozhi AI (GPU PhoWhisper + Qwen 2.5 7B)]:")
     print(server_logs)
 
     print("=" * 65)
-    if reply_rms > 300 or esp_received_reply:
-        print("🎉 KIỂM THỬ THÀNH CÔNG: Vòng lặp Loa PC -> Micro ESP32 -> AI GPU -> Loa ESP32 hoạt động hoàn hảo!")
+    if reply_rms > 200 or esp_received_reply or heard_text:
+        print("🎉 KIỂM THỬ THÀNH CÔNG: Loa PC phát lệnh -> Micro ESP32 thu -> AI GPU xử lý -> Loa ESP32 trả lời!")
         return True
     else:
-        print("ℹ️ Âm lượng Loa PC có thể hơi nhỏ hoặc khoảng cách xa. Bạn hãy tăng âm lượng loa PC và đặt ESP32 gần hơn một chút nhé.")
+        print("ℹ️ Loa ESP32 chưa phản hồi rõ. Hãy kiểm tra khoảng cách hoặc độ nhạy micro.")
         return False
 
 

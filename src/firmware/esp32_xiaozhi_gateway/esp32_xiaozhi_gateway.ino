@@ -640,7 +640,7 @@ void initI2S_Microphone() {
       .sample_rate = AUDIO_SAMPLE_RATE,
       .bits_per_sample =
           I2S_BITS_PER_SAMPLE_32BIT, // INMP441 truyen 24-bit trong slot 32-bit
-      .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT, // 64 xung clock/khung chuẩn cho INMP441 (hỗ trợ cả Left lẫn Right)
+      .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT, // INMP441 L/R noi GND -> Thu thuan mono Left
       .communication_format = I2S_COMM_FORMAT_STAND_I2S,
       .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
       .dma_buf_count = 8,
@@ -868,7 +868,7 @@ void micAudioReaderTask(void *param) {
   preRollFilled = false;
   Serial.println("[TASK MIC] WiFi san sang, Mic bat dau lang nghe!");
 
-  static int activeMicChannel = 0; // Mặc định 0: LEFT (Chuẩn INMP441 nối L/R xuống GND)
+  static int activeMicChannel = 0; // Luôn dùng 0: LEFT (Chuẩn INMP441 nối L/R xuống GND)
 
   while (true) {
     if (wavBufStatic == NULL) {
@@ -884,29 +884,24 @@ void micAudioReaderTask(void *param) {
     esp_err_t res = i2s_read(I2S_MIC_PORT, rawSamples, sizeof(rawSamples),
                              &bytesRead, pdMS_TO_TICKS(100));
     if (res == ESP_OK && bytesRead > 0) {
-      int numSamples = bytesRead / sizeof(int32_t);
-      int numPairs = numSamples / 2;
-      if (numPairs <= 0) continue;
+      int numSamples = bytesRead / sizeof(int32_t); // Mono 1 kênh duy nhất
+      if (numSamples <= 0) continue;
 
-      int ch = (activeMicChannel == 1) ? 1 : 0;
-      int64_t sumSamples = 0;
-      for (int i = 0; i < numPairs; i++) {
-        int32_t rawVal = rawSamples[i * 2 + ch] >> 14;
-        sumSamples += rawVal;
+      // 1. Tính DC Mean trong miền 32-bit nguyên bản để bảo toàn 100% độ nhạy
+      int64_t sumL = 0;
+      for (int i = 0; i < numSamples; i++) {
+        sumL += rawSamples[i];
       }
-      int32_t dcMean = sumSamples / numPairs;
+      int32_t dcMean = sumL / numSamples;
 
       int64_t sumSquares = 0;
-
-      // Xử lý mẫu âm thanh 24-bit từ slot 32-bit của INMP441 với gain chuẩn >> 14
-      // Khử thành phần một chiều (DC Offset) để đo chính xác năng lượng âm thanh thực
-      for (int i = 0; i < numPairs; i++) {
-        int32_t rawVal = rawSamples[i * 2 + ch] >> 14;
-        int32_t s = rawVal - dcMean;
+      for (int i = 0; i < numSamples; i++) {
+        // Trừ DC offset ở độ phân giải 32-bit rồi mới chuyển dịch >> 14 (+12dB gain sạch)
+        int32_t s = (rawSamples[i] - dcMean) >> 14;
         if (s > 32767) s = 32767;
         if (s < -32768) s = -32768;
         int16_t sample16 = (int16_t)s;
-        sumSquares += (int64_t)s * (int64_t)s;
+        sumSquares += (int64_t)sample16 * sample16;
 
         // Lưu liên tục vào Pre-roll Ring Buffer để không bao giờ mất chữ đầu
         preRollBuffer[preRollIndex++] = sample16;
@@ -916,15 +911,14 @@ void micAudioReaderTask(void *param) {
         }
       }
 
-      int rms = (int)sqrt(sumSquares / numPairs);
+      int rms = (int)sqrt(sumSquares / numSamples);
 
       // In log định kỳ mỗi 2 giây để kiểm tra phần cứng Micro INMP441
       static unsigned long lastRmsPrint = 0;
       if (millis() - lastRmsPrint > 2000) {
         lastRmsPrint = millis();
-        Serial.printf("[MIC TEST] RMS hien tai: %d (Nguong: %d, Kenh: %s)\n",
-                      rms, VAD_THRESHOLD,
-                      activeMicChannel == 1 ? "RIGHT" : "LEFT");
+        Serial.printf("[MIC TEST] Raw[0]: %d, RMS: %d (Nguong: %d, Kenh: ONLY_LEFT)\n",
+                      rawSamples[0], rms, VAD_THRESHOLD);
       }
 
       // Bộ lọc lọc gai nhiễu: kích hoạt nhanh khi giọng nói duy trì liên tục ít nhất 2 frame (~16ms)
@@ -958,7 +952,7 @@ void micAudioReaderTask(void *param) {
         }
 
         // 2. Tiếp tục thu trực tiếp từ I2S - Tự động phát hiện điểm ngắt câu thông minh (End-Of-Speech EOS)
-        int32_t rawChunk[128 * 2]; // 128 cặp stereo (256 int32_t)
+        int32_t rawChunk[128]; // Mono 128 mẫu (128 int32_t)
         unsigned long recordStart = millis();
         int consecutiveSilenceChunks = 0;
         const size_t minSpeechSamples = 16000; // Tối thiểu 1.0 giây bản thu (tránh ngắt sớm do tiếng động lạ)
@@ -966,29 +960,26 @@ void micAudioReaderTask(void *param) {
 
         while (samplesRecorded < targetSamples && (millis() - recordStart < maxRecordMs)) {
           size_t bytesReadNow = 0;
-          size_t toReadPairs = min((size_t)128, targetSamples - samplesRecorded);
-          esp_err_t err = i2s_read(I2S_MIC_PORT, rawChunk, toReadPairs * 2 * sizeof(int32_t), &bytesReadNow, pdMS_TO_TICKS(100));
+          size_t toRead = min((size_t)128, targetSamples - samplesRecorded);
+          esp_err_t err = i2s_read(I2S_MIC_PORT, rawChunk, toRead * sizeof(int32_t), &bytesReadNow, pdMS_TO_TICKS(100));
           if (err == ESP_OK && bytesReadNow > 0) {
-            int chunkPairs = (bytesReadNow / sizeof(int32_t)) / 2;
-            int ch = (activeMicChannel == 1) ? 1 : 0;
+            int count = bytesReadNow / sizeof(int32_t);
             int64_t chunkSum = 0;
-            for (int s = 0; s < chunkPairs; s++) {
-              int32_t rawVal = rawChunk[s * 2 + ch] >> 14;
-              chunkSum += rawVal;
+            for (int s = 0; s < count; s++) {
+              chunkSum += rawChunk[s];
             }
-            int32_t chunkMean = chunkSum / (chunkPairs > 0 ? chunkPairs : 1);
+            int32_t chunkMean = chunkSum / (count > 0 ? count : 1);
 
             int64_t chunkSquares = 0;
-            for (int s = 0; s < chunkPairs && samplesRecorded < targetSamples; s++) {
-              int32_t rawVal = rawChunk[s * 2 + ch] >> 14;
-              int32_t sample = rawVal - chunkMean;
+            for (int s = 0; s < count && samplesRecorded < targetSamples; s++) {
+              int32_t sample = (rawChunk[s] - chunkMean) >> 14;
               if (sample > 32767) sample = 32767;
               if (sample < -32768) sample = -32768;
               pcmData[samplesRecorded++] = (int16_t)sample;
               chunkSquares += (int64_t)sample * (int64_t)sample;
             }
 
-            int chunkRms = (int)sqrt(chunkSquares / (chunkPairs > 0 ? chunkPairs : 1));
+            int chunkRms = (int)sqrt(chunkSquares / (count > 0 ? count : 1));
             // Phát hiện khoảng lặng sau khi nói xong (EOS)
             // Ngưỡng im lặng: dưới 65% VAD_THRESHOLD
             if (chunkRms < (VAD_THRESHOLD * 0.65)) {
