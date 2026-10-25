@@ -104,25 +104,26 @@ Hệ thống sử dụng **3 vi điều khiển ESP32** (chuẩn ESP32 DevKit WR
 
 ### 4.1. Bảng nối chân chi tiết
 
-| Module / Linh kiện | Chân Module | Chân ESP32 (GPIO) | Mức điện áp | Ghi chú / Chức năng |
-| :--- | :--- | :--- | :--- | :--- |
-| **Mạch công suất MAX98357A** | VIN / VCC | **VIN (5V)** | 5V | Cấp nguồn 5V cho loa công suất 3W |
-| | GND | GND | 0V | Nối Mass |
-| | BCLK | **GPIO 26** | I2S0 BCLK | Bit Clock truyền âm thanh |
-| | LRC | **GPIO 25** | I2S0 LRC | Left/Right Word Select Clock |
-| | DIN | **GPIO 27** | I2S0 DATA | Dữ liệu âm thanh phát ra loa |
-| | GAIN | GND / Để trống | - | Mặc định Gain 9dB hoặc 12dB |
-| | SD_MODE | Để trống | - | Tự động bật kênh |
-| **Micro số I2S INMP441** | VDD | **3.3V** | 3.3V | **Chỉ dùng 3.3V, không dùng 5V** |
-| | GND | GND | 0V | Nối Mass chung |
-| | SCK | **GPIO 14** | I2S1 SCK | Serial Clock thu âm thanh |
-| | WS | **GPIO 15** | I2S1 WS | Word Select thu âm thanh |
-| | SD | **GPIO 32** | I2S1 SD | Serial Data Input vào ESP32 |
-| | L/R | GND | 0V | Nối GND để chọn kênh Left |
-| **Màn hình OLED 1.3" I2C** | VCC | 3.3V | 3.3V | Nguồn màn hình hiển thị biểu cảm AI |
-| | GND | GND | 0V | Nối Mass |
-| | SDA | **GPIO 21** | I2C SDA | Dữ liệu màn hình |
-| | SCL | **GPIO 22** | I2C SCL | Xung clock màn hình |
+| Module / Linh kiện | Chân Module | Chân ESP32 Classic (WROOM) | Chân ESP32-S3 | Mức điện áp | Ghi chú / Chức năng |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **LED Onboard** | Tích hợp trên bo | **GPIO 2** | **GPIO 48** | Logic 3.3V | Đèn LED phản hồi trạng thái kết nối & truyền audio |
+| **Mạch công suất MAX98357A** | VIN / VCC | **VIN (5V)** | **5V** | 5V | Cấp nguồn 5V cho loa công suất 3W |
+| | GND | GND | GND | 0V | Nối Mass |
+| | BCLK | **GPIO 26** | **GPIO 15** | I2S0 BCLK | Bit Clock truyền âm thanh |
+| | LRC | **GPIO 25** | **GPIO 16** | I2S0 LRC | Left/Right Word Select Clock |
+| | DIN | **GPIO 27** | **GPIO 7** | I2S0 DATA | Dữ liệu âm thanh phát ra loa |
+| | GAIN | GND / Để trống | GND / Để trống | - | Mặc định Gain 9dB hoặc 12dB |
+| | SD_MODE | Để trống | Để trống | - | Tự động bật kênh |
+| **Micro số I2S INMP441** | VDD | **3.3V** | **3.3V** | 3.3V | **Chỉ dùng 3.3V, không dùng 5V** |
+| | GND | GND | GND | 0V | Nối Mass chung |
+| | SCK | **GPIO 14** | **GPIO 5** | I2S1 SCK | Serial Clock thu âm thanh |
+| | WS | **GPIO 15** | **GPIO 4** | I2S1 WS | Word Select thu âm thanh |
+| | SD | **GPIO 32** | **GPIO 6** | I2S1 SD | Serial Data Input vào ESP32 |
+| | L/R | GND | GND | 0V | Nối GND để chọn kênh Left |
+| **Màn hình OLED 1.3" I2C** | VCC | 3.3V | 3.3V | 3.3V | Nguồn màn hình hiển thị biểu cảm AI |
+| | GND | GND | GND | 0V | Nối Mass |
+| | SDA | **GPIO 21** | **GPIO 17** | I2C SDA | Dữ liệu màn hình |
+| | SCL | **GPIO 22** | **GPIO 18** | I2C SCL | Xung clock màn hình |
 
 ### 4.2. Cấu hình firmware quan trọng (đầu file .ino)
 

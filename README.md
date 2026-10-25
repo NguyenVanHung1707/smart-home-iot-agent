@@ -82,20 +82,48 @@ Hệ thống được thiết kế với kiến trúc **Serverless & Hybrid Clou
 - Tự động đóng chốt an toàn sau 5 giây mở cửa.
 
 ### 3.4. Trí tuệ nhân tạo (AI Agent 30+ Tools)
-- Ra lệnh ngôn ngữ tự nhiên tiếng Việt:
+- Ra lệnh ngôn ngữ tự nhiên tiếng Việt mượt mà:
   - *"Bật đèn phòng khách và mở quạt phòng ngủ"*
-  - *"Kiểm tra nhiệt độ nhà mình hiện tại bao nhiêu độ?"*
+  - *"Kiểm tra nhiệt độ và nồng độ khí gas nhà mình hiện tại bao nhiêu?"*
   - *"Phát bài Lạc Trôi của Sơn Tùng M-TP"*
-  - *"Thời tiết ngày mai ở Hà Nội thế nào?"*
-  - *"Thêm sữa vào danh sách mua sắm"*
-- **Tool Categories**: Điều khiển thiết bị, cảm biến, lịch hẹn, phát nhạc, thời tiết, chất lượng không khí, phân tích năng lượng, ghi chú, danh sách mua sắm, kiểm tra an ninh, tối ưu giấc ngủ, tính toán & đổi đơn vị, tìm kiếm mạng xã hội.
-- **MCP Server** hỗ trợ tool-calling theo chuẩn Model Context Protocol (dùng với Claude, Gemini API).
-- **Guardrails** kiểm duyệt an toàn mọi phản hồi LLM trước khi gửi đến người dùng.
+  - *"Dự báo thời tiết 3 ngày tới ở Hà Nội thế nào?"*
+  - *"Tính tiền điện tháng này hết bao nhiêu nếu dùng 280 kWh?"*
+  - *"Thêm sữa tươi và cà phê vào danh sách mua sắm"*
+- **11 Phân hệ công cụ (Tool Categories)**:
+  1. **Điều khiển thiết bị**: `control_light`, `control_aircon`, `control_blind`, `control_speaker`, `control_display`, `control_lock`, `control_smart_device`, `batch_control_devices`
+  2. **Ngữ cảnh & Lịch hẹn**: `activate_scene`, `get_schedules`, `set_device_timer`, `list_device_timers`, `cancel_device_timer`
+  3. **Âm nhạc & Đa phương tiện**: `play_youtube_music` (Tìm kiếm YouTube, trích xuất audio stream, phát qua FloatingMediaPlayer Web và ESP32 I2S MAX98357A)
+  4. **Thông tin & Cảm biến**: `get_room_devices`, `get_sensor_data`, `get_security_report`
+  5. **Tra cứu mở rộng**: `search_internet` (Tavily AI Search), `search_social_media` (Twitter / X Trends), `search_home_guides`
+  6. **Thời tiết & Môi trường**: `get_weather_forecast` (Dự báo Open-Meteo), `evaluate_air_quality` (Đánh giá chỉ số AQI)
+  7. **Năng lượng & Tiện ích**: `get_energy_analytics` (Phân tích kWh tiêu thụ), `smart_unit_and_cost_calculator` (Tính tiền điện EVN 6 bậc có VAT, tư vấn công suất BTU máy lạnh theo diện tích m2, quy đổi nhiệt độ C/F)
+  8. **An toàn & An ninh**: `audit_home_safety` (Chẩn đoán rò rỉ gas, an ninh cửa, rơ-le), `request_unlock_approval` (Phê duyệt mở khóa bảo mật)
+  9. **Chăm sóc gia đình & Giấc ngủ**: `manage_shopping_list` (Danh sách mua sắm nhu yếu phẩm), `optimize_sleep_environment` (Chế độ ngủ ngon)
+  10. **Ghi chú gia đình**: `add_family_note`, `get_family_notes`, `delete_family_note`
+  11. **Sở thích người dùng**: `save_user_preference`, `get_user_preferences`
 
-### 3.5. Loa thông minh AI Xiaozhi (Phát nhạc + Voice AI)
-- **Phát nhạc**: Nói *"phát bài Lạc Trôi"* → Máy chủ tìm kiếm YouTube, convert sang WAV, stream qua HTTP → ESP32 phát ra Loa MAX98357A I2S.
-- **Đồng bộ Web + ESP32**: Nút **🔥 Phát cả ESP32 & WEB** trên Web Dashboard phát nhạc đồng thời trên loa phần cứng và trình duyệt.
-- **Cấu hình AI Settings**: Tùy chỉnh Persona, System Prompt, Giọng đọc (Edge-TTS), Mô hình AI và Wake Words trực tiếp trên giao diện Web.
+### 3.5. Hệ thống Rào chắn An toàn 3 Lớp (3-Layer Guardrails System)
+Hệ thống tích hợp lớp phòng thủ an ninh toàn diện tại `src/services/guardrails.py`:
+- **Layer 1: Input Security Guardrail**:
+  - Chống Prompt Injection & Jailbreak (ngăn chặn các kỹ thuật DAN, Developer Mode, Roleplay bằng cả tiếng Anh và tiếng Việt).
+  - Ngăn chặn trích xuất bí mật hệ thống (Secret Exfiltration: mật khẩu wifi, API key, file `.env`, chuỗi kết nối database).
+  - Phát hiện và ngăn chặn đe dọa vật lý (chập điện, cháy nổ gas, nhốt người).
+  - Lọc bỏ ngôn từ thô tục, xúc phạm và độc hại (Profanity/Toxicity Filter).
+- **Layer 2: Device Safety Guardrail**:
+  - Chống bật/tắt dồn dập rơ-le (Anti-Flapping Relay Shield): Khóa rơ-le 10 giây nếu phát hiện bật/tắt quá 3 lần liên tục trong 5 giây, bảo vệ tiếp điểm phần cứng.
+  - Chính sách khóa cửa nghiêm ngặt (Strict Door Security): Từ chối hoàn toàn lệnh mở khóa qua giọng nói/AI thông thường; bắt buộc mở bằng mã PIN hoặc thẻ từ RFID.
+  - Giới hạn tham số hợp lệ (Parameter Bounds): Nhiệt độ điều hòa giới hạn từ 16°C – 30°C.
+- **Layer 3: Output Privacy Guardrail (DLP)**:
+  - Tự động nhận diện và che giấu (redaction) dữ liệu nhạy cảm trước khi phản hồi người dùng: `[REDACTED_JWT_TOKEN]`, `[REDACTED_API_KEY]`, `[REDACTED_DATABASE_URL]`.
+
+### 3.6. Chuẩn Giao Tiếp MCP Server (Model Context Protocol)
+- Tương thích chính thức chuẩn JSON-RPC 2.0 MCP (version `2024-11-05`), cho phép các AI client bên ngoài (Claude Desktop, Cursor, Gemini CLI) kết nối trực tiếp qua endpoint `/api/mcp` để điều khiển nhà thông minh.
+- Hỗ trợ đầy đủ 13 công cụ: điều khiển thiết bị, đọc trạng thái/cảm biến, phát nhạc, tra cứu thời tiết, tìm kiếm Internet, phân tích an toàn, tính tiền điện EVN.
+
+### 3.7. Loa thông minh AI Xiaozhi (Phát nhạc + Voice AI)
+- **Phát nhạc**: Nói *"phát bài Lạc Trôi"* → Máy chủ tìm kiếm YouTube, trích xuất luồng audio stream WAV, stream qua HTTP → ESP32 phát trực tiếp ra Loa MAX98357A I2S.
+- **Đồng bộ Web + ESP32**: Nút **🔥 Phát cả ESP32 & WEB** trên FloatingMediaPlayer phát nhạc đồng thời trên loa phần cứng và trình duyệt với độ trễ thấp.
+- **Cấu hình AI Settings**: Tùy chỉnh Persona (Quản gia Jarvis, Cô Tấm, HomeMind, Sentinel), System Prompt, Giọng đọc (Edge-TTS Hoài My / Nam Minh), Mô hình AI (DeepSeek, GPT-4o-mini, Ollama Qwen) và Wake Words trực tiếp trên giao diện Web.
 
 ---
 
@@ -105,7 +133,7 @@ Hệ thống được thiết kế với kiến trúc **Serverless & Hybrid Clou
 | :--- | :--- |
 | **Backend** | Python 3.11, FastAPI, Pydantic v2, Uvicorn, LangGraph, SQLAlchemy, Psycopg2 |
 | **AI Engine** | LangGraph (Tool Calling), OpenAI-compatible API, Ollama (Qwen 2.5 7B GPU local) |
-| **MCP & Safety** | MCP Server (Model Context Protocol), Guardrails service |
+| **MCP & Safety** | MCP Server (JSON-RPC 2.0), 3-Layer Guardrails System |
 | **Frontend** | React 18, TypeScript, Vite, Vanilla CSS, MQTT.js (WebSocket), Lucide Icons |
 | **Cơ sở dữ liệu** | PostgreSQL 16 Alpine |
 | **Giao thức IoT** | MQTT (Mosquitto 2.0 / HiveMQ Cloud TLS/WSS), ESP-NOW (Espressif) |
@@ -148,46 +176,49 @@ smart-home-iot-agent/
 │       ├── fun_local.py            # ASR FunASR SenseVoice cục bộ
 │       └── http_server.py          # HTTP endpoint bổ sung (OTA, audio stream)
 ├── runtime/                        # Trạng thái hoạt động thiết bị thực tế
-├── scripts/                        # Scripts hỗ trợ: benchmark HIL, serial monitor
+├── scripts/                        # Scripts hỗ trợ: benchmark, kiểm tra phần cứng, backup
+│   ├── backup_db.py                # Sao lưu và phục hồi cơ sở dữ liệu PostgreSQL
 │   ├── benchmark_ai.py             # Benchmark AI Agent end-to-end
 │   ├── benchmark_mcp.py            # Benchmark MCP tool-calling
-│   ├── run_full_hil_benchmark.py   # Chạy full Hardware-in-the-Loop test
-│   └── check_serial.py             # Monitor Serial ESP32 qua COM port
+│   ├── check_serial.py             # Monitor Serial ESP32 qua COM port
+│   ├── reboot_esp32.py             # Điều khiển reset cứng ESP32 qua DTR/RTS
+│   ├── run_full_hil_benchmark.py   # Bộ kiểm thử phần cứng HIL (Hardware-in-the-Loop)
+│   └── setup_mqtt_auth.py          # Thiết lập xác thực và phân quyền ACL Mosquitto
 ├── src/                            # Mã nguồn Backend FastAPI
 │   ├── agents/
 │   │   ├── graph.py                # LangGraph AI Agent workflow
 │   │   ├── harness.py              # Agent execution harness
 │   │   ├── system_prompt.py        # System prompt builder
-│   │   └── tools/                  # 30+ AI tools
-│   │       ├── smart_device.py     # Điều khiển thiết bị thông minh
-│   │       ├── media_player.py     # Phát nhạc YouTube → WAV → ESP32 I2S
-│   │       ├── weather_forecast.py # Thời tiết thực tế
+│   │   └── tools/                  # 30+ AI tools (điều khiển, cảm biến, thời tiết, nhạc...)
 │   │       ├── air_quality_advisor.py  # Tư vấn chất lượng không khí
-│   │       ├── energy_analytics.py    # Phân tích tiêu thụ điện
-│   │       ├── home_notes.py          # Ghi chú trong nhà
-│   │       ├── home_safety_audit.py   # Kiểm tra an toàn nhà
-│   │       ├── shopping_list.py       # Quản lý danh sách mua sắm
-│   │       ├── sleep_optimizer.py     # Tối ưu giấc ngủ
-│   │       ├── smart_calc_converter.py # Tính toán & đổi đơn vị
-│   │       ├── social_search.py       # Tìm kiếm mạng xã hội
-│   │       └── ...                    # Và nhiều tools khác
-│   ├── api/                        # REST API endpoints (auth, devices, rooms…)
+│   │       ├── energy_analytics.py     # Phân tích tiêu thụ điện
+│   │       ├── home_notes.py           # Ghi chú gia đình
+│   │       ├── home_safety_audit.py    # Kiểm tra an toàn nhà
+│   │       ├── media_player.py         # Phát nhạc YouTube → WAV → ESP32 I2S
+│   │       ├── shopping_list.py        # Quản lý danh sách mua sắm
+│   │       ├── sleep_optimizer.py      # Tối ưu giấc ngủ
+│   │       ├── smart_calc_converter.py # Tính tiền điện EVN & đổi đơn vị
+│   │       ├── smart_device.py         # Điều khiển thiết bị thông minh
+│   │       ├── social_search.py        # Tìm kiếm mạng xã hội Twitter/X
+│   │       ├── weather_forecast.py     # Thời tiết thực tế
+│   │       └── ...                     # Và nhiều tools khác
+│   ├── api/                        # REST API endpoints (auth, devices, rooms, mcp…)
 │   ├── firmware/                   # Arduino C++ cho 3 bo mạch ESP32
 │   │   ├── esp32_home_appliances_espnow/
 │   │   ├── esp32_main_entrance_espnow/
 │   │   └── esp32_xiaozhi_gateway/  # Gateway AI Voice (MQTT + I2S + ESP-NOW)
 │   ├── services/
 │   │   ├── ai_config.py            # Quản lý Persona, Giọng, Mô hình AI
-│   │   ├── guardrails.py           # Kiểm duyệt an toàn LLM response
-│   │   ├── mcp_server.py           # MCP Server (Model Context Protocol)
+│   │   ├── guardrails.py           # Kiểm duyệt an toàn LLM response (3-Layer)
+│   │   ├── mcp_server.py           # MCP Server JSON-RPC 2.0 (Model Context Protocol)
 │   │   ├── mqtt.py                 # MQTT Bridge Backend ↔ ESP32
-│   │   ├── speech.py               # TTS / STT service
+│   │   ├── speech.py               # TTS (Edge-TTS/gTTS) / STT service
 │   │   ├── xiaozhi.py              # Xiaozhi Hub API client
 │   │   └── natural_language_control.py  # Xử lý lệnh ngôn ngữ tự nhiên
 │   └── main.py                     # Điểm khởi chạy FastAPI + WebSocket
 ├── tests/                          # Unit & integration tests
-│   ├── test_guardrails.py
-│   └── test_mcp_tools.py
+│   ├── test_guardrails.py          # Kiểm thử 3 tầng rào chắn an toàn bảo mật
+│   └── test_mcp_tools.py           # Kiểm thử giao thức MCP JSON-RPC 2.0 & tools
 ├── docker-compose.yml              # Khởi chạy đầy đủ (backend, frontend, mqtt, postgres, ollama, xiaozhi)
 ├── Dockerfile                      # Docker image Backend
 ├── Makefile                        # Lệnh thao tác nhanh
