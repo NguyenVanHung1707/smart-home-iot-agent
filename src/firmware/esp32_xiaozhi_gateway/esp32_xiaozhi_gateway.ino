@@ -94,8 +94,8 @@ U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 #define AUDIO_SAMPLE_RATE 16000
 
 // Ngưỡng năng lượng nhận diện giọng nói (Voice Activity Detection - VAD)
-// Đặt 1500 với bit-shift >> 13 để loại bỏ 100% tiếng ồn nền, chỉ kích hoạt khi có giọng nói thực tế từ loa/người
-#define VAD_THRESHOLD 1500
+// Đặt 400 với bit-shift >> 14 để bắt trọn giọng nói tự nhiên, loại bỏ tiếng ồn nền
+#define VAD_THRESHOLD 400
 
 // VAD & Mic Buffer: Giữ lại 600ms âm thanh trước thời điểm kích hoạt VAD
 // để không bao giờ bị nuốt chữ đầu ("bật", "alo", "mở", "hôm nay", v.v.)
@@ -868,7 +868,7 @@ void micAudioReaderTask(void *param) {
   preRollFilled = false;
   Serial.println("[TASK MIC] WiFi san sang, Mic bat dau lang nghe!");
 
-  static int activeMicChannel = -1; // -1: Tu dong do kenh, 0: Left (L/R noi GND), 1: Right (L/R noi VDD hoac tha noi)
+  static int activeMicChannel = 0; // Mặc định 0: LEFT (Chuẩn INMP441 nối L/R xuống GND)
 
   while (true) {
     if (wavBufStatic == NULL) {
@@ -888,41 +888,20 @@ void micAudioReaderTask(void *param) {
       int numPairs = numSamples / 2;
       if (numPairs <= 0) continue;
 
-      // Tự động nhận diện kênh Micro Left (L/R nối GND) hoặc Right (L/R nối 3.3V hoặc thả nổi)
-      if (activeMicChannel == -1) {
-        int64_t sumSqL = 0, sumSqR = 0;
-        for (int i = 0; i < numPairs; i++) {
-          int32_t sL = rawSamples[i * 2] >> 13;
-          int32_t sR = rawSamples[i * 2 + 1] >> 13;
-          sumSqL += (int64_t)sL * sL;
-          sumSqR += (int64_t)sR * sR;
-        }
-        if (sumSqL > 20000 || sumSqR > 20000) {
-          activeMicChannel = (sumSqR > sumSqL) ? 1 : 0;
-          Serial.printf("[INMP441] Tu dong khoa kenh Micro: %s (L_energy=%lld, R_energy=%lld)\n",
-                        activeMicChannel == 1 ? "RIGHT (L/R noi VDD hoac tha noi)" : "LEFT (L/R noi GND)",
-                        sumSqL, sumSqR);
-        }
-      }
-
       int ch = (activeMicChannel == 1) ? 1 : 0;
       int64_t sumSamples = 0;
       for (int i = 0; i < numPairs; i++) {
-        int32_t rawVal = (activeMicChannel == -1)
-                             ? ((abs(rawSamples[i * 2] >> 13) > abs(rawSamples[i * 2 + 1] >> 13)) ? (rawSamples[i * 2] >> 13) : (rawSamples[i * 2 + 1] >> 13))
-                             : (rawSamples[i * 2 + ch] >> 13);
+        int32_t rawVal = rawSamples[i * 2 + ch] >> 14;
         sumSamples += rawVal;
       }
       int32_t dcMean = sumSamples / numPairs;
 
       int64_t sumSquares = 0;
 
-      // Xử lý mẫu âm thanh 24-bit từ slot 32-bit của INMP441
+      // Xử lý mẫu âm thanh 24-bit từ slot 32-bit của INMP441 với gain chuẩn >> 14
       // Khử thành phần một chiều (DC Offset) để đo chính xác năng lượng âm thanh thực
       for (int i = 0; i < numPairs; i++) {
-        int32_t rawVal = (activeMicChannel == -1)
-                             ? ((abs(rawSamples[i * 2] >> 13) > abs(rawSamples[i * 2 + 1] >> 13)) ? (rawSamples[i * 2] >> 13) : (rawSamples[i * 2 + 1] >> 13))
-                             : (rawSamples[i * 2 + ch] >> 13);
+        int32_t rawVal = rawSamples[i * 2 + ch] >> 14;
         int32_t s = rawVal - dcMean;
         if (s > 32767) s = 32767;
         if (s < -32768) s = -32768;
@@ -945,10 +924,10 @@ void micAudioReaderTask(void *param) {
         lastRmsPrint = millis();
         Serial.printf("[MIC TEST] RMS hien tai: %d (Nguong: %d, Kenh: %s)\n",
                       rms, VAD_THRESHOLD,
-                      activeMicChannel == 1 ? "RIGHT" : (activeMicChannel == 0 ? "LEFT" : "AUTO"));
+                      activeMicChannel == 1 ? "RIGHT" : "LEFT");
       }
 
-      // Bộ lọc lọc gai nhiễu: chỉ kích hoạt khi giọng nói duy trì liên tục ít nhất 2 frame (~32ms)
+      // Bộ lọc lọc gai nhiễu: kích hoạt nhanh khi giọng nói duy trì liên tục ít nhất 2 frame (~16ms)
       static int vadConsecutiveFrames = 0;
       if (rms > VAD_THRESHOLD) {
         vadConsecutiveFrames++;
@@ -957,7 +936,7 @@ void micAudioReaderTask(void *param) {
       }
 
       // Nếu năng lượng vượt ngưỡng VAD liên tục -> Người dùng đang nói vào Micro!
-      if (vadConsecutiveFrames >= 3) {
+      if (vadConsecutiveFrames >= 2) {
         vadConsecutiveFrames = 0;
         Serial.printf("[XIAOZHI MIC VAD] Phat hien giong noi thuc te! RMS: %d\n", rms);
         strncpy(robotEmotion, "listening", sizeof(robotEmotion) - 1);
@@ -994,18 +973,14 @@ void micAudioReaderTask(void *param) {
             int ch = (activeMicChannel == 1) ? 1 : 0;
             int64_t chunkSum = 0;
             for (int s = 0; s < chunkPairs; s++) {
-              int32_t rawVal = (activeMicChannel == -1)
-                                   ? ((abs(rawChunk[s * 2] >> 13) > abs(rawChunk[s * 2 + 1] >> 13)) ? (rawChunk[s * 2] >> 13) : (rawChunk[s * 2 + 1] >> 13))
-                                   : (rawChunk[s * 2 + ch] >> 13);
+              int32_t rawVal = rawChunk[s * 2 + ch] >> 14;
               chunkSum += rawVal;
             }
             int32_t chunkMean = chunkSum / (chunkPairs > 0 ? chunkPairs : 1);
 
             int64_t chunkSquares = 0;
             for (int s = 0; s < chunkPairs && samplesRecorded < targetSamples; s++) {
-              int32_t rawVal = (activeMicChannel == -1)
-                                   ? ((abs(rawChunk[s * 2] >> 13) > abs(rawChunk[s * 2 + 1] >> 13)) ? (rawChunk[s * 2] >> 13) : (rawChunk[s * 2 + 1] >> 13))
-                                   : (rawChunk[s * 2 + ch] >> 13);
+              int32_t rawVal = rawChunk[s * 2 + ch] >> 14;
               int32_t sample = rawVal - chunkMean;
               if (sample > 32767) sample = 32767;
               if (sample < -32768) sample = -32768;
@@ -1019,9 +994,8 @@ void micAudioReaderTask(void *param) {
             if (chunkRms < (VAD_THRESHOLD * 0.65)) {
               consecutiveSilenceChunks++;
               // Mỗi chunk 128 mẫu @ 16kHz = 8ms.
-              // 75 chunks = 600ms im lặng liên tục -> Người dùng thực sự đã nói xong câu!
-              // Không bị ngắt khi người dùng chỉ tạm nghỉ ngắt nhịp giữa các từ hoặc lấy hơi.
-              if (samplesRecorded >= minSpeechSamples && consecutiveSilenceChunks >= 75) {
+              // 45 chunks = 360ms im lặng liên tục -> Người dùng thực sự đã nói xong câu!
+              if (samplesRecorded >= minSpeechSamples && consecutiveSilenceChunks >= 45) {
                 Serial.printf("[XIAOZHI MIC EOS] Phat hien nguoi dung da noi xong (%d mau ~%.2fs). Gui ngay!\n",
                               samplesRecorded, (float)samplesRecorded / AUDIO_SAMPLE_RATE);
                 break;
@@ -1033,6 +1007,7 @@ void micAudioReaderTask(void *param) {
             vTaskDelay(pdMS_TO_TICKS(2));
           }
         }
+
 
         // Cập nhật lại Header WAV chuẩn với số byte thực tế đã thu (bao gồm cả 600ms âm đuôi tự nhiên)
         size_t actualWavDataBytes = samplesRecorded * sizeof(int16_t);
@@ -1660,7 +1635,7 @@ void loop() {
     // 2. Duy trì WebSocket Xiaozhi
     if (wsIsConnected) {
       wsClient.poll();
-    } else if (now - lastWsReconnect > 6000) {
+    } else if (now - lastWsReconnect > 30000) {
       lastWsReconnect = now;
       connectWebSocket();
     }
