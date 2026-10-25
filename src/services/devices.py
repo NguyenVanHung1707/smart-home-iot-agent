@@ -88,6 +88,7 @@ def sensor_readings(device: Device) -> dict[str, dict[str, Any]]:
     """Return all semantic readings that can be resolved for a sensor."""
     return {metric: reading for metric in _SENSOR_METRICS if (reading := sensor_reading(device, metric)) is not None}
 
+
 _HARDWARE_NODE_GROUPS: dict[str, set[str]] = {
     "esp32_home_appliances": {
         "living-light",
@@ -101,6 +102,7 @@ _HARDWARE_NODE_GROUPS: dict[str, set[str]] = {
         "living-light-sensor",
         "living-motion",
         "living-display",
+        "gateway-speaker",
         "living-blind",
         "window-servo",
     },
@@ -198,6 +200,21 @@ _DEFAULT_REAL_DEVICES: list[dict[str, Any]] = [
         "kind": "display",
         "online": False,
         "state": {"power": True, "message": "Homing Hub Ready"},
+    },
+    {
+        "id": "gateway-speaker",
+        "name": "Loa ESP32 AI Gateway",
+        "room": "Phòng khách",
+        "kind": "speaker",
+        "online": True,
+        "state": {
+            "power": True,
+            "volume": 80,
+            "playing": False,
+            "track": "",
+            "media_url": "",
+            "audio_stream_url": "",
+        },
     },
     {
         "id": "living-blind",
@@ -299,12 +316,19 @@ _DEFAULT_SIMULATOR_DEVICES: list[dict[str, Any]] = [
         "state": {"position": 0},
     },
     {
-        "id": "hub-speaker",
-        "name": "Loa Homing",
+        "id": "gateway-speaker",
+        "name": "Loa ESP32 AI Gateway",
         "room": "Phòng khách",
         "kind": "speaker",
         "online": True,
-        "state": {"power": False, "volume": 45, "playing": False},
+        "state": {
+            "power": True,
+            "volume": 80,
+            "playing": False,
+            "track": "",
+            "media_url": "",
+            "audio_stream_url": "",
+        },
     },
     {
         "id": "entry-lock",
@@ -371,7 +395,11 @@ class DeviceRegistry:
         elif norm_mode == "simulator":
             self.mode = "simulator"
         else:
-            self.mode = "real" if self.storage_path.name.lower().startswith("devices_real") or "real" in self.storage_path.name.lower() else "simulator"
+            self.mode = (
+                "real"
+                if self.storage_path.name.lower().startswith("devices_real") or "real" in self.storage_path.name.lower()
+                else "simulator"
+            )
         self._devices: dict[str, Device] = {}
         self._discovered: dict[str, dict[str, Any]] = {}
         self._last_seen: dict[str, float] = {}
@@ -418,7 +446,9 @@ class DeviceRegistry:
                         if not isinstance(raw, list):
                             raise ValueError("device storage must contain a list")
                     except (OSError, ValueError, TypeError):
-                        logger.warning("Failed to load device registry from %s", source or self.storage_path, exc_info=True)
+                        logger.warning(
+                            "Failed to load device registry from %s", source or self.storage_path, exc_info=True
+                        )
                         raw = []
 
             self._devices = {
@@ -465,7 +495,6 @@ class DeviceRegistry:
     def list_all(self) -> list[Device]:
         """Convenience alias for list()"""
         return self.list()
-
 
     def get(self, device_id: str) -> Device | None:
         with self._lock:
@@ -814,19 +843,13 @@ def get_registry(mode: str | None = None) -> DeviceRegistry:
 
     with _REGISTRY_LOCK:
         if normalized in {"real", "live", "hardware"}:
-            path = settings.real_device_storage_path
-            if not Path(path).exists() and Path("data/devices_real.json").exists():
-                path = "data/devices_real.json"
+            path = "data/devices.json" if Path("data/devices.json").exists() else settings.real_device_storage_path
             key = f"real:{path}"
             if key not in _REGISTRIES:
                 _REGISTRIES[key] = DeviceRegistry(path, seed_defaults=True, mode="real")
             return _REGISTRIES[key]
 
-        path = settings.device_storage_path
-        if not Path(path).exists() and Path("data/devices.json").exists():
-            path = "data/devices.json"
-        elif not Path(path).exists() and Path("runtime/devices.json").exists():
-            path = "runtime/devices.json"
+        path = "data/devices.json" if Path("data/devices.json").exists() else settings.device_storage_path
         key = f"simulator:{path}"
         if key not in _REGISTRIES:
             if "registry" in globals() and registry.storage_path == Path(path):

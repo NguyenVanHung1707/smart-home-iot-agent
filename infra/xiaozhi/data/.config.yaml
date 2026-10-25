@@ -1,0 +1,133 @@
+server:
+  ip: 0.0.0.0
+  port: 8000
+  http_port: 8003
+  websocket: ws://lophocso.io.vn/xiaozhi/v1/
+  timezone_offset: 7
+  auth:
+    enabled: false
+    allowed_devices: []
+  mqtt_gateway: null
+  mqtt_signature_key: null
+  udp_gateway: null
+log:
+  log_level: INFO
+  log_dir: tmp
+  log_file: server.log
+  data_dir: data
+delete_audio: true
+close_connection_no_voice_time: 120
+tts_timeout: 15
+tool_call_timeout: 30
+enable_wakeup_words_response_cache: true
+enable_greeting: true
+enable_stop_tts_notify: false
+enable_websocket_ping: true
+exit_commands:
+- tạm biệt
+- nghỉ ngơi đi
+- dừng lại
+- tắt đi
+xiaozhi:
+  type: hello
+  version: 1
+  transport: websocket
+  audio_params:
+    format: opus
+    sample_rate: 16000
+    channels: 1
+    frame_duration: 60
+wakeup_words:
+- xiaozhi
+- chào xiaozhi
+- tiểu trí
+- homing
+- nhà thông minh
+prompt: 'Bạn là Trợ lý AI Homing Xiaozhi của ngôi nhà thông minh.
+
+  Bạn luôn giao tiếp hoàn toàn bằng Tiếng Việt một cách tự nhiên, lịch sự, ngắn gọn
+  và hữu ích.
+
+  [Quy tắc ứng xử]:
+
+  1. Khi người dùng yêu cầu bật, tắt, mở khóa, thay đổi thiết bị (đèn, quạt, cửa chính,
+  cửa sổ...), bạn hãy gọi function ''control_smart_home''.
+
+  2. Khi người dùng hỏi nhiệt độ, độ ẩm, an toàn gas, tình trạng cửa, hãy gọi function
+  ''get_smart_home_state''.
+
+  3. Khi trả lời, hãy nói ngắn gọn trong 1-2 câu để phát ra loa rõ ràng, không dài
+  dòng.'
+system_error_response: Dạ, hiện tại em đang bận một chút, bạn vui lòng thử lại sau
+  giây lát nhé.
+selected_module:
+  VAD: SileroVAD
+  ASR: FunASR
+  LLM: OllamaLLM
+  TTS: EdgeTTS
+  Memory: nomem
+  Intent: function_call
+Intent:
+  function_call:
+    type: function_call
+    functions:
+    - smart_home
+    - get_time
+    - get_weather
+Memory:
+  nomem:
+    type: nomem
+VAD:
+  SileroVAD:
+    type: silero
+    threshold: 0.5
+    threshold_low: 0.3
+    model_dir: models/snakers4_silero-vad
+    min_silence_duration_ms: 250
+ASR:
+  FunASR:
+    type: fun_local
+    model_dir: models/SenseVoiceSmall
+    output_dir: tmp/
+    language: auto
+  OpenaiASR:
+    type: openai
+    api_key: ${OPENAI_API_KEY}
+    base_url: https://api.openai.com/v1/audio/transcriptions
+    model_name: whisper-1
+    output_dir: tmp/
+LLM:
+  OllamaLLM:
+    type: ollama
+    base_url: http://homing-ollama:11434
+    model_name: qwen2.5:3b
+  DeepSeekLLM:
+    type: openai
+    base_url: https://api.deepseek.com
+    model_name: deepseek-chat
+    api_key: ${DEEPSEEK_API_KEY:-sk-placeholder}
+    temperature: 0.7
+    max_tokens: 400
+  OpenAILLM:
+    type: openai
+    base_url: https://api.openai.com/v1
+    model_name: gpt-4o-mini
+    api_key: ${OPENAI_API_KEY:-sk-placeholder}
+    temperature: 0.7
+    max_tokens: 400
+  ChatGLMLLM:
+    type: openai
+    model_name: glm-4-flash
+    url: https://open.bigmodel.cn/api/paas/v4/
+    api_key: ${ZHIPU_API_KEY:-placeholder}
+TTS:
+  EdgeTTS:
+    type: edge
+    voice: vi-VN-HoaiMyNeural
+    output_dir: tmp/
+plugins:
+  get_time: {}
+  get_weather:
+    api_host: mj7p3y7naa.re.qweatherapi.com
+    api_key: a861d0d5e7bf4ee1a83d9a9e4f96d4da
+    default_location: Hà Nội

@@ -209,7 +209,27 @@
 
 .hm-top-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
-/* Data Mode Switcher */
+/* Connected Real Hardware Mode Badge */
+.hm-connected-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--hm-control-bg, rgba(15, 23, 42, 0.6));
+  border-radius: 20px;
+  border: 1px solid rgba(18, 216, 193, 0.28);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hm-primary, #12d8c1);
+  box-shadow: 0 0 16px rgba(18, 216, 193, 0.12);
+}
+.hm-connected-mode svg,
+.hm-connected-mode .hm-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--hm-primary, #12d8c1);
+}
+
 .hm-mode-switcher {
   display: flex;
   align-items: center;
@@ -362,3 +382,49 @@
   font-size: 12px;
   font-weight: 800;
 }
+
+/* Reusable Top Tab Switcher */
+.hm-tab-switcher {
+  display: flex;
+  background: rgba(6, 27, 45, 0.85);
+  border: 1px solid var(--hm-border);
+  padding: 6px;
+  border-radius: 14px;
+  gap: 8px;
+  width: fit-content;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.hm-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--hm-muted);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hm-tab-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.hm-tab-btn:hover {
+  color: var(--hm-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.hm-tab-btn.active {
+  background: linear-gradient(135deg, rgba(18, 216, 193, 0.18), rgba(47, 158, 255, 0.14));
+  border-color: var(--hm-primary);
+  color: #f4fbff;
+  box-shadow: 0 2px 12px rgba(18, 216, 193, 0.25);
+}
+

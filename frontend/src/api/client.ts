@@ -13,7 +13,7 @@ export const apiBaseUrl = (import.meta.env.VITE_API_URL || "/api/v1").replace(/\
 
 function withAuthHeaders(init?: RequestInit): RequestInit | undefined {
   const token = getAccessToken();
-  const dataMode = (typeof window !== "undefined" ? localStorage.getItem("homemind-data-mode") : null) || "simulator";
+  const dataMode = (typeof window !== "undefined" ? localStorage.getItem("homemind-data-mode") : null) || "real";
   const headers = new Headers(init?.headers);
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
@@ -96,7 +96,11 @@ export function postJson<T>(path: string, payload?: unknown) {
 }
 
 export function sendDeviceCommand(deviceId: string, command: ApiDeviceCommand, pin?: string) {
-  const query = pin ? `?pin=${encodeURIComponent(pin)}` : "";
+  const dataMode = (typeof window !== "undefined" ? localStorage.getItem("homemind-data-mode") : null) || "real";
+  const params = new URLSearchParams();
+  if (pin) params.set("pin", pin);
+  params.set("mode", dataMode);
+  const query = `?${params.toString()}`;
   return postJson<{ id?: string; status?: string }>(`/devices/${deviceId}/command${query}`, command);
 }
 
@@ -209,5 +213,38 @@ export function triggerDiscoveryScan() {
   return postJson<{ status: string; message: string }>("/discovery/scan", {});
 }
 
+export function getAiConfig() {
+  return apiFetch<import("../types").AiConfigResponse>("/ai/config");
+}
 
+export function saveAiConfig(payload: Partial<import("../types").AiConfigData>) {
+  return postJson<{ status: string; message: string; config: import("../types").AiConfigData }>("/ai/config", payload);
+}
+
+export function resetAiConfig() {
+  return postJson<{ status: string; message: string; config: import("../types").AiConfigData }>("/ai/reset", {});
+}
+
+export function getAIConversations(params?: { source?: string; search?: string; limit?: number; offset?: number }) {
+  const searchParams = new URLSearchParams();
+  if (params?.source && params.source !== "all") searchParams.set("source", params.source);
+  if (params?.search) searchParams.set("search", params.search);
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.offset) searchParams.set("offset", String(params.offset));
+  const qs = searchParams.toString();
+  return apiFetch<import("../types").AIConversationsResponse>(`/conversations/history${qs ? `?${qs}` : ""}`);
+}
+
+export function clearAIConversations(source?: string) {
+  const qs = source && source !== "all" ? `?source=${encodeURIComponent(source)}` : "";
+  return apiFetch<{ status: string; deleted_count: number }>(`/conversations/history${qs}`, {
+    method: "DELETE",
+  });
+}
+
+export function deleteAIConversation(id: string) {
+  return apiFetch<{ status: string; id: string }>(`/conversations/history/${id}`, {
+    method: "DELETE",
+  });
+}
 

@@ -374,7 +374,9 @@ def _is_status_request(text: str) -> bool:
         return False
     remaining = f"{text[: observed.start()]} {text[observed.end() :]}"
     remaining_without_question_particle = re.sub(r"\b(?:a|ha|vay|sao|nhi)\b", " ", remaining)
-    return _power_action(remaining_without_question_particle) is None and not _has_adjustment_cue(remaining_without_question_particle)
+    return _power_action(remaining_without_question_particle) is None and not _has_adjustment_cue(
+        remaining_without_question_particle
+    )
 
 
 def _is_deferred_request(text: str) -> bool:
@@ -509,8 +511,8 @@ def _with_device_context(query: str, device_id: str) -> str | None:
 
 
 def _unsafe_non_command(text: str) -> str | None:
-    if _contains(text, "mo khoa", "mo chot", "mo cua", "unlock"):
-        return "Mở khóa cần được tạo và xác nhận trong ứng dụng Homing Hub."
+    if _contains(text, "mo khoa", "mo chot", "mo cua", "unlock") and not _contains(text, "khoa cua", "dong cua", "gai chot"):
+        return "Vì lý do an ninh, tôi không thể mở cửa. Vui lòng nhập mật khẩu trên bàn phím, trên web hoặc quét thẻ từ."
     if _contains(
         text,
         "neu",
@@ -651,8 +653,7 @@ def _device_ids(text: str) -> list[str]:
     matches = [
         device.id
         for device in devices
-        if matches_kind(device)
-        and (not mentioned_rooms or device.room in mentioned_rooms)
+        if matches_kind(device) and (not mentioned_rooms or device.room in mentioned_rooms)
     ]
     # A display message changes state and must have an explicit target.  Do
     # not silently pick the only currently registered screen: deployments may
@@ -875,6 +876,64 @@ def _has_unresolved_explicit_control_target(clause: str, commands: list[ParsedCo
     return bool(re.search(r"\b(?:den|quat|fan|may|loa|rem|blind|man|cua|thiet bi)\b", clause))
 
 
+def _time_date_inquiry_reply(query: str, text: str) -> str | None:
+    """Answer inquiries about the current day of the week, date, or time in Vietnamese."""
+    WEEKDAYS_VI = {
+        0: "Thứ Hai",
+        1: "Thứ Ba",
+        2: "Thứ Tư",
+        3: "Thứ Năm",
+        4: "Thứ Sáu",
+        5: "Thứ Bảy",
+        6: "Chủ Nhật",
+    }
+    from datetime import datetime, timedelta
+
+    q_lower = query.lower()
+    t_clean = text.lower()
+
+    # Don't intercept if it's an actionable command on a device (e.g., "bật đèn hôm nay lúc...")
+    if _power_action(t_clean) is not None or _has_adjustment_cue(t_clean) or _has_device_mention(t_clean):
+        return None
+
+    # Inquiries for tomorrow ("ngày mai là thứ mấy", "mai là thứ mấy")
+    is_tomorrow_weekday = (
+        _contains(t_clean, "ngay mai thu may", "mai thu may", "ngay mai la thu may", "mai la thu may")
+        or _contains(q_lower, "ngày mai thứ mấy", "mai thứ mấy", "ngày mai là thứ mấy", "mai là thứ mấy")
+    )
+    # Inquiries for day of the week ("hôm nay là thứ mấy", "hôm nay thứ mấy", "thứ mấy rồi", "thứ mấy")
+    is_weekday = (
+        _contains(t_clean, "thu may", "hom nay thu may", "hom nay la thu may", "nay la thu may")
+        or _contains(q_lower, "thứ mấy", "hôm nay thứ mấy", "hôm nay là thứ mấy")
+    )
+    # Inquiries for date ("hôm nay ngày mấy", "hôm nay là ngày bao nhiêu", "hôm nay ngày gì", "ngày mấy")
+    is_date = (
+        _contains(t_clean, "ngay may", "ngay bao nhieu", "hom nay ngay may", "hom nay ngay bao nhieu", "hom nay la ngay bao nhieu", "hom nay ngay gi")
+        or _contains(q_lower, "ngày mấy", "ngày bao nhiêu", "hôm nay ngày mấy", "hôm nay ngày bao nhiêu", "hôm nay là ngày gì")
+    )
+    # Inquiries for clock time ("mấy giờ rồi", "bây giờ là mấy giờ", "thời gian")
+    is_time = (
+        _contains(t_clean, "may gio", "may gio roi", "thoi gian hien tai", "bay gio la may gio", "may gio")
+        or _contains(q_lower, "mấy giờ", "mấy giờ rồi", "thời gian hiện tại", "bây giờ là mấy giờ")
+    )
+
+    now = datetime.now()
+    if is_tomorrow_weekday:
+        tom = now + timedelta(days=1)
+        tom_wd = WEEKDAYS_VI.get(tom.weekday(), "")
+        return f"Ngày mai là {tom_wd}, ngày {tom.day} tháng {tom.month} năm {tom.year}."
+
+    if is_weekday or is_date:
+        weekday = WEEKDAYS_VI.get(now.weekday(), "")
+        return f"Hôm nay là {weekday}, ngày {now.day} tháng {now.month} năm {now.year}."
+
+    if is_time:
+        weekday = WEEKDAYS_VI.get(now.weekday(), "")
+        return f"Bây giờ là {now.hour} giờ {now.minute:02d} phút, {weekday}, ngày {now.day}/{now.month}/{now.year}."
+
+    return None
+
+
 def parse_home_request(query: str, mode: str | None = None) -> ParsedHomeRequest:
     text = _normalize(query)
     if not text:
@@ -885,6 +944,9 @@ def parse_home_request(query: str, mode: str | None = None) -> ParsedHomeRequest
             True,
             reply="Mình không thể bỏ qua quy tắc an toàn hoặc thực hiện yêu cầu ghi đè chính sách.",
         )
+
+    if time_reply := _time_date_inquiry_reply(query, text):
+        return ParsedHomeRequest(True, reply=time_reply)
 
     if is_absolute_calendar_schedule(query):
         return ParsedHomeRequest(
@@ -900,6 +962,39 @@ def parse_home_request(query: str, mode: str | None = None) -> ParsedHomeRequest
 
     if topology_reply := _room_topology_reply(text, mode=mode):
         return ParsedHomeRequest(True, reply=topology_reply)
+
+    if _contains(text, "an toan ngoi nha", "an toan nha", "kiem tra an toan", "audit an toan", "chan doan an toan"):
+        from src.agents.tools.home_safety_audit import audit_home_safety
+        import json
+        res = audit_home_safety.invoke({"mode": mode or "simulator"})
+        res_data = json.loads(res) if isinstance(res, str) else res
+        return ParsedHomeRequest(True, reply=res_data.get("message", "Đã chẩn đoán an toàn ngôi nhà."))
+
+    if _contains(text, "di ngu", "chuan bi ngu", "che do ngu", "ngu ngon", "toi uu phong ngu"):
+        from src.agents.tools.sleep_optimizer import optimize_sleep_environment
+        import json
+        res = optimize_sleep_environment.invoke({"mode": mode or "simulator"})
+        res_data = json.loads(res) if isinstance(res, str) else res
+        return ParsedHomeRequest(True, reply=res_data.get("message", "Đã kích hoạt chế độ ngủ ngon."))
+
+    if _contains(text, "danh sach mua sam", "danh sach mua do", "can mua gi", "do can mua", "danh sach mua"):
+        from src.agents.tools.shopping_list import manage_shopping_list
+        import json
+        res = manage_shopping_list.invoke({"action": "get"})
+        res_data = json.loads(res) if isinstance(res, str) else res
+        return ParsedHomeRequest(True, reply=res_data.get("message", "Danh sách mua sắm hiện đang trống."))
+
+    if _contains(text, "tinh tien dien", "bieu gia dien", "tien dien evn", "dieu hoa bao nhieu btu", "may lanh bao nhieu btu"):
+        from src.agents.tools.smart_calc_converter import smart_unit_and_cost_calculator
+        import json, re
+        kwh_match = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:kwh|so dien|so)", text)
+        kwh_val = float(kwh_match.group(1).replace(",", ".")) if kwh_match else None
+        area_match = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:m2|met vuong)", text)
+        area_val = float(area_match.group(1).replace(",", ".")) if area_match else None
+        calc_type = "ac_btu_recommendation" if area_val and not kwh_val else "electricity_bill_evn"
+        res = smart_unit_and_cost_calculator.invoke({"calc_type": calc_type, "kwh": kwh_val, "room_area_m2": area_val})
+        res_data = json.loads(res) if isinstance(res, str) else res
+        return ParsedHomeRequest(True, reply=res_data.get("message", "Đã thực hiện tính toán chuyên gia."))
 
     has_control_language = (
         _power_action(text) is not None
@@ -1083,6 +1178,20 @@ async def handle_natural_home_request(
     session_id: str | None = None,
     mode: str | None = None,
 ) -> dict[str, Any] | None:
+    from src.services.guardrails import guardrails
+
+    input_guard = guardrails.inspect_input(query)
+    if not input_guard.passed:
+        return {
+            "response": input_guard.suggested_response or "Yêu cầu bị từ chối bởi rào chắn an toàn của ngôi nhà.",
+            "analysis": "guardrail_blocked",
+            "metadata": {
+                "commands": [],
+                "violation": input_guard.violation_type,
+                "reason": input_guard.reason,
+            },
+        }
+
     if route := route_information_request(query, mode):
         return execute_information_route(route)
     plan = parse_home_request(query, mode=mode)
@@ -1143,6 +1252,11 @@ async def handle_natural_home_request(
     devices: list[dict[str, Any]] = []
     # Preserve order for requests such as "bật điều hòa và đặt 24 độ".
     for command in plan.commands:
+        dev_guard = guardrails.inspect_device_command(command.device_id, command.action, command.value)
+        if not dev_guard.passed:
+            failed.append(f"{command.device_id}: {dev_guard.suggested_response or dev_guard.reason}")
+            continue
+
         if mode is not None:
             try:
                 device, error = await asyncio.to_thread(
@@ -1178,8 +1292,9 @@ async def handle_natural_home_request(
         parts.append("; ".join(successful) + ".")
     if failed:
         parts.append("Chưa thực hiện: " + "; ".join(failed) + ".")
+    clean_reply = guardrails.sanitize_output(" ".join(parts))
     return {
-        "response": " ".join(parts),
+        "response": clean_reply,
         "analysis": "deterministic_natural_language_control",
         "metadata": {
             "commands": [command.as_dict() for command in plan.commands],

@@ -113,7 +113,7 @@ class Settings(BaseSettings):
     llm_local_generic_tool_grammar_enabled: bool = False
     llm_local_only: bool = True
     device_storage_path: str = "data/devices.json"
-    real_device_storage_path: str = "data/devices_real.json"
+    real_device_storage_path: str = "data/devices.json"
     simulator_device_storage_path: str = "data/devices.json"
 
     # AI Queue / Concurrency (Jetson Nano)
@@ -151,8 +151,6 @@ class Settings(BaseSettings):
     voice_max_tts_chars: int = Field(default=1000, ge=1, le=5000)
     voice_fallback_chime_enabled: bool = False
 
-
-
     # Database
     database_url: str = "sqlite:///./data/app.db"
 
@@ -170,6 +168,11 @@ class Settings(BaseSettings):
 
     # Vector Store
     chroma_persist_dir: str = "./data/chroma"
+
+    # External APIs (YouTube Data API v3, Tavily Search, RapidAPI Twitter)
+    youtube_api_key: str = "AIzaSyD-piHhSsNoVeDUq_YvercO7DudyXWZGKE"
+    tavily_api_key: str = "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"
+    rapidapi_key: str = "85385cb9aemsh46ef170c034215bp15032cjsn14cee3a8beaa"
 
     @property
     def rollout_contract(self) -> RolloutContract:

@@ -5,7 +5,6 @@ from __future__ import annotations
 import html
 import re
 import urllib.parse
-from typing import Any
 
 import httpx
 from langchain_core.tools import tool
@@ -17,7 +16,10 @@ from src.agents.tools.base import _StrictToolInput, _tool_result
 class SearchInternetInput(_StrictToolInput):
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
-    query: str = Field(default="", description="Từ khóa, chủ đề hoặc câu hỏi cần tra cứu trên Internet (tin tức, thời tiết, sự kiện...)")
+    query: str = Field(
+        default="",
+        description="Từ khóa, chủ đề hoặc câu hỏi cần tra cứu trên Internet (tin tức, thời tiết, sự kiện...)",
+    )
     q: str | None = Field(default=None, description="Từ khóa tra cứu")
     keyword: str | None = Field(default=None, description="Từ khóa tra cứu")
     max_results: int = Field(default=3, ge=1, le=5, description="Số lượng kết quả tìm kiếm tối đa (1 đến 5)")
@@ -26,6 +28,71 @@ class SearchInternetInput(_StrictToolInput):
 def _clean_html(raw_html: str) -> str:
     cleaned = re.sub(r"<[^<]+?>", "", raw_html)
     return html.unescape(cleaned).strip()
+
+
+def _search_tavily(query: str, max_results: int = 3, api_key: str | None = None) -> dict | None:
+    """Tìm kiếm thông tin chính xác qua Tavily AI Search Engine."""
+    from src.config import get_settings
+    key = api_key or get_settings().tavily_api_key or "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"
+    if not key:
+        return None
+
+    url = "https://api.tavily.com/search"
+    payload = {
+        "api_key": key,
+        "query": query,
+        "search_depth": "basic",
+        "include_answer": True,
+        "max_results": max_results,
+    }
+    try:
+        with httpx.Client(timeout=8.0) as client:
+            resp = client.post(url, json=payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                results = []
+                for item in data.get("results", [])[:max_results]:
+                    results.append({
+                        "title": item.get("title", ""),
+                        "snippet": item.get("content", ""),
+                        "url": item.get("url", ""),
+                        "score": item.get("score", 0.0),
+                    })
+                return {
+                    "answer": data.get("answer", ""),
+                    "results": results,
+                }
+    except Exception:
+        pass
+    return None
+
+
+def _search_duckduckgo(query: str, max_results: int = 3) -> list[dict[str, str]]:
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+    }
+    url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+    try:
+        with httpx.Client(timeout=8.0, follow_redirects=True) as client:
+            resp = client.get(url, headers=headers)
+            if resp.status_code != 200:
+                return []
+
+        snippets = re.findall(r'<a class="result__snippet"[^>]*>(.*?)</a>', resp.text, re.DOTALL)
+        links = re.findall(r'<a class="result__url"[^>]*href="([^"]+)"', resp.text)
+        results: list[dict[str, str]] = []
+        for i in range(min(max_results, len(snippets))):
+            s = _clean_html(snippets[i])
+            l = links[i].strip() if i < len(links) else ""
+            if s:
+                results.append({"title": f"Thông tin tra cứu {i+1}", "snippet": s, "url": l})
+        return results
+    except Exception:
+        return []
 
 
 def _search_bing(query: str, max_results: int = 3) -> list[dict[str, str]]:
@@ -95,10 +162,44 @@ def search_internet(
     if not search_q:
         return _tool_result("invalid_request", message="Từ khóa tìm kiếm không được để trống.")
 
+    # Loại bỏ các cụm từ đệm mệnh lệnh ("tra google", "hỏi google", "giúp tôi", v.v.)
+    clean_q = re.sub(
+        r"^(?:tra google|tìm trên google|tìm google|hỏi google|tra cứu google|tra cứu|tìm kiếm|tra|hỏi)\s+",
+        "",
+        search_q,
+        flags=re.I,
+    ).strip()
+    clean_q = re.sub(r"\s+(?:tra google|trên google|giúp tôi|hộ tôi|nhé|nha)$", "", clean_q, flags=re.I).strip()
+    target_q = clean_q or search_q
+
     try:
-        results = _search_bing(search_q, max_results=max_results)
+        # 1. Ưu tiên tìm kiếm thông minh chuyên sâu bằng Tavily AI Search
+        tavily_data = _search_tavily(target_q, max_results=max_results)
+        if tavily_data and (tavily_data.get("results") or tavily_data.get("answer")):
+            results = tavily_data.get("results", [])
+            answer = tavily_data.get("answer", "")
+            summary_parts = []
+            if answer:
+                summary_parts.append(f"**Tóm tắt câu trả lời:** {answer}")
+            if results:
+                summary_parts.append("\n".join(f"- **{r['title']}**: {r['snippet']} (Nguồn: {r['url']})" for r in results))
+            summary_text = "\n\n".join(summary_parts)
+            return _tool_result(
+                "success",
+                engine="tavily",
+                query=search_q,
+                answer=answer,
+                count=len(results),
+                results=results,
+                summary=summary_text,
+            )
+
+        # 2. Fallback sang DuckDuckGo, Bing, Wikipedia nếu không có kết nối Tavily
+        results = _search_duckduckgo(target_q, max_results=max_results)
         if not results:
-            results = _search_wikipedia(search_q, max_results=max_results)
+            results = _search_bing(target_q, max_results=max_results)
+        if not results:
+            results = _search_wikipedia(target_q, max_results=max_results)
 
         if not results:
             return _tool_result(
@@ -109,18 +210,16 @@ def search_internet(
 
         return _tool_result(
             "success",
-            query=q,
+            engine="fallback",
+            query=search_q,
             count=len(results),
             results=results,
-            summary="\n\n".join(
-                f"- **{r['title']}**: {r['snippet']} (Nguồn: {r['url']})"
-                for r in results
-            ),
+            summary="\n\n".join(f"- **{r['title']}**: {r['snippet']} (Nguồn: {r['url']})" for r in results),
         )
     except Exception as exc:
         return _tool_result(
             "error",
-            query=q,
+            query=search_q,
             error=str(exc),
             message="Không thể kết nối đến dịch vụ tìm kiếm Internet. Vui lòng thử lại sau.",
         )

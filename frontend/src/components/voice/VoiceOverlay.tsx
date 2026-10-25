@@ -1,15 +1,67 @@
 import { useEffect, useRef } from "react";
 import { useDialogFocus } from "../../hooks/useDialogFocus";
-import type { ChatMessage, DataMode, VoiceMode } from "../../types";
+import type { ChatMessage, DataMode } from "../../types";
 import { Icon } from "../shared/Icon";
 import { VoiceComposer } from "./VoiceComposer";
 import { VoiceFallbackInput } from "./VoiceFallbackInput";
 import { VoiceTranscript } from "./VoiceTranscript";
 
+export interface ScenarioPrompt {
+  id: string;
+  label: string;
+  prompt: string;
+  category: string;
+  icon: "sparkles" | "sun" | "bulb" | "shield" | "thermo" | "info";
+}
+
+export const TEST_SCENARIOS: ScenarioPrompt[] = [
+  {
+    id: "weather",
+    label: "Thời tiết hôm nay",
+    prompt: "Dự báo thời tiết ngoài trời hôm nay thế nào?",
+    category: "Dự báo",
+    icon: "sun",
+  },
+  {
+    id: "energy",
+    label: "Tiêu thụ điện năng",
+    prompt: "Hôm nay nhà mình tiêu thụ bao nhiêu điện năng?",
+    category: "Năng lượng",
+    icon: "bulb",
+  },
+  {
+    id: "air",
+    label: "Chất lượng không khí",
+    prompt: "Chất lượng không khí trong nhà có sạch không?",
+    category: "Môi trường",
+    icon: "thermo",
+  },
+  {
+    id: "notes",
+    label: "Ghi chú gia đình",
+    prompt: "Xem danh sách ghi chú",
+    category: "Nhắc việc",
+    icon: "info",
+  },
+  {
+    id: "poem",
+    label: "Làm một bài thơ",
+    prompt: "Làm một bài thơ 4 câu ngắn về ngôi nhà thông minh và buổi tối ấm áp đi.",
+    category: "Sáng tạo",
+    icon: "sparkles",
+  },
+  {
+    id: "security",
+    label: "Kiểm tra an ninh cửa",
+    prompt: "Cửa chính hiện tại đã được khóa an toàn chưa?",
+    category: "An ninh",
+    icon: "shield",
+  },
+];
+
 export function VoiceOverlay({
   open,
-  dataMode = "simulator",
-  mode,
+  dataMode = "real",
   listening,
   busy,
   error,
@@ -19,17 +71,19 @@ export function VoiceOverlay({
   latestAssistant = "",
   voiceStatusReady,
   ttsEnabled,
+  isPlayingAudio = false,
   onClose,
   onStop,
   onToggle,
-  onSwitchMode,
   onToggleTts,
   onManualChange,
   onSend,
+  onSpeakText,
+  onStopSpeaking,
 }: {
   open: boolean;
   dataMode?: DataMode;
-  mode: VoiceMode;
+  mode?: string;
   listening: boolean;
   busy: boolean;
   error: string;
@@ -39,13 +93,16 @@ export function VoiceOverlay({
   latestAssistant?: string;
   voiceStatusReady: boolean;
   ttsEnabled: boolean;
+  isPlayingAudio?: boolean;
   onClose: () => void;
   onStop: () => void;
   onToggle: () => void;
-  onSwitchMode: (mode: VoiceMode) => void;
+  onSwitchMode?: (mode: any) => void;
   onToggleTts: () => void;
   onManualChange: (value: string) => void;
-  onSend: () => void;
+  onSend: (customPrompt?: string) => void;
+  onSpeakText?: (text: string) => void;
+  onStopSpeaking?: () => void;
 }) {
   const dialogRef = useDialogFocus<HTMLElement>(open, onClose);
   const historyBottomRef = useRef<HTMLDivElement | null>(null);
@@ -54,25 +111,29 @@ export function VoiceOverlay({
     if (historyBottomRef.current) {
       historyBottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages.length, transcript]);
+  }, [messages.length, transcript, busy]);
 
   if (!open) return null;
 
-  const isReal = dataMode === "real";
-  const agentSubTitle = isReal ? "TRỢ LÝ AI XIAOZHI (PHẦN CỨNG THẬT)" : "TRỢ LÝ AI LOCAL MODEL (MÔ PHỎNG)";
-  const assistantName = isReal ? "Trợ lý Xiaozhi (ESP32)" : "Trợ lý Local Model (Qwen/Llama)";
+  const assistantName = "Trợ lý Xiaozhi (Local AI)";
 
   const statusText =
     error ||
     (busy
-      ? (isReal ? "Xiaozhi AI đang phân tích ý định và điều khiển ESP32..." : "Local Model đang phân tích ý định và lập kế hoạch...")
+      ? "Xiaozhi đang suy nghĩ câu trả lời..."
       : listening
         ? "Đang lắng nghe tiếng Việt (Realtime VAD)..."
         : voiceStatusReady
-          ? (isReal ? "Chạm vào biểu tượng micro để bắt đầu nói với Xiaozhi." : "Chạm vào biểu tượng micro để bắt đầu nói với Local Model.")
-          : (isReal ? "Trợ lý Xiaozhi sẵn sàng; lệnh sẽ gửi trực tiếp đến phần cứng ESP32." : "Local Model sẵn sàng nhận diện trên môi trường giả lập."));
+          ? "Chạm vào biểu tượng micro để bắt đầu nói với Xiaozhi."
+          : "Trợ lý Xiaozhi sẵn sàng. Hãy nói hoặc chọn kịch bản bên dưới.");
 
   const canSend = !busy && Boolean(transcript.trim() || manualValue.trim());
+
+  function handleSelectScenario(scenario: ScenarioPrompt) {
+    if (busy) return;
+    onManualChange(scenario.prompt);
+    onSend(scenario.prompt);
+  }
 
   return (
     <div className="hm-voice-overlay" onClick={onClose}>
@@ -85,61 +146,54 @@ export function VoiceOverlay({
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
+        {/* Header */}
         <header className="hm-voice-head">
           <button
             className="hm-icon-button"
             type="button"
             onClick={onClose}
-            aria-label="Đóng trợ lý giọng nói"
+            aria-label="Đóng trò chuyện AI"
           >
             <Icon name="close" />
           </button>
+
           <div className="hm-voice-header-info">
-            <span className="hm-voice-sub">{agentSubTitle}</span>
-            <strong id="hm-voice-title">
-              {mode === "chat" ? (isReal ? "Trò chuyện AI Xiaozhi" : "Trò chuyện Local Model") : "Điều khiển nhà bằng giọng nói"}
-            </strong>
+            <div className="hm-voice-badge-row">
+              <span className="hm-voice-status-dot" />
+              <span className="hm-voice-engine-badge">GPU Accelerated • Qwen 2.5</span>
+            </div>
+            <strong id="hm-voice-title">Trò Chuyện AI Xiaozhi</strong>
+            <span className="hm-voice-desc">Đối thoại tiếng Việt thông minh & quản lý nhà</span>
           </div>
-          <button
-            className="hm-icon-button danger"
-            type="button"
-            disabled={!listening}
-            onClick={onStop}
-            aria-label="Dừng lắng nghe"
-          >
-            <Icon name="micOff" />
-          </button>
+
+          <div className="hm-voice-header-actions">
+            <button
+              type="button"
+              className={`hm-tts-pill-btn ${ttsEnabled ? "active" : ""}`}
+              onClick={onToggleTts}
+              title={ttsEnabled ? "Giọng đọc AI đang BẬT (Piper TTS)" : "Giọng đọc AI đang TẮT"}
+              aria-label="Bật tắt giọng đọc AI"
+            >
+              <span className="hm-tts-icon-wrap">
+                <Icon name="sparkles" />
+              </span>
+              <span>TTS: {ttsEnabled ? "BẬT" : "TẮT"}</span>
+            </button>
+            {listening ? (
+              <button
+                className="hm-icon-button danger"
+                type="button"
+                onClick={onStop}
+                aria-label="Dừng lắng nghe"
+                title="Dừng lắng nghe"
+              >
+                <Icon name="micOff" />
+              </button>
+            ) : null}
+          </div>
         </header>
 
-        {/* Mode & TTS Controls bar */}
-        <div className="hm-voice-tabs-bar">
-          <div className="hm-voice-mode-tabs">
-            <button
-              type="button"
-              className={`hm-tab-btn ${mode === "command" ? "active" : ""}`}
-              onClick={() => onSwitchMode("command")}
-            >
-              Lệnh thiết bị
-            </button>
-            <button
-              type="button"
-              className={`hm-tab-btn ${mode === "chat" ? "active" : ""}`}
-              onClick={() => onSwitchMode("chat")}
-            >
-              Trò chuyện AI
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className={`hm-tts-toggle-btn ${ttsEnabled ? "active" : ""}`}
-            onClick={onToggleTts}
-            title="Bật/Tắt giọng đọc phản hồi Piper TTS"
-          >
-            <span>TTS: {ttsEnabled ? "BẬT" : "TẮT"}</span>
-          </button>
-        </div>
-
+        {/* Center Interactive Orb */}
         <VoiceComposer
           listening={listening}
           disabled={busy}
@@ -147,10 +201,13 @@ export function VoiceOverlay({
           onToggle={onToggle}
         />
 
-        <VoiceTranscript transcript={transcript} />
+        {/* Realtime STT Transcript Card (if listening or active) */}
+        {(transcript || listening) ? (
+          <VoiceTranscript transcript={transcript} />
+        ) : null}
 
-        {/* Conversation history thread */}
-        <div className="hm-voice-history-scroll" aria-label="Lịch sử tương tác">
+        {/* Conversation Stream */}
+        <div className="hm-voice-history-scroll" aria-label="Lịch sử đối thoại">
           {messages && messages.length > 0 ? (
             <div className="hm-voice-message-list">
               {messages.map((msg, idx) => (
@@ -161,13 +218,60 @@ export function VoiceOverlay({
                   <div className="hm-voice-msg-header">
                     <span className="hm-voice-msg-sender">
                       <Icon name={msg.role === "user" ? "mic" : "sparkles"} />
-                      {msg.role === "user" ? "Bạn (Giọng nói / STT)" : assistantName}
+                      {msg.role === "user" ? "Bạn" : assistantName}
                     </span>
-                    <span className="hm-voice-msg-seq">#{idx + 1}</span>
+                    <div className="hm-voice-msg-actions">
+                      {msg.role === "assistant" && onSpeakText ? (
+                        <button
+                          type="button"
+                          className="hm-msg-speak-action-btn"
+                          onClick={() => onSpeakText(msg.text)}
+                          title="Nghe giọng đọc câu trả lời này"
+                          aria-label="Nghe lại câu trả lời"
+                        >
+                          <Icon name="volume" />
+                          <span>Nghe</span>
+                        </button>
+                      ) : null}
+                      <span className="hm-voice-msg-seq">#{idx + 1}</span>
+                    </div>
                   </div>
                   <p className="hm-voice-msg-content">{msg.text}</p>
                 </div>
               ))}
+              {isPlayingAudio ? (
+                <div className="hm-voice-audio-status-bar" role="status">
+                  <div className="hm-soundwave-anim">
+                    <span /><span /><span /><span />
+                  </div>
+                  <span>Trợ lý Xiaozhi đang phát giọng nói...</span>
+                  {onStopSpeaking ? (
+                    <button
+                      type="button"
+                      className="hm-audio-stop-pill"
+                      onClick={onStopSpeaking}
+                      title="Dừng giọng đọc"
+                    >
+                      Dừng
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+              {busy ? (
+                <div className="hm-voice-msg-bubble assistant typing">
+                  <div className="hm-voice-msg-header">
+                    <span className="hm-voice-msg-sender">
+                      <Icon name="sparkles" />
+                      {assistantName}
+                    </span>
+                  </div>
+                  <div className="hm-typing-indicator">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </div>
+              ) : null}
               <div ref={historyBottomRef} />
             </div>
           ) : latestAssistant ? (
@@ -175,21 +279,63 @@ export function VoiceOverlay({
               <div className="hm-reply-header">
                 <Icon name="sparkles" />
                 <span>Phản hồi từ {assistantName}</span>
+                {onSpeakText ? (
+                  <button
+                    type="button"
+                    className="hm-msg-speak-action-btn"
+                    onClick={() => onSpeakText(latestAssistant)}
+                    title="Nghe giọng đọc"
+                  >
+                    <Icon name="volume" />
+                    <span>Nghe</span>
+                  </button>
+                ) : null}
               </div>
               <p>{latestAssistant}</p>
             </div>
           ) : (
-            <div className="hm-voice-empty-hint">
-              <span>Chưa có lịch sử đối thoại trong phiên này. Hãy nói hoặc nhập lệnh để bắt đầu.</span>
+            <div className="hm-voice-welcome-card">
+              <div className="hm-welcome-icon">
+                <Icon name="sparkles" />
+              </div>
+              <h4>Chào bạn! Tôi là Xiaozhi</h4>
+              <p>
+                Tôi có thể trò chuyện, chia sẻ kiến thức, tư vấn lối sống và kiểm tra không gian sống
+                cho bạn. Hãy nói hoặc chọn nhanh kịch bản gợi ý bên dưới!
+              </p>
             </div>
           )}
         </div>
 
+        {/* Quick Test Scenarios Bar */}
+        <div className="hm-voice-scenarios-section">
+          <div className="hm-scenarios-header">
+            <span>💡 Kịch bản trò chuyện thử nghiệm:</span>
+          </div>
+          <div className="hm-scenarios-grid">
+            {TEST_SCENARIOS.map((sc) => (
+              <button
+                key={sc.id}
+                type="button"
+                className="hm-scenario-chip"
+                disabled={busy}
+                onClick={() => handleSelectScenario(sc)}
+                title={sc.prompt}
+              >
+                <Icon name={sc.icon} />
+                <span className="hm-chip-text">{sc.label}</span>
+                <span className="hm-chip-tag">{sc.category}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Input Bar */}
         <VoiceFallbackInput
           value={manualValue}
           canSend={canSend}
           onChange={onManualChange}
-          onSend={onSend}
+          onSend={() => onSend()}
         />
       </section>
     </div>

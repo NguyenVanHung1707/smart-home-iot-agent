@@ -57,7 +57,7 @@ function MqttEventCard({ event }: { event: ApiSimulatorEvent }) {
 export function MqttPage({
   devices,
   events,
-  dataMode = "simulator",
+  dataMode = "real",
   onDeviceCommand,
   onSetFault,
 }: {
@@ -84,15 +84,15 @@ export function MqttPage({
     return true;
   });
 
-  const isReal = dataMode === "real";
-  const topicPrefix = isReal ? "homing/devices/#" : "homing/simulator/devices/#";
-  const deviceNodeLabel = isReal ? "Bo mạch ESP32 thật" : "Simulator Docker";
+  const isReal = true;
+  const topicPrefix = "homing/devices/#";
+  const deviceNodeLabel = "Bo mạch ESP32 thật";
 
   return (
     <section className="hm-mqtt-page" aria-label="MQTT Observatory">
       <SectionHeading
         eyebrow="LIVE MESSAGE OBSERVATORY"
-        title={`Luồng giao tiếp MQTT · ${isReal ? "Phần cứng ESP32" : "Giả lập"}`}
+        title="Luồng giao tiếp MQTT · Phần cứng ESP32"
         aside={
           <span className="hm-count">
             {events.length} Gói tin
@@ -100,9 +100,7 @@ export function MqttPage({
         }
       />
       <p className="hm-page-intro">
-        {isReal
-          ? "Quan sát lộ trình gói tin trực tiếp từ AI Agent tới MQTT Broker và phản hồi ACK từ các bo mạch ESP32 thật."
-          : "Quan sát lộ trình gói tin từ Llama Agent tới MQTT Broker, thiết bị mô phỏng Sandbox và ACK phản hồi về Dashboard."}
+        Quan sát lộ trình gói tin trực tiếp từ AI Agent tới MQTT Broker và phản hồi ACK từ các bo mạch ESP32 thật.
       </p>
 
       {/* Cloud MQTT (WSS Serverless) Configuration */}
@@ -112,7 +110,7 @@ export function MqttPage({
       <section className="hm-mqtt-route-panel" aria-label="Lộ trình tin nhắn MQTT">
         <div className="hm-route-title">
           <Icon name="mqtt" />
-          <span>Kiến trúc luồng thông điệp ({isReal ? "Chế độ Phần cứng thật" : "Chế độ Giả lập"})</span>
+          <span>Kiến trúc luồng thông điệp (Chế độ Phần cứng thật)</span>
         </div>
         <div className="hm-mqtt-flow">
           <FlowNode label="AGENT" detail="Kế hoạch JSON" tone="blue" />
@@ -141,7 +139,7 @@ export function MqttPage({
           <header className="hm-console-header">
             <div>
               <h3>Message Stream</h3>
-              <small>QoS 1 · {isReal ? "ESP32 Hardware Buffer" : "Simulator Buffer"}</small>
+              <small>QoS 1 · ESP32 Hardware Buffer</small>
             </div>
             <div className="hm-console-filters">
               <input

@@ -29,7 +29,7 @@ function readHistory(key: string) {
   }
 }
 
-export function useHistoryStorage(role: Role, dataMode: DataMode = "simulator") {
+export function useHistoryStorage(role: Role, dataMode: DataMode = "real") {
   const storageKey = useMemo(() => historyStorageKey(role, dataMode), [role, dataMode]);
   const [history, setHistory] = useState<HistoryItem[]>(() => readHistory(storageKey));
 

@@ -52,23 +52,13 @@ def request_unlock_approval(
             message="Không tìm thấy thiết bị khóa cửa trong hệ thống để tạo yêu cầu.",
         )
 
-    # Create approval ticket in ApprovalStore
-    approval_item = approvals.create(
-        device_id=device.id,
-        command=DeviceCommand(action="unlock"),
-        requested_by=reason,
-    )
-
+    # Reject unlock request via AI directly according to strict security policy
     return _tool_result(
-        "success",
-        ticket_id=approval_item.id,
+        "denied",
         device_id=device.id,
         device_name=device.name,
-        expires_at=approval_item.expires_at,
-        requested_by=reason,
-        approval_status="pending",
         message=(
-            f"Đã tạo yêu cầu mở khóa cho '{device.name}' (Mã ticket: {approval_item.id[:8]}). "
-            f"Chủ nhà vui lòng mở ứng dụng Homing Hub để phê duyệt mở cửa trong vòng 2 phút."
+            "Yêu cầu mở cửa qua AI bị từ chối vì lý do an ninh. "
+            "Vui lòng nhập mật khẩu trên bàn phím, trên giao diện web hoặc quét thẻ từ RFID để mở cửa."
         ),
     )

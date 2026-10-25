@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI):
     print(f"Starting {settings.app_name} in {settings.app_env} mode")
     try:
         from src.database import init_db
+
         init_db()
         users.load()
     except Exception as e:
@@ -60,6 +61,7 @@ app.add_middleware(
 
 app.include_router(auth_router, prefix="/api/v1/auth")
 app.include_router(router, prefix="/api/v1", dependencies=[Depends(current_user)])
+app.include_router(router, prefix="/api", dependencies=[Depends(current_user)])
 
 
 @app.get("/health")

@@ -20,10 +20,28 @@ export interface MqttTelemetryMessage {
   timestamp: number;
 }
 
+function getDefaultBrokerUrl(): string {
+  if (typeof window !== "undefined") {
+    if (import.meta.env.VITE_HIVEMQ_WSS_URL) {
+      return import.meta.env.VITE_HIVEMQ_WSS_URL;
+    }
+    const isHttps = window.location.protocol === "https:";
+    const proto = isHttps ? "wss:" : "ws:";
+    const host = window.location.host;
+    // Nếu chạy qua port dev 5173 của Vite, trỏ trực tiếp sang port 9001 của Mosquitto
+    if (window.location.port === "5173" || window.location.port === "3000") {
+      return `${proto}//${window.location.hostname}:9001`;
+    }
+    // Qua Nginx reverse proxy (/mqtt)
+    return `${proto}//${host}/mqtt`;
+  }
+  return "ws://localhost:9001";
+}
+
 const STORAGE_KEY = "homing-cloud-mqtt-config";
 
 const DEFAULT_CONFIG: CloudMqttConfig = {
-  brokerUrl: (typeof window !== "undefined" && import.meta.env.VITE_HIVEMQ_WSS_URL) || "wss://broker.emqx.io:8084/mqtt",
+  brokerUrl: getDefaultBrokerUrl(),
   username: (typeof window !== "undefined" && import.meta.env.VITE_HIVEMQ_USER) || "",
   password: (typeof window !== "undefined" && import.meta.env.VITE_HIVEMQ_PASS) || "",
   topicPrefix: "homing",
@@ -39,13 +57,20 @@ const stateListeners = new Set<(data: MqttTelemetryMessage) => void>();
 const alertListeners = new Set<(alert: any) => void>();
 
 export function getCloudMqttConfig(): CloudMqttConfig {
-  if (typeof window === "undefined") return DEFAULT_CONFIG;
+  const currentDefault = { ...DEFAULT_CONFIG, brokerUrl: getDefaultBrokerUrl() };
+  if (typeof window === "undefined") return currentDefault;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_CONFIG;
-    return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+    if (!raw) return currentDefault;
+    const parsed = JSON.parse(raw);
+    // Nếu trong localStorage lưu broker EMQX hoặc HiveMQ public cũ, tự động migrate về Mosquitto Hub cục bộ
+    if (parsed.brokerUrl && (parsed.brokerUrl.includes("emqx.io") || parsed.brokerUrl.includes("hivemq.cloud"))) {
+      parsed.brokerUrl = currentDefault.brokerUrl;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    }
+    return { ...currentDefault, ...parsed };
   } catch {
-    return DEFAULT_CONFIG;
+    return currentDefault;
   }
 }
 
@@ -169,6 +194,7 @@ export function publishDeviceCommand(deviceId: string, action: string, value: an
   const payload = JSON.stringify({
     action,
     value,
+    command_id: `web-${Date.now()}-${Math.random().toString(16).substring(2, 6)}`,
     timestamp: Date.now(),
   });
 

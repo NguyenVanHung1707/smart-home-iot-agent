@@ -3,63 +3,7 @@ import type { Device, HomePreset, Role, Room } from "../../types";
 import { Icon } from "../shared/Icon";
 import { PresetPanel } from "./PresetPanel";
 
-export const DEVICE_WATTAGE: Record<string, number> = {
-  aircon: 1200,
-  light: 40,
-  fan: 45,
-  display: 65,
-  speaker: 20,
-  blind: 25,
-  lock: 4,
-  sensor: 1,
-};
 
-export function calculateDeviceWatts(device: Device): number {
-  if (device.status === "offline") return 0;
-  const kind = device.kind ?? "sensor";
-  const isPowerOn = device.status === "on" || Boolean(device.state?.power);
-
-  switch (kind) {
-    case "aircon":
-      return isPowerOn ? DEVICE_WATTAGE.aircon : 0;
-    case "light": {
-      if (!isPowerOn && device.status !== "on") return 0;
-      const brightness =
-        typeof device.state?.brightness === "number"
-          ? Math.max(0, Math.min(100, device.state.brightness))
-          : 100;
-      return (DEVICE_WATTAGE.light * brightness) / 100;
-    }
-    case "fan": {
-      if (!isPowerOn && device.status !== "on") return 0;
-      const speed =
-        typeof device.state?.speed === "number"
-          ? Math.max(0, Math.min(100, device.state.speed))
-          : 100;
-      return (DEVICE_WATTAGE.fan * speed) / 100;
-    }
-    case "display":
-      return isPowerOn ? DEVICE_WATTAGE.display : 0;
-    case "speaker":
-      return isPowerOn ? DEVICE_WATTAGE.speaker : 0;
-    case "blind":
-      return isPowerOn ? DEVICE_WATTAGE.blind : 0;
-    case "lock":
-      return DEVICE_WATTAGE.lock;
-    case "sensor":
-      return DEVICE_WATTAGE.sensor;
-    default:
-      return isPowerOn ? 30 : 0;
-  }
-}
-
-// 24 mốc đặc tuyến phụ tải sinh hoạt gia đình điển hình theo giờ trong ngày
-const HOURLY_PROFILE = [
-  0.22, 0.18, 0.16, 0.15, 0.18, 0.32, // 00:00 - 05:00: ban đêm, tải nền
-  0.58, 0.78, 0.62, 0.42, 0.38, 0.52, // 06:00 - 11:00: sáng thức dậy, ra ngoài
-  0.68, 0.48, 0.42, 0.44, 0.54, 0.74, // 12:00 - 17:00: trưa & chiều
-  0.94, 1.0, 0.88, 0.72, 0.48, 0.32,  // 18:00 - 23:00: cao điểm sinh hoạt tối
-];
 
 type HomeRightRailProps = {
   rooms: Room[];
@@ -97,55 +41,7 @@ export function HomeRightRail({
         : Number(rawHum.toFixed(1))
       : 56;
 
-  // --- NĂNG LƯỢNG THỰC TẾ ---
-  const liveWatts = devices.reduce((sum, d) => sum + calculateDeviceWatts(d), 0);
-  const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
 
-  const totalInstalledWatts = devices.reduce(
-    (sum, d) => sum + (DEVICE_WATTAGE[d.kind ?? "sensor"] ?? 30),
-    0
-  );
-  const baseScaleWatts = Math.max(liveWatts, totalInstalledWatts * 0.45, 180);
-
-  // Phân bổ 24 cột năng lượng của ngày hôm nay
-  const hourlyData = HOURLY_PROFILE.map((profileWeight, h) => {
-    if (h < currentHour) {
-      return { kwh: (profileWeight * baseScaleWatts) / 1000 };
-    }
-    if (h === currentHour) {
-      const elapsedFraction = Math.max(1, currentMinute) / 60;
-      const currentWatts = Math.max(liveWatts, baseScaleWatts * profileWeight * 0.6);
-      return { kwh: (currentWatts * elapsedFraction) / 1000 };
-    }
-    // Giờ tương lai (> currentHour)
-    return { kwh: (profileWeight * baseScaleWatts) / 1000 };
-  });
-
-  const todayKwh = hourlyData
-    .slice(0, currentHour + 1)
-    .reduce((sum, item) => sum + item.kwh, 0);
-
-  const formattedLivePower =
-    liveWatts >= 1000
-      ? `${(liveWatts / 1000).toFixed(2)} kW`
-      : `${Math.round(liveWatts)} W`;
-
-  // So sánh động với phụ tải chuẩn ngày hôm qua cùng mốc giờ
-  const yesterdayBenchmark =
-    HOURLY_PROFILE.slice(0, currentHour).reduce(
-      (sum, coeff) => sum + (coeff * totalInstalledWatts * 0.48) / 1000,
-      0
-    ) +
-    ((HOURLY_PROFILE[currentHour] * totalInstalledWatts * 0.48 * Math.max(1, currentMinute)) / 60) / 1000;
-
-  const trendDiffPercent = Math.round(
-    ((todayKwh - yesterdayBenchmark) / Math.max(0.1, yesterdayBenchmark)) * 100
-  );
-  const trendText = trendDiffPercent >= 0 ? `↑ ${trendDiffPercent}%` : `↓ ${Math.abs(trendDiffPercent)}%`;
-
-  const maxKwh = Math.max(...hourlyData.map((d) => d.kwh), 0.1);
 
   // --- BẢO MẬT THỰC TẾ ---
   const lockDevice =
@@ -342,56 +238,6 @@ export function HomeRightRail({
           </div>
         </section>
 
-        <section className="widget energy-card">
-          <div className="widget-row">
-            <div>
-              <h2>Năng lượng</h2>
-              <p>Hôm nay</p>
-              <strong>{todayKwh.toFixed(1)} kWh</strong>
-              <span className="energy-live-power">Đang tiêu thụ: {formattedLivePower}</span>
-            </div>
-            <span className="trend">
-              {trendText}
-              <small>so với hôm qua</small>
-            </span>
-          </div>
-          <div className="bars" aria-label="Biểu đồ năng lượng theo giờ">
-            {hourlyData.map((d, h) => {
-              const isCurrent = h === currentHour;
-              const isFuture = h > currentHour;
-              let heightPercent: number;
-              if (isCurrent) {
-                const currentRateKwh = liveWatts / 1000;
-                const relativeLoad = Math.max(d.kwh, currentRateKwh);
-                heightPercent = Math.max(16, Math.min(100, Math.round((relativeLoad / maxKwh) * 85)));
-              } else {
-                heightPercent = Math.max(12, Math.min(100, Math.round((d.kwh / maxKwh) * 90)));
-              }
-
-              const tooltipText = `${String(h).padStart(2, "0")}:00 - ${d.kwh.toFixed(2)} kWh${
-                isCurrent ? " (hiện tại)" : isFuture ? " (dự kiến)" : ""
-              }`;
-
-              return (
-                <i
-                  key={h}
-                  className={`${isCurrent ? "current" : ""} ${isFuture ? "future" : ""}`.trim() || undefined}
-                  style={{ height: `${heightPercent}%` }}
-                  title={tooltipText}
-                />
-              );
-            })}
-          </div>
-          <div className="bar-labels">
-            <span>00</span>
-            <span>04</span>
-            <span>08</span>
-            <span>12</span>
-            <span>16</span>
-            <span>20</span>
-            <span>24</span>
-          </div>
-        </section>
 
         <section className="widget security-card">
           <h2>Bảo mật</h2>

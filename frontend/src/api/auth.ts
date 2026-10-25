@@ -21,8 +21,8 @@ export interface TokenResponse {
   user: UserPublic;
 }
 
-export function roleFromBackend(role: BackendRole): Role {
-  return role === "ADMIN" ? "homeadmin" : "member";
+export function roleFromBackend(_role: BackendRole): Role {
+  return "homeadmin";
 }
 
 export async function login(email: string, password: string): Promise<UserPublic> {

@@ -48,15 +48,20 @@ def route_information_request(query: str, mode: str | None = None) -> Informatio
     if _contains(text, "an ninh", "bao mat", "bao cao an toan", "kiem tra an toan"):
         return InformationRoute("get_security_report", {"include_sensors": True, "include_locks": True})
     guide = _contains(text, "huong dan", "tai lieu", "so tay", "khac phuc", "sua loi", "cach reset", "cach dat lai")
-    retrieve = _contains(text, "tim huong dan", "tim tai lieu", "tra cuu", "cach", "lam sao", "the nao", "tai sao") or "?" in text
+    retrieve = (
+        _contains(text, "tim huong dan", "tim tai lieu", "tra cuu", "cach", "lam sao", "the nao", "tai sao")
+        or "?" in text
+    )
     if guide and retrieve:
         return InformationRoute("search_home_guides", {"query": query.strip()})
-    if _contains(text, "rem", "man cua", "blind") and _contains(text, "dang", "trang thai", "mo bao nhieu", "dong chua", "mo chua", "?"):
+    if _contains(text, "rem", "man cua", "blind") and _contains(
+        text, "dang", "trang thai", "mo bao nhieu", "dong chua", "mo chua", "?"
+    ):
         if room := _mentioned_room(text, mode):
             return InformationRoute("get_room_devices", {"room": room})
-    inventory = _contains(text, "danh sach thiet bi", "thiet bi nao", "co nhung thiet bi", "nha co bao nhieu phong", "toan bo thiet bi") and not _contains(
-        text, "dang bat", "dang tat", "bat chua", "tat chua"
-    )
+    inventory = _contains(
+        text, "danh sach thiet bi", "thiet bi nao", "co nhung thiet bi", "nha co bao nhieu phong", "toan bo thiet bi"
+    ) and not _contains(text, "dang bat", "dang tat", "bat chua", "tat chua")
     if inventory:
         return InformationRoute("get_room_devices", {"room": _mentioned_room(text, mode)})
     return None

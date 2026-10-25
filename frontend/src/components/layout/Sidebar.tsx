@@ -22,7 +22,7 @@ export function Sidebar({
         </span>
         <div>
           <strong>HomeMind Hub</strong>
-          <small>{role === "homeadmin" ? "Home Owner" : "Chế độ Gia đình"}</small>
+          <small>Chủ nhà (Admin)</small>
         </div>
       </div>
 
@@ -32,11 +32,11 @@ export function Sidebar({
           item.isExternal ? (
             <a
               key={item.label}
-              href={item.href || "/simulator/"}
+              href={item.href || "#"}
               target="_blank"
               rel="noopener noreferrer"
               className="hm-sidebar-nav-btn hm-sidebar-external-btn"
-              title="Mở trang Mô phỏng Simulator (Tab mới)"
+              title={item.label}
             >
               <Icon name={item.icon} />
               <span>{item.label}</span>

@@ -1,261 +1,122 @@
-# Homing (HomeMind): Trợ lý Nhà thông minh Điều khiển bằng Giọng nói Tiếng Việt với AI Agent và IoT
+# Homing Smart Home Hub — AI Agent IoT System
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-463%20passed%2C%201%20skipped-success)]()
-[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.14-blue)]()
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688)]()
-[![LangGraph](https://img.shields.io/badge/LangGraph-0.2+-orange)]()
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)]()
-
-> **Homing** là giải pháp nhà thông minh AI Agent điều khiển bằng giọng nói tiếng Việt cục bộ (On-Device / Edge AI). Dự án tích hợp nhận diện tiếng nói (sherpa-onnx Zipformer `sherpa-onnx-zipformer-vi-int8-2025-04-20`), tổng hợp giọng nói (Piper TTS `vi_VN-vais1000-medium`), bộ điều phối suy luận đa bước LangGraph, giao thức MQTT (QoS 1) và phần cứng vi điều khiển ESP32 kèm bộ giả lập 8 thiết bị ảo.
-
-> 📖 **Tài liệu hướng dẫn mới:** Xem [Hướng dẫn tải model AI, chạy Docker và kích hoạt GPU NVIDIA chi tiết tại đây](HUONG_DAN_CAI_DAT_VA_CHAY_MODEL.md).
+Hệ thống nhà thông minh thế hệ mới kết hợp giữa **Trí tuệ nhân tạo (AI Agent)**, **Internet of Things (IoT)** và mạng điều khiển phần cứng không dây **ESP-NOW / MQTT**.
 
 ---
 
-## Tính năng Nổi bật
+## 1. Giới thiệu tổng quan dự án
 
-- **Điều khiển Giọng nói Tiếng Việt Cục bộ (Edge STT & TTS)**:
-  - Nhận diện giọng nói chạy CPU với **sherpa-onnx Zipformer** (`sherpa-onnx-zipformer-vi-int8-2025-04-20`, int8).
-  - Tổng hợp giọng nói phản hồi qua **Piper TTS** (`vi_VN-vais1000-medium`).
-  - Tích hợp **Voice Activity Detection (VAD)** ở cả frontend và backend để tự động cắt khoảng lặng và lọc nhiễu.
-- **AI Agent Suy luận Đa bước và Đa lượt (LangGraph Orchestration)**:
-  - Xử lý câu lệnh đơn, đa lệnh kết hợp (*"Tắt hết đèn và chỉnh điều hòa phòng khách 24 độ"*), câu hỏi làm rõ (clarification context) và đại từ thay thế.
-  - Phân tích ngữ nghĩa tiếng Việt: từ chối các câu giả định, phủ định hoặc câu lệnh hoãn trong tương lai.
-  - Hỗ trợ chế độ ReAct với mô hình ngôn ngữ (`Qwen2.5-3B-Instruct` / `Qwen2.5-1.5B` / `Qwen3.5-2B`, lượng tử hóa Q4_K_M qua `llama.cpp`) và bộ phân tích ngữ pháp tiền định (Deterministic Engine) độ trễ thấp (<50ms).
-- **Bảo mật và Xác thực An toàn (PIN Code & HITL)**:
-  - Tác vụ an ninh (như mở khóa cửa `entry-lock`) yêu cầu xác thực mã PIN bảo vệ hoặc phê duyệt qua giao diện, ngăn ngừa phát lệnh ngoài ý muốn.
-- **Giao thức IoT Chuẩn hóa và Tích hợp Phần cứng ESP32**:
-  - Giao tiếp qua **Mosquitto MQTT** với cơ chế QoS 1, Retained State và Acknowledgment telemetry (các topic `homing/devices/{device_id}/command`, `state`, `ack`, `fault`).
-  - Firmware ESP32 cho thiết bị gia dụng và cụm cổng khóa an ninh (Keypad 4x4, RFID RC522, LCD I2C, Servo, Buzzer) trong `src/firmware/`.
-  - Tích hợp sẵn **Device Simulator** (`src/simulator.py`) chạy độc lập mô phỏng 8 thiết bị ảo, giúp kiểm thử toàn bộ hệ thống không cần phần cứng.
-- **Bảng điều khiển Thời gian thực (Interactive Dashboard & Simulator)**:
-  - Giao diện React Dashboard (`frontend/`) cho phép thao tác bật/tắt, kéo thanh trượt độ sáng/nhiệt độ, thu âm giọng nói và theo dõi log phản hồi.
-  - Virtual Home Simulator (`frontend-simulator/`) hỗ trợ mô phỏng mặt bằng 2D Canvas và tiêm lỗi (fault injection).
+Homing Smart Home Hub là nền tảng quản trị và tự động hóa nhà thông minh toàn diện, cho phép người dùng giám sát môi trường, điều khiển các thiết bị điện trong gia đình, đảm bảo an ninh cửa ra vào và tương tác điều khiển bằng ngôn ngữ tự nhiên thông qua Giọng nói (Voice AI) hoặc Chatbot.
+
+Hệ thống được thiết kế với kiến trúc **Serverless & Hybrid Cloud**:
+- **Tầng Cloud / Server**: Backend FastAPI điều phối AI Agent, lưu trữ dữ liệu PostgreSQL và giao diện Web Dashboard React thời gian thực.
+- **Tầng Giao tiếp IoT**: Kết nối hai chiều qua MQTT (hỗ trợ cả Local Mosquitto và Cloud HiveMQ WSS bảo mật SSL/TLS).
+- **Tầng Thiết bị Biên (Hardware)**: 3 bo mạch vi điều khiển ESP32 giao tiếp với nhau bằng sóng vô tuyến tốc độ cao **ESP-NOW** (< 2ms, không phụ thuộc WiFi/Internet cục bộ).
 
 ---
 
-## Kiến trúc và Ngăn xếp Công nghệ
-
-```mermaid
-graph LR
-    User([User / Mic]) -->|Voice / Text| Dashboard[React Dashboard]
-    Dashboard -->|REST / Audio| Backend[FastAPI Hub]
-    
-    subgraph HubEngine["Homing Hub Core"]
-        Backend --> Zipformer[Zipformer STT]
-        Backend --> Agent[LangGraph Agent]
-        Backend --> Piper[Piper TTS]
-    end
-    
-    Agent --> Registry[Device Registry]
-    Registry <-->|MQTT Pub/Sub| Broker[Mosquitto Broker]
-    
-    Broker <--> ESP32[ESP32 Hardware]
-    Broker <--> Sim[Device Simulator]
-```
-
-| Tầng hệ thống | Công nghệ sử dụng | Vai trò chi tiết |
-|---|---|---|
-| **Frontend** | React 18, Vite, TypeScript, TailwindCSS | Giao diện điều khiển (`frontend/`) và mô phỏng 2D Canvas (`frontend-simulator/`) |
-| **Backend API** | FastAPI, Uvicorn, Pydantic v2 | Hub điều phối REST API, streaming audio, quản lý state mirror |
-| **Speech-to-Text** | `sherpa-onnx` Zipformer (`sherpa-onnx-zipformer-vi-int8-2025-04-20`) | STT tiếng Việt on-device, tiêu thụ RAM thấp (~150MB) |
-| **Text-to-Speech** | Piper TTS Service (`vi_VN-vais1000-medium`) | Tổng hợp âm thanh WAV tiếng Việt độ trễ thấp (<1s) |
-| **AI Orchestration** | LangGraph, LangChain, Qwen2.5-3B-Instruct / Qwen2.5-1.5B / Qwen3.5-2B (Q4_K_M) | Đồ thị trạng thái ReAct, định tuyến ý định, quản lý công cụ |
-| **IoT Protocol** | Eclipse Mosquitto MQTT Broker (Port 1883, QoS 1) | Kênh truyền thông Pub/Sub điều khiển thiết bị (`command`, `state`, `ack`, `fault`) |
-| **Phần cứng IoT** | ESP32 SoC, C++ / Arduino Framework (`src/firmware/`) | Điều khiển relay, servo, cảm biến gas MQ2, DHT11, RFID |
-| **Bộ giả lập IoT** | Python Device Simulator (`src/simulator.py`) | Mô phỏng 8 thiết bị ảo qua MQTT |
-| **Testing** | Pytest, Pytest-asyncio, Mocked MQTT | Bộ kiểm thử tự động gồm 463 passed, 1 skipped |
-
----
-
-## Hướng dẫn Cài đặt và Khởi chạy
-
-### 1. Yêu cầu Tiên quyết (Prerequisites)
-- **Hệ điều hành**: Linux (Ubuntu 20.04+), macOS, hoặc Windows (WSL2 / Docker Desktop).
-- **Phần mềm**: Docker Engine & Docker Compose v2, Python 3.11+, `curl`, `tar`, `sha256sum`.
-
-### 2. Tải Voice Models và Cấu hình Môi trường
-
-```bash
-# Clone repository (SSH hoặc HTTPS)
-git clone git@github.com:AI20K-Build-Phase-Cohort-3/P-140.git homing-hub
-cd homing-hub
-
-# Tạo file cấu hình môi trường
-cp .env.example .env
-
-# Tải các mô hình Zipformer STT và Piper TTS tiếng Việt (tự động kiểm tra checksum)
-bash scripts/download_voice_models.sh
-```
-
-### 3. Chạy qua Docker Compose (Khuyến nghị)
-
-Sử dụng script `scripts/docker.sh` để khởi động các chế độ mong muốn:
-
-```bash
-# Chạy toàn bộ hệ thống (Frontend, Backend, MQTT, Simulator, Zipformer, Piper TTS)
-bash scripts/docker.sh up full
-
-# Kiểm tra trạng thái các container
-bash scripts/docker.sh ps
-```
-
-Truy cập các dịch vụ:
-- **Web Dashboard**: [http://localhost/](http://localhost/)
-- **FastAPI Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **MQTT Broker**: `localhost:1883`
-
-Để tắt hệ thống:
-```bash
-bash scripts/docker.sh down
-```
-
----
-
-### 4. Chạy Cục bộ với Python (Local Python Setup)
-
-Nếu muốn phát triển và kiểm tra trực tiếp:
-
-```bash
-# 1. Tạo và kích hoạt virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# 2. Cài đặt thư viện
-pip install -r requirements.txt
-
-# 3. Khởi động MQTT Broker & Device Simulator (hoặc chạy docker cho mqtt)
-docker compose up -d mqtt
-
-# 4. Chạy backend FastAPI
-uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
----
-
-## Cấu hình Môi trường (.env Guide)
-
-File `.env` quản lý các tham số hoạt động chính của hệ thống:
-
-```ini
-# -- LLM & Reasoning ----------------------------------
-LLM_ENABLED=false                           # Bật/tắt ReAct Agent với LLM (false dùng Deterministic Parser)
-MODEL_NAME=qwen2.5-3b-instruct-q4_k_m.gguf
-LLAMA_BASE_URL=http://localhost:8080/v1
-LLM_TIMEOUT_SECONDS=12
-
-# -- MQTT Broker --------------------------------------
-MQTT_ENABLED=true
-MQTT_BROKER=localhost                       # Đặt là "mqtt" khi chạy trong Docker Compose
-MQTT_PORT=1883
-MQTT_TOPIC_PREFIX=homing
-MQTT_QOS=1
-MQTT_RETAIN_STATE=true
-MQTT_CLIENT_ID=homing-hub
-
-# -- Speech Runtime (STT & TTS) -----------------------
-VOICE_ENABLED=true
-ZIPFORMER_MODEL_DIR=models/zipformer/sherpa-onnx-zipformer-vi-int8-2025-04-20
-ZIPFORMER_NUM_THREADS=2
-PIPER_ENDPOINT=http://localhost:5000        # http://piper:5000 trong Docker
-PIPER_VOICE=vi_VN-vais1000-medium
-TTS_TIMEOUT_SECONDS=30
-VOICE_MAX_AUDIO_SECONDS=20
-VOICE_MAX_AUDIO_BYTES=1000000
-
-# -- An toàn & Bảo mật --------------------------------
-SECURITY_PIN=1234                           # Mã PIN mở khóa cửa
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173
-```
-
----
-
-## Mẫu Câu Lệnh Giọng nói và Văn bản
-
-Homing xử lý đa dạng các tình huống điều khiển bằng tiếng Việt:
-
-1. **Điều khiển Đơn lệnh (Single-intent Device Control)**:
-   > *"Bật đèn phòng khách"* hoặc *"Bật đèn phòng ngủ sáng 50%"*
-   - *Hành động*: Bật relay đèn phòng khách và cập nhật độ sáng theo yêu cầu.
-
-2. **Điều khiển Phức hợp / Đa phòng (Multi-intent Complex Command)**:
-   > *"Tắt hết đèn và chỉnh điều hòa phòng khách 24 độ"*
-   - *Hành động*: Gửi chuỗi lệnh tắt đồng loạt `living-light`, `bedroom-light`, `kitchen-light`, và đặt nhiệt độ `living-aircon` về 24°C.
-
-3. **Truy vấn Trạng thái Cảm biến & Thiết bị (Status Query)**:
-   > *"Nhiệt độ và độ ẩm phòng khách đang là bao nhiêu?"*
-   - *Hành động*: Đọc dữ liệu cảm biến thời gian thực: *"Nhiệt độ phòng khách hiện tại là 27°C, độ ẩm 65%."*
-
-4. **Xác thực An toàn Mở khóa Cửa (High-Security PIN Authentication)**:
-   > Người dùng: *"Mở khóa cửa chính"*  
-   > Homing: *"Mở khóa cần được tạo và xác nhận trong ứng dụng Homing Hub hoặc cung cấp mã PIN hợp lệ."*  
-   > Người dùng: Xác nhận mã PIN `1234` trên Web Dashboard hoặc Keypad: Cửa mở thành công.
-
-5. **Hỏi đáp Tri thức & Hướng dẫn Thiết bị (RAG / Knowledge Q&A)**:
-   > *"Làm thế nào khi cảm biến phát hiện rò rỉ khí gas?"*
-   - *Hành động*: Tra cứu tài liệu an toàn: Hướng dẫn người dùng khóa van bình gas, mở cửa sổ thông gió và không bật công tắc điện.
-
-6. **Điều chỉnh Tương đối & Ngữ cảnh Tiếp nối (Contextual Follow-up)**:
-   > Người dùng: *"Cho loa phòng khách to lên một chút"*  
-   > Homing: Tăng âm lượng `hub-speaker` thêm 10%.  
-   > Người dùng: *"Tắt nó đi"* : Tự động nhận biết đại từ *"nó"* tương ứng với `hub-speaker` và tắt loa.
-
----
-
-## Kiểm thử và Chạy Simulator
-
-### 1. Chạy Bộ Kiểm thử (Pytest Suite)
-Bộ kiểm thử tự động gồm 463 passed, 1 skipped bao quát API, Agent Logic, Speech Services, An toàn Ngữ nghĩa và MQTT transport:
-
-```bash
-# Kích hoạt venv và chạy pytest (loại trừ test live model và phần cứng thực tế)
-pytest tests/ -v -m "not live_model and not hardware"
-```
-
-### 2. Chạy Độc lập Device Simulator
-Bộ giả lập mô phỏng 8 thiết bị IoT phản hồi MQTT state và ack như phần cứng thật:
-
-```bash
-# Chạy simulator kết nối với broker localhost
-MQTT_BROKER=localhost python -m src.simulator
-```
-
----
-
-## Cấu trúc Thư mục Dự án
+## 2. Kiến trúc hệ thống tổng thể
 
 ```text
-├── src/
-│   ├── agents/               # LangGraph Agent, State graph, Nodes & Tools
-│   │   ├── graph.py          # StateGraph pipeline & routing
-│   │   ├── state.py          # Schema trạng thái AgentState
-│   │   └── tools/            # Smart home tools (@tool)
-│   ├── api/                  # FastAPI REST routes & audio streaming endpoints
-│   ├── firmware/             # Mã nguồn C++/Arduino cho vi điều khiển ESP32
-│   ├── models/               # Pydantic schemas (Device, Command, State, Audio)
-│   ├── services/             # Logic nghiệp vụ: Speech, MQTT, Device Registry, Safety
-│   ├── config.py             # Cấu hình Pydantic Settings
-│   ├── main.py               # Điểm khởi chạy FastAPI Hub
-│   └── simulator.py          # Virtual Device Simulator qua MQTT (8 thiết bị)
-├── frontend/                 # React + Vite Dashboard thời gian thực
-├── frontend-simulator/       # 2D Canvas Virtual Home Simulator & Fault Injection
-├── infra/                    # Mosquitto config, Piper Dockerfile
-├── docs/                     # Tài liệu kỹ thuật, sơ đồ kiến trúc, firmware guide
-├── eval/                     # Báo cáo đánh giá chất lượng và test cases
-├── tests/                    # 463 passed, 1 skipped Unit & Integration tests
-├── docker-compose.yml        # Docker Compose triển khai toàn bộ dịch vụ
-└── requirements.txt          # Danh sách dependencies Python
+ ┌─────────────────────────────────────────────────────────────────────────┐
+ │                           NGƯỜI DÙNG & GIAO DIỆN                        │
+ │  • Web Dashboard (React 18 + Vite + Three.js 2D/3D + Lucide Icons)      │
+ │  • Loa thông minh AI Xiaozhi (Micro INMP441 & Loa MAX98357A)            │
+ └───────────────────────────────────┬─────────────────────────────────────┘
+                                     │ HTTPS / WSS / REST
+                                     ▼
+ ┌─────────────────────────────────────────────────────────────────────────┐
+ │                       HOMING BACKEND & CLOUD RUNTIME                    │
+ │  • FastAPI Core: Quản trị thiết bị, phòng ốc, preset ngữ cảnh, JWT auth │
+ │  • AI Agent Engine: LangGraph + LLM Tool Calling (Qwen / OpenAI API)    │
+ │  • Database: PostgreSQL (Lưu trữ tài khoản, lịch sử lệnh, phê duyệt)    │
+ │  • MQTT Broker: Eclipse Mosquitto (Local LAN) & HiveMQ Cloud (WSS)      │
+ └───────────────────────────────────┬─────────────────────────────────────┘
+                                     │ MQTT (Port 1883 / 8883 / 8884)
+                                     ▼
+ ┌─────────────────────────────────────────────────────────────────────────┐
+ │                       HẠ TẦNG PHẦN CỨNG 3 ESP32                         │
+ │                                                                         │
+ │   [ESP32 #3 - Gateway Master]                                           │
+ │   ├── Nhận lệnh từ Cloud MQTT & Micro giọng nói                         │
+ │   └── Phát sóng không dây ESP-NOW (2.4GHz nội bộ)                       │
+ │            │                                  │                         │
+ │            ▼ (ESP-NOW < 2ms)                  ▼ (ESP-NOW < 2ms)         │
+ │   [ESP32 #1 - Thiết bị gia dụng]     [ESP32 #2 - Cửa an ninh chính]     │
+ │   ├── 3 Đèn, 3 Quạt DC, Rèm Servo    ├── Khóa chốt Servo 90°            │
+ │   ├── DHT11, MQ2 Khí gas, PIR, LDR   ├── Quẹt thẻ từ RFID RC522         │
+ │   └── Màn hình OLED & Nút bấm cơ     ├── Bàn phím số Keypad 4x4 & LCD   │
+ └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Đội ngũ Phát triển và Bản quyền
+## 3. Các tính năng cốt lõi
 
-- **Dự án**: VinUni AI20K Build Phase: Homing Hub Project.
-- **Kho lưu trữ**: [git@github.com:AI20K-Build-Phase-Cohort-3/P-140.git](https://github.com/AI20K-Build-Phase-Cohort-3/P-140)
-- **Giấy phép**: [MIT License](LICENSE).
+### 3.1. Điều khiển thiết bị & Quản lý phòng trực quan
+- Giám sát trạng thái thiết bị thời gian thực theo từng phòng (Phòng khách, Phòng ngủ, Phòng bếp, Cửa chính).
+- Điều khiển tức thì đèn, quạt, rèm cửa, khóa cửa với độ trễ phản hồi cực thấp.
+- Cơ chế gom nhóm và điều khiển ngữ cảnh một chạm (Preset): "Đi ngủ", "Tiếp khách", "Ra khỏi nhà".
 
-## Agent Rollout Contract
+### 3.2. Giám sát an toàn môi trường & Báo động tự động
+- **Cảm biến khí Gas / Khói MQ-2**: Tự động hú còi báo động và kích hoạt mở cửa sổ thông gió khi nồng độ gas vượt ngưỡng nguy hiểm.
+- **Cảm biến nhiệt độ & độ ẩm DHT11**: Cập nhật biểu đồ nhiệt độ phòng khách liên tục.
+- **Cảm biến chuyển động PIR**: Tự động bật đèn khi có người di chuyển.
 
-`legacy_active` và `typed_shadow` dùng pipeline legacy; shadow không tạo graph typed và không publish. `typed_active` chỉ chạy khi các gate enabled, capability và artifact đều hợp lệ, nếu không sẽ tự động quay về legacy. Hai chế độ dùng chung validator, policy, idempotency và verification contract.
+### 3.3. Hệ thống kiểm soát an ninh đa tầng
+- Mở khóa cửa chính bằng **Thẻ từ RFID** hoặc **Mật mã phím số Keypad 4x4**.
+- Chốt bảo mật an toàn: Khóa cửa có thể mở từ xa qua Web hoặc Voice với cơ chế bảo vệ mã PIN hoặc phê duyệt của Chủ nhà.
+- Tự động đóng chốt an toàn sau 5 giây mở cửa.
+
+### 3.4. Trí tuệ nhân tạo (AI Agent Voice & Chat)
+- Hỗ trợ ra lệnh bằng ngôn ngữ tự nhiên tiếng Việt:
+  - *"Bật đèn phòng khách và mở quạt phòng ngủ"*
+  - *"Kiểm tra nhiệt độ nhà mình hiện tại bao nhiêu độ?"*
+  - *"Mở khóa cửa chính"* (Agent kích hoạt bước kiểm tra an ninh).
+- Điều hướng và gọi công cụ (Tool-calling) chính xác, tự động phân tích ý định người dùng.
+
+---
+
+## 4. Công nghệ sử dụng
+
+| Tầng | Công nghệ / Thư viện |
+| :--- | :--- |
+| **Backend** | Python 3.11, FastAPI, Pydantic v2, Uvicorn, LangGraph, SQLAlchemy, Psycopg2 |
+| **Frontend** | React 18, TypeScript, Vite, Vanilla CSS, Lucide Icons, MQTT.js, Three.js |
+| **Cơ sở dữ liệu** | PostgreSQL 16 Alpine |
+| **Giao thức IoT** | MQTT (Mosquitto 2.0 / HiveMQ Cloud TLS/WSS), ESP-NOW (Espressif) |
+| **Trợ lý giọng nói** | Xiaozhi ESP32 Voice Server (Self-hosted WebSocket Opus, Edge-TTS Tiếng Việt, Function Calling) |
+| **Phần cứng** | 3 bo mạch vi điều khiển ESP32, cảm biến DHT11, MQ2, PIR, RFID-RC522, Keypad 4x4, Servo SG90, OLED SH1106, LCD 16x2 I2C, Micro I2S INMP441, Khuếch đại I2S MAX98357A |
+| **Triển khai** | Docker, Docker Compose, Cloudflare Tunnel |
+
+---
+
+## 5. Cấu trúc mã nguồn
+
+```text
+smart-home-iot-agent/
+├── data/                       # Dữ liệu cấu hình JSON (thiết bị, phòng, tài khoản)
+├── frontend/                   # Mã nguồn ứng dụng Web Dashboard React + Vite
+│   ├── src/                    # Components giao diện, hooks, API client
+│   └── nginx.conf              # Cấu hình Web Server Nginx cho Frontend
+├── infra/                      # Cấu hình Mosquitto MQTT & Xiaozhi AI Voice Server
+│   ├── mosquitto.conf          # Cấu hình Mosquitto Broker
+│   └── xiaozhi/                # Máy chủ Xiaozhi Server (config & plugins điều khiển IoT)
+├── runtime/                    # Lưu trữ trạng thái hoạt động của thiết bị
+├── scripts/                    # Các tiện ích cấu hình bảo mật MQTT & sao lưu DB
+├── src/                        # Mã nguồn Backend FastAPI
+│   ├── agents/                 # Logic xử lý AI Agent, Prompt và Tools
+│   ├── api/                    # Các API endpoint REST (auth, devices, rooms, approvals)
+│   ├── firmware/               # Mã nguồn Arduino C++ cho 3 bo mạch ESP32
+│   │   ├── esp32_home_appliances_espnow/
+│   │   ├── esp32_main_entrance_espnow/
+│   │   └── esp32_xiaozhi_gateway/
+│   ├── services/               # Dịch vụ MQTT, Device Registry, Users, Speech
+│   └── main.py                 # Điểm khởi chạy ứng dụng FastAPI
+├── docker-compose.yml          # File khởi chạy toàn bộ dịch vụ với Docker
+├── Dockerfile                  # Docker image cho Backend
+├── Makefile                    # Lệnh thao tác nhanh (build, format, lint)
+├── requirements.txt            # Danh sách thư viện Python
+├── PINOUT_CONFIG.md            # Tài liệu cấu hình chân đấu nối chi tiết ESP32
+└── SETUP_GUIDE.md              # Hướng dẫn chi tiết triển khai cho người mới từ A-Z
+```

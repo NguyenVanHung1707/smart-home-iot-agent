@@ -48,9 +48,10 @@ export interface ActiveToast {
 
 export function useHomeData(role: Role = "homeadmin") {
   const [dataMode, setDataModeState] = useState<DataMode>(() => {
-    if (typeof window === "undefined") return "simulator";
-    const saved = localStorage.getItem("homemind-data-mode");
-    return saved === "real" ? "real" : "simulator";
+    if (typeof window !== "undefined") {
+      localStorage.setItem("homemind-data-mode", "real");
+    }
+    return "real";
   });
 
   const [liveDevices, setLiveDevices] = useState<ApiDevice[]>([]);

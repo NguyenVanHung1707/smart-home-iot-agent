@@ -86,9 +86,13 @@ def get_security_report(
             # Gas leak detection
             if gas and isinstance(gas["value"], (int, float)):
                 if gas["alarm"] is True:
-                    alerts.append(f"CẢNH BÁO NGUY HIỂM: Phát hiện rò rỉ khí Gas tại '{sensor.room}' (Mức: {gas['value']} {gas['unit'] or ''})!")
+                    alerts.append(
+                        f"CẢNH BÁO NGUY HIỂM: Phát hiện rò rỉ khí Gas tại '{sensor.room}' (Mức: {gas['value']} {gas['unit'] or ''})!"
+                    )
                 elif gas["value"] >= 150:
-                    warnings.append(f"Nồng độ khí gas tại '{sensor.room}' cao hơn bình thường ({gas['value']} {gas['unit'] or ''}).")
+                    warnings.append(
+                        f"Nồng độ khí gas tại '{sensor.room}' cao hơn bình thường ({gas['value']} {gas['unit'] or ''})."
+                    )
 
             # High temperature / Fire risk
             if temp and isinstance(temp["value"], (int, float)) and temp["value"] >= 50.0:

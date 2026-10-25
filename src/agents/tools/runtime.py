@@ -16,21 +16,29 @@ from src.agents.tools.batch_control import batch_control_devices
 from src.agents.tools.blind import control_blind
 from src.agents.tools.display import control_display
 from src.agents.tools.home_guides import search_home_guides
+from src.agents.tools.internet_search import search_internet
 from src.agents.tools.light import control_light
 from src.agents.tools.lock import control_lock
+from src.agents.tools.media_player import play_youtube_music
+from src.agents.tools.air_quality_advisor import evaluate_air_quality
+from src.agents.tools.energy_analytics import get_energy_analytics
+from src.agents.tools.home_notes import add_family_note, delete_family_note, get_family_notes
+from src.agents.tools.home_safety_audit import audit_home_safety
 from src.agents.tools.preferences import get_user_preferences, save_user_preference
 from src.agents.tools.room_devices import get_room_devices
 from src.agents.tools.scene import activate_scene
 from src.agents.tools.schedules import get_schedules
 from src.agents.tools.security import get_security_report
-from src.agents.tools.internet_search import search_internet
-from src.agents.tools.media_player import play_youtube_music
 from src.agents.tools.sensor_data import get_sensor_data
+from src.agents.tools.shopping_list import manage_shopping_list
+from src.agents.tools.sleep_optimizer import optimize_sleep_environment
+from src.agents.tools.smart_calc_converter import smart_unit_and_cost_calculator
 from src.agents.tools.smart_device import ControlSmartDeviceInput, control_smart_device
 from src.agents.tools.speaker import control_speaker
 from src.agents.tools.timer import cancel_device_timer, list_device_timers, set_device_timer
 from src.agents.tools.unlock_approval import request_unlock_approval
-
+from src.agents.tools.social_search import search_social_media
+from src.agents.tools.weather_forecast import get_weather_forecast
 
 CONTROL_TOOL_NAMES: frozenset[str] = frozenset(
     {
@@ -40,8 +48,10 @@ CONTROL_TOOL_NAMES: frozenset[str] = frozenset(
         "control_speaker",
         "control_display",
         "control_lock",
+        "play_youtube_music",
         "batch_control_devices",
         "activate_scene",
+        "optimize_sleep_environment",
         "request_unlock_approval",
         "set_device_timer",
         "cancel_device_timer",
@@ -58,6 +68,10 @@ TOOLS = [
     play_youtube_music,
     batch_control_devices,
     activate_scene,
+    optimize_sleep_environment,
+    audit_home_safety,
+    manage_shopping_list,
+    smart_unit_and_cost_calculator,
     request_unlock_approval,
     set_device_timer,
     list_device_timers,
@@ -68,10 +82,16 @@ TOOLS = [
     get_schedules,
     search_home_guides,
     search_internet,
+    search_social_media,
+    get_weather_forecast,
+    get_energy_analytics,
+    evaluate_air_quality,
+    add_family_note,
+    get_family_notes,
+    delete_family_note,
     save_user_preference,
     get_user_preferences,
 ]
-
 
 
 def _control_for_kind(

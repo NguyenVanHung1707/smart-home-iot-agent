@@ -50,6 +50,7 @@ const icons: Record<IconName, IconDefinition> = {
   ac: "M3 6h18M5 6v8m14-8v8M7 10h10M8 21l4-7 4 7",
   drop: "M12 3s6 6.1 6 11a6 6 0 0 1-12 0c0-4.9 6-11 6-11Z",
   thermo: "M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0ZM12 5v11",
+  volume: "M11 5L6 9H2v6h4l5 4V5z M15.54 8.46a5 5 0 0 1 0 7.07 M19.07 4.93a10 10 0 0 1 0 14.14",
 };
 
 export function Icon({ name }: { name: IconName }) {

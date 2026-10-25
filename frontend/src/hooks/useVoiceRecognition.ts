@@ -73,11 +73,65 @@ export function useVoiceRecognition() {
     setVoice((current) => ({ ...current, finalTranscript: "", interimTranscript: "" }));
   }
 
-  async function speak(text: string): Promise<number> {
-    if (!ttsEnabled || !text.trim()) return 0;
+  function stopSpeaking() {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsPlayingAudio(false);
+  }
+
+  function fallbackBrowserSpeech(cleanText: string): number {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setIsPlayingAudio(false);
+      return 0;
+    }
     try {
-      setIsPlayingAudio(true);
-      const { audioUrl, latencyMs } = await synthesizeVoice(text);
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = "vi-VN";
+      utterance.rate = 1.05;
+      const voices = window.speechSynthesis.getVoices();
+      const viVoice = voices.find((v) => v.lang.toLowerCase().includes("vi"));
+      if (viVoice) {
+        utterance.voice = viVoice;
+      }
+      utterance.onstart = () => setIsPlayingAudio(true);
+      utterance.onend = () => setIsPlayingAudio(false);
+      utterance.onerror = () => setIsPlayingAudio(false);
+      window.speechSynthesis.speak(utterance);
+      return 50;
+    } catch {
+      setIsPlayingAudio(false);
+      return 0;
+    }
+  }
+
+  async function speak(text: string, force = false): Promise<number> {
+    if ((!ttsEnabled && !force) || !text.trim()) return 0;
+    stopSpeaking();
+
+    // Làm sạch ký tự markdown và định dạng để giọng đọc tự nhiên
+    const cleanSpeakText = text
+      .replace(/[*_#`~[\]]/g, " ")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/°C/g, " độ C")
+      .replace(/%/g, " phần trăm")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!cleanSpeakText) {
+      setIsPlayingAudio(false);
+      return 0;
+    }
+
+    setIsPlayingAudio(true);
+
+    try {
+      const { audioUrl, latencyMs } = await synthesizeVoice(cleanSpeakText);
       const audio = new Audio(audioUrl);
       currentAudioRef.current = audio;
       audio.addEventListener("ended", () => {
@@ -87,15 +141,13 @@ export function useVoiceRecognition() {
       }, { once: true });
       audio.addEventListener("error", () => {
         URL.revokeObjectURL(audioUrl);
-        setIsPlayingAudio(false);
         currentAudioRef.current = null;
+        fallbackBrowserSpeech(cleanSpeakText);
       }, { once: true });
       await audio.play();
       return latencyMs;
     } catch {
-      setIsPlayingAudio(false);
-      // Browser autoplay or offline fallback
-      return 0;
+      return fallbackBrowserSpeech(cleanSpeakText);
     }
   }
 
@@ -244,6 +296,7 @@ export function useVoiceRecognition() {
     isPlayingAudio,
     audioLevel,
     speak,
+    stopSpeaking,
     openVoice,
     stopVoice,
     closeVoice,

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
+import type { ApiDeviceCommand } from "../../api/types";
 import type { Approval, Device, Room } from "../../types";
 import { Icon } from "../shared/Icon";
 import { HomeCircuitLayer } from "./HomeCircuitLayer";
@@ -20,6 +21,8 @@ type HomeCircuitPanelProps = {
   onAddRoom?: () => void;
   onAddDevice?: () => void;
   onNavigateApprovals?: () => void;
+  onDeviceCommand?: (device: Device, command: ApiDeviceCommand) => Promise<void>;
+  onRequestPinUnlock?: (device: Device) => void;
 };
 
 export function HomeCircuitPanel({
@@ -32,6 +35,8 @@ export function HomeCircuitPanel({
   onAddRoom,
   onAddDevice,
   onNavigateApprovals,
+  onDeviceCommand,
+  onRequestPinUnlock,
 }: HomeCircuitPanelProps) {
   const [activeCircuit, setActiveCircuit] = useState<CircuitKey | null>(null);
   const [activeAnchor, setActiveAnchor] = useState<{ key: CircuitKey; cx: number; cy: number } | null>(null);
@@ -225,6 +230,8 @@ export function HomeCircuitPanel({
             circuit={deviceCircuit(device, devicePage * pageSize + index)}
             activeCircuit={activeCircuit}
             onActive={activateCircuit}
+            onDeviceCommand={onDeviceCommand}
+            onRequestPinUnlock={onRequestPinUnlock}
           />
         ))}
       </div>

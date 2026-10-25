@@ -13,17 +13,20 @@ export function VoiceComposer({
 }) {
   return (
     <div className="hm-voice-composer">
-      <button
-        type="button"
-        className={`hm-voice-orb ${listening ? "listening" : ""}`}
-        disabled={disabled}
-        onClick={onToggle}
-        aria-label={listening ? "Dừng nghe" : "Bắt đầu nghe"}
-      >
-        <span />
-        <Icon name="mic" />
-      </button>
-      <p className={`hm-voice-status-text ${listening ? "is-listening" : ""}`} aria-live="polite">
+      <div className="hm-voice-orb-wrapper">
+        <button
+          type="button"
+          className={`hm-voice-orb ${listening ? "listening" : ""} ${disabled ? "busy" : ""}`}
+          disabled={disabled}
+          onClick={onToggle}
+          aria-label={listening ? "Dừng lắng nghe" : "Bắt đầu nói với Xiaozhi"}
+        >
+          <span className="hm-orb-halo" />
+          <span className="hm-orb-core" />
+          <Icon name={listening ? "micOff" : "mic"} />
+        </button>
+      </div>
+      <p className={`hm-voice-status-text ${listening ? "is-listening" : ""} ${disabled ? "is-busy" : ""}`} aria-live="polite">
         {statusText}
       </p>
     </div>

@@ -90,6 +90,7 @@ export function RoomsPage({
         presets={presets}
         onPresetsChange={onPresetsChange}
         onDeviceCommand={onDeviceCommand}
+        onRequestPinUnlock={onRequestPinUnlock}
       />
 
       <RoomDeviceModal

@@ -8,29 +8,28 @@ import { useHistoryStorage } from "../../hooks/useHistoryStorage";
 import { useHomeData } from "../../hooks/useHomeData";
 import { usePresets } from "../../hooks/usePresets";
 import { useVoiceRecognition } from "../../hooks/useVoiceRecognition";
-import { adminNav, defaultPageByRole, isPageAllowedForRole, memberNav } from "../../navigation";
+import { adminNav, defaultPageByRole, isPageAllowedForRole } from "../../navigation";
 import type { ChatMessage, DataMode, Device, NavItem, Page, Role, Room, ThemeMode, VoiceMode } from "../../types";
 import { assistantReply } from "../../utils";
 import { createId } from "../../utils/id";
 import { ActivityPage } from "../admin/ActivityPage";
 import { ApprovalsPage } from "../admin/ApprovalsPage";
-import { FloorplanPage } from "../floorplan/FloorplanPage";
-import { SimulatorPage } from "../simulator/SimulatorPage";
+import { AIConversationsPage } from "../history/AIConversationsPage";
 import { HistoryPage } from "../history/HistoryPage";
 import { MqttPage } from "../mqtt/MqttPage";
 import { PresetsPage } from "../rooms/PresetsPage";
-import { RequestsPage } from "../requests/RequestsPage";
 import { RoomsPage } from "../rooms/RoomsPage";
-import { ModePinModal } from "../security/ModePinModal";
 import { PinModal } from "../security/PinModal";
+import { AISettingsPage } from "../settings/AISettingsPage";
 import { VoiceOverlay } from "../voice/VoiceOverlay";
 import { NotificationCenterModal } from "./NotificationCenterModal";
 import { PageShell } from "./PageShell";
 import { Sidebar } from "./Sidebar";
 import { TopGreeting } from "./TopGreeting";
+import { FloatingMediaPlayer } from "../shared/FloatingMediaPlayer";
 
 export function App({
-  role,
+  role: _role,
   userName,
   theme,
   onToggleTheme,
@@ -42,10 +41,8 @@ export function App({
   onToggleTheme: () => void;
   onSignOut: () => void;
 }) {
-  return role === "homeadmin" ? (
+  return (
     <HomeAdminApp theme={theme} onToggleTheme={onToggleTheme} userName={userName} onSignOut={onSignOut} />
-  ) : (
-    <MemberApp theme={theme} onToggleTheme={onToggleTheme} userName={userName} onSignOut={onSignOut} />
   );
 }
 
@@ -55,10 +52,7 @@ function useHomeAppController(role: Role) {
   const [roomPage, setRoomPage] = useState(0);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
-  const [requestCancelled, setRequestCancelled] = useState(false);
   const [notifCenterOpen, setNotifCenterOpen] = useState(false);
-  const [modePinModalOpen, setModePinModalOpen] = useState(false);
-
   // Tự động kết nối Cloud MQTT (HiveMQ Cloud WSS)
   useEffect(() => {
     const cfg = getCloudMqttConfig();
@@ -113,7 +107,9 @@ function useHomeAppController(role: Role) {
     voice,
     ttsEnabled,
     setTtsEnabled,
+    isPlayingAudio,
     speak,
+    stopSpeaking,
     closeVoice,
     stopVoice,
     resetTranscript,
@@ -256,11 +252,11 @@ function useHomeAppController(role: Role) {
     toggleVoice(mode, (text) => void currentSubmitter(mode)(text));
   }
 
-  function sendVoiceOverlay() {
+  function sendVoiceOverlay(customText?: string) {
     const transcriptText = [voice.finalTranscript, voice.interimTranscript].filter(Boolean).join(" ").trim();
-    const manual = voice.mode === "chat" ? chatCommand : command;
+    const manual = typeof customText === "string" ? customText : (voice.mode === "chat" ? chatCommand : command);
     stopVoice();
-    void currentSubmitter()(transcriptText || manual);
+    void submitChatMessage(manual || transcriptText);
     resetTranscript();
   }
 
@@ -298,22 +294,6 @@ function useHomeAppController(role: Role) {
     notify(`Đã xác thực mã PIN! ${device.name} đã được mở khóa an toàn.`);
   }
 
-  function handleToggleDataMode(nextMode: DataMode) {
-    if (nextMode === "simulator") {
-      home.setDataMode("simulator");
-      return;
-    }
-    if (nextMode === "real") {
-      if (home.dataMode === "real") return;
-      setModePinModalOpen(true);
-    }
-  }
-
-  function handleModePinSuccess() {
-    home.setDataMode("real");
-    notify("Đã chuyển sang chế độ Mô hình nhà thông minh (ESP32 MQTT thật)");
-  }
-
   const transcript = [voice.finalTranscript, voice.interimTranscript].filter(Boolean).join(" ").trim();
   const assistantMessages = (voice.mode === "chat" ? chat : voiceThread).filter(
     (message) => message.role === "assistant",
@@ -334,9 +314,7 @@ function useHomeAppController(role: Role) {
     roomPage: currentRoomPage,
     selectedLiveRoom,
     selectedHistoryId,
-    requestCancelled,
     notifCenterOpen,
-    modePinModalOpen,
     pinModalOpen,
     pinDevice,
     command,
@@ -356,13 +334,14 @@ function useHomeAppController(role: Role) {
     updatePresets: presetState.updatePresets,
     voice,
     ttsEnabled,
+    isPlayingAudio,
+    speak,
+    stopSpeaking,
     setSidebarOpen,
     setRoomPage,
     setSelectedRoom,
     setSelectedHistoryId,
-    setRequestCancelled,
     setNotifCenterOpen,
-    setModePinModalOpen,
     setPinModalOpen,
     setPinDevice,
     setCommand,
@@ -379,8 +358,6 @@ function useHomeAppController(role: Role) {
     handleDeviceCommand,
     handleRequestPinUnlock,
     handlePinUnlockSuccess,
-    handleToggleDataMode,
-    handleModePinSuccess,
     notify,
   };
 }
@@ -419,7 +396,7 @@ function HomeAdminApp({ theme, onToggleTheme, userName, onSignOut }: SessionShel
           onRoomPage={app.setRoomPage}
           onOpenRoom={app.setSelectedRoom}
           onCloseRoom={() => app.setSelectedRoom(null)}
-          onOpenVoice={() => app.handleToggleVoice("command")}
+          onOpenVoice={() => app.handleToggleVoice("chat")}
           onNavigateApprovals={() => app.navigate("Approvals")}
           presets={app.presets}
           onPresetsChange={app.updatePresets}
@@ -464,45 +441,30 @@ function HomeAdminApp({ theme, onToggleTheme, userName, onSignOut }: SessionShel
         />
       ) : null}
 
-      {app.page === "Simulator" || app.page === "Floorplan2D" || app.page === "Floorplan3D" ? (
-        <SimulatorPage />
-      ) : null}
 
-      {app.page === "History" ? (
+      {app.page === "History" || app.page === "Activity" ? (
         <HistoryPage
           history={app.history}
           selectedId={app.selectedHistoryId}
           onSelect={(item) => app.setSelectedHistoryId(item.id)}
+          activity={app.home.activity}
+          initialTab={app.page === "Activity" ? "system" : "commands"}
         />
       ) : null}
 
-      {app.page === "Approvals" ? (
-        <ApprovalsPage
-          approvals={app.home.approvals}
-          onApprove={(id) => void app.handleApproval(id, "approve")}
-          onReject={(id) => void app.handleApproval(id, "reject")}
-        />
+      {app.page === "AIConversations" ? (
+        <AIConversationsPage onNotify={app.notify} />
       ) : null}
 
-      {app.page === "Activity" ? <ActivityPage activity={app.home.activity} /> : null}
-
-      {app.page === "MQTT" ? (
-        <MqttPage
-          devices={app.home.rawDevices}
-          events={app.home.events}
-          dataMode={app.home.dataMode}
-          onDeviceCommand={(dev) => void app.handleDeviceCommand(dev, { action: "toggle" })}
-          onSetFault={app.home.setSimulatorFault}
-        />
-      ) : null}
-
-      {app.page === "Presets" ? (
-        <PresetsPage
+      {app.page === "AISettings" || app.page === "Presets" ? (
+        <AISettingsPage
           role={app.role}
           devices={app.home.rooms.flatMap((room) => room.devices)}
           presets={app.presets}
           onPresetsChange={app.updatePresets}
           onDeviceCommand={app.handleDeviceCommand}
+          onNotify={app.notify}
+          initialTab={app.page === "Presets" ? "presets" : "ai"}
         />
       ) : null}
 
@@ -531,85 +493,6 @@ function HomeAdminApp({ theme, onToggleTheme, userName, onSignOut }: SessionShel
   );
 }
 
-function MemberApp({ theme, onToggleTheme, userName, onSignOut }: SessionShellProps) {
-  const app = useHomeAppController("member");
-
-  return (
-    <HomeAppFrame
-      app={app}
-      navItems={memberNav}
-      notificationCount={app.home.unreadNotificationsCount}
-      theme={theme}
-      onToggleTheme={onToggleTheme}
-      userName={userName}
-      onSignOut={onSignOut}
-    >
-      {app.page === "Rooms" ? (
-        <RoomsPage
-          role={app.role}
-          rooms={app.home.rooms}
-          approvals={app.home.approvals}
-          discoveredDevices={[]}
-          roomPage={app.roomPage}
-          selectedRoom={app.selectedLiveRoom}
-          listening={app.voice.listening}
-          onRoomPage={app.setRoomPage}
-          onOpenRoom={app.setSelectedRoom}
-          onCloseRoom={() => app.setSelectedRoom(null)}
-          onOpenVoice={() => app.handleToggleVoice("command")}
-          onDeviceCommand={app.handleDeviceCommand}
-          onRequestPinUnlock={(device) => void app.handleDeviceCommand(device, { action: "unlock" })}
-          presets={app.presets}
-          onPresetsChange={app.updatePresets}
-        />
-      ) : null}
-
-      {app.page === "Simulator" || app.page === "Floorplan2D" || app.page === "Floorplan3D" ? (
-        <SimulatorPage />
-      ) : null}
-
-      {app.page === "History" ? (
-        <HistoryPage
-          history={app.history}
-          selectedId={app.selectedHistoryId}
-          onSelect={(item) => app.setSelectedHistoryId(item.id)}
-        />
-      ) : null}
-
-      {app.page === "Presets" ? (
-        <PresetsPage
-          role={app.role}
-          devices={app.home.rooms.flatMap((room) => room.devices)}
-          presets={app.presets}
-          onPresetsChange={app.updatePresets}
-          onDeviceCommand={app.handleDeviceCommand}
-        />
-      ) : null}
-
-      {app.page === "Requests" ? (
-        <RequestsPage
-          approvals={app.home.approvals}
-          cancelled={app.requestCancelled}
-          onCancel={() => app.setRequestCancelled(true)}
-          onCancelApproval={async (id) => {
-            await app.home.decideApproval(id, "reject");
-            app.notify("Đã hủy yêu cầu phê duyệt an ninh.");
-          }}
-        />
-      ) : null}
-
-      <NotificationCenterModal
-        open={app.notifCenterOpen}
-        notifications={app.home.notifications}
-        approvals={[]}
-        onClose={() => app.setNotifCenterOpen(false)}
-        onMarkAllRead={app.home.markAllNotificationsRead}
-        onClearAll={app.home.clearNotifications}
-        onDismissNotification={app.home.dismissNotification}
-      />
-    </HomeAppFrame>
-  );
-}
 
 function HomeAppFrame({
   app,
@@ -656,7 +539,6 @@ function HomeAppFrame({
               notificationCount={notificationCount}
               dataMode={app.home.dataMode}
               theme={theme}
-              onToggleDataMode={app.handleToggleDataMode}
               onToggleTheme={onToggleTheme}
               onToggleSidebar={() => app.setSidebarOpen((open) => !open)}
               onOpenNotifications={() => app.setNotifCenterOpen(true)}
@@ -692,34 +574,28 @@ function HomeAppFrame({
       <VoiceOverlay
         open={app.voice.open}
         dataMode={app.home.dataMode}
-        mode={app.voice.mode}
+        mode="chat"
         listening={app.voice.listening}
         busy={app.submittingVoice}
         error={app.voice.error || app.actionError}
         transcript={app.transcript}
-        manualValue={app.voice.mode === "chat" ? app.chatCommand : app.command}
+        manualValue={app.chatCommand}
         messages={app.activeMessages}
         latestAssistant={app.latestAssistant}
         voiceStatusReady={Boolean(app.home.voiceStatus?.ready)}
         ttsEnabled={app.ttsEnabled}
+        isPlayingAudio={app.isPlayingAudio}
         onClose={app.closeVoice}
         onStop={app.stopVoice}
-        onToggle={() => app.handleToggleVoice(app.voice.mode)}
-        onSwitchMode={(mode) => {
-          app.closeVoice();
-          setTimeout(() => app.handleToggleVoice(mode), 100);
-        }}
+        onToggle={() => app.handleToggleVoice("chat")}
         onToggleTts={() => app.setTtsEnabled((val) => !val)}
-        onManualChange={app.voice.mode === "chat" ? app.setChatCommand : app.setCommand}
-        onSend={app.sendVoiceOverlay}
+        onManualChange={app.setChatCommand}
+        onSend={(customPrompt) => app.sendVoiceOverlay(customPrompt)}
+        onSpeakText={(text) => void app.speak(text, true)}
+        onStopSpeaking={app.stopSpeaking}
       />
 
-      <ModePinModal
-        open={app.modePinModalOpen}
-        onClose={() => app.setModePinModalOpen(false)}
-        onSuccess={app.handleModePinSuccess}
-      />
-
+      <FloatingMediaPlayer onNotify={(msg) => app.setActionNotice(msg)} />
     </main>
   );
 }

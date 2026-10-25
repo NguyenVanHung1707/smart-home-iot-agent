@@ -40,7 +40,13 @@ class LocalAgentHarness:
     while enforcing strict cycle detection and loop limits.
     """
 
-    def __init__(self, max_tool_call_iterations: int = 3, system_prompt_profile: str | None = None, generic_tool_protocol_enabled: bool = False, tool_retrieval_enabled: bool = False) -> None:
+    def __init__(
+        self,
+        max_tool_call_iterations: int = 3,
+        system_prompt_profile: str | None = None,
+        generic_tool_protocol_enabled: bool = False,
+        tool_retrieval_enabled: bool = False,
+    ) -> None:
         """Initialize the harness with a maximum number of tool execution turns.
 
         Args:
@@ -71,13 +77,24 @@ class LocalAgentHarness:
         """
         history = list(messages)
         if not history or not isinstance(history[0], SystemMessage):
-            prompt_query = next((str(message.content) for message in reversed(history) if isinstance(message, HumanMessage)), None)
-            history.insert(0, SystemMessage(content=build_system_prompt(profile=self.system_prompt_profile, query=prompt_query if self.tool_retrieval_enabled else None)))
+            prompt_query = next(
+                (str(message.content) for message in reversed(history) if isinstance(message, HumanMessage)), None
+            )
+            history.insert(
+                0,
+                SystemMessage(
+                    content=build_system_prompt(
+                        profile=self.system_prompt_profile, query=prompt_query if self.tool_retrieval_enabled else None
+                    )
+                ),
+            )
 
         generated: list[BaseMessage] = []
         seen_calls: set[tuple[str, str, str]] = set()
         local_protocol_profile = self.system_prompt_profile in {"local_tool_first", "qwen_tool_first"}
-        user_text = next((str(message.content) for message in reversed(history) if isinstance(message, HumanMessage)), "")
+        user_text = next(
+            (str(message.content) for message in reversed(history) if isinstance(message, HumanMessage)), ""
+        )
         injection_attempt = is_prompt_injection_attempt(user_text)
         absolute_calendar_schedule = is_absolute_calendar_schedule(user_text)
 
@@ -201,7 +218,9 @@ class LocalAgentHarness:
                     feedback = ToolMessage(
                         name="protocol_error",
                         tool_call_id="protocol-gate",
-                        content=json.dumps({"status": "invalid_request", "instruction": "Control calls require a clear imperative."}),
+                        content=json.dumps(
+                            {"status": "invalid_request", "instruction": "Control calls require a clear imperative."}
+                        ),
                     )
                     history.append(feedback)
                     generated.append(feedback)
@@ -209,7 +228,13 @@ class LocalAgentHarness:
                 for tool_call in local_calls:
                     call_key = (tool_call["name"], "generic", json.dumps(tool_call["args"], sort_keys=True))
                     if call_key in seen_calls:
-                        history.append(ToolMessage(name=tool_call["name"], tool_call_id=tool_call["id"], content='{"status":"failed","message":"Duplicate tool call detected."}'))
+                        history.append(
+                            ToolMessage(
+                                name=tool_call["name"],
+                                tool_call_id=tool_call["id"],
+                                content='{"status":"failed","message":"Duplicate tool call detected."}',
+                            )
+                        )
                         generated.append(history[-1])
                         continue
                     seen_calls.add(call_key)
@@ -232,7 +257,9 @@ class LocalAgentHarness:
                 feedback = ToolMessage(
                     name="protocol_error",
                     tool_call_id="protocol-gate",
-                    content=json.dumps({"status": "invalid_request", "instruction": "Do not use a tool for this request."}),
+                    content=json.dumps(
+                        {"status": "invalid_request", "instruction": "Do not use a tool for this request."}
+                    ),
                 )
                 history.append(feedback)
                 generated.append(feedback)

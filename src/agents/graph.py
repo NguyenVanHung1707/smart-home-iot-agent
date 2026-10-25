@@ -152,7 +152,9 @@ def _get_bound_llm(transport: str | None = None):
     return _get_llm().bind_tools(TOOLS) if resolved_transport == "native" else _get_llm()
 
 
-def _bind_local_protocol_grammar(llm, *, transport: str, query: str, enabled: bool = False, generic_enabled: bool = False):
+def _bind_local_protocol_grammar(
+    llm, *, transport: str, query: str, enabled: bool = False, generic_enabled: bool = False
+):
     """Optionally pass llama.cpp grammar per request; never affect native turns."""
     if not enabled or transport != "homeassistant_protocol" or not tool_needed(query) or not hasattr(llm, "bind"):
         return llm, False
@@ -186,7 +188,16 @@ async def agent_node(state: AgentState) -> dict:
     # Inject system prompt at the front if not already present
     if not messages or not isinstance(messages[0], SystemMessage):
         prompt_query = state.get("query", "") if settings.llm_local_tool_retrieval_enabled else None
-        messages.insert(0, SystemMessage(content=build_system_prompt(mode=mode, profile=_prompt_profile_for_transport(transport, settings.llm_local_generic_tool_protocol_enabled), query=prompt_query)))
+        messages.insert(
+            0,
+            SystemMessage(
+                content=build_system_prompt(
+                    mode=mode,
+                    profile=_prompt_profile_for_transport(transport, settings.llm_local_generic_tool_protocol_enabled),
+                    query=prompt_query,
+                )
+            ),
+        )
 
     model = _get_llm()
     try:
@@ -197,7 +208,9 @@ async def agent_node(state: AgentState) -> dict:
         llm,
         transport=transport,
         query=query,
-        enabled=settings.llm_local_generic_tool_grammar_enabled if settings.llm_local_generic_tool_protocol_enabled else settings.llm_local_protocol_grammar_enabled,
+        enabled=settings.llm_local_generic_tool_grammar_enabled
+        if settings.llm_local_generic_tool_protocol_enabled
+        else settings.llm_local_protocol_grammar_enabled,
         generic_enabled=settings.llm_local_generic_tool_protocol_enabled,
     )
     try:
@@ -223,14 +236,20 @@ async def agent_node(state: AgentState) -> dict:
     if local_calls is not None:
         if absolute_calendar_schedule and any(call["name"] == "set_device_timer" for call in local_calls):
             return {"messages": [AIMessage(content=_UNSUPPORTED_SCHEDULE_RESPONSE)]}
-        control_calls = sum(call["name"] in CONTROL_TOOL_NAMES or call["name"] == "control_smart_device" for call in local_calls)
+        control_calls = sum(
+            call["name"] in CONTROL_TOOL_NAMES or call["name"] == "control_smart_device" for call in local_calls
+        )
         if control_calls and not tool_needed(query):
             return {"messages": [AIMessage(content=_PROTOCOL_ERROR_RESPONSE)]}
         if state.get("device_command_count", 0) + control_calls > _MAX_DEVICE_COMMANDS:
             return {"messages": [AIMessage(content=_DEVICE_COMMAND_LIMIT_RESPONSE)]}
         return {"messages": [AIMessage(content="", tool_calls=local_calls)]}
     if legacy_call is not None:
-        is_control_call = legacy_call.tool_name is None or legacy_call.tool_name in CONTROL_TOOL_NAMES or legacy_call.tool_name == "control_smart_device"
+        is_control_call = (
+            legacy_call.tool_name is None
+            or legacy_call.tool_name in CONTROL_TOOL_NAMES
+            or legacy_call.tool_name == "control_smart_device"
+        )
         if is_control_call and transport == "homeassistant_protocol" and query and not tool_needed(query):
             return {"messages": [AIMessage(content=_PROTOCOL_ERROR_RESPONSE)]}
         return {"messages": [AIMessage(content=""), execute_homeassistant_call(legacy_call)]}
@@ -451,7 +470,9 @@ def _after_resolve(state: TypedAgentState) -> str:
         case InterpretationStatus.READY:
             return "validate"
         case (
-            InterpretationStatus.REPAIR_REQUIRED | InterpretationStatus.INVALID | InterpretationStatus.GENERIC_FALLBACK
+            InterpretationStatus.REPAIR_REQUIRED
+            | InterpretationStatus.INVALID
+            | InterpretationStatus.GENERIC_FALLBACK
         ):
             return "respond"
 

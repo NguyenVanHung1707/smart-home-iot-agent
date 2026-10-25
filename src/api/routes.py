@@ -15,6 +15,9 @@ from src.models.schemas import (
     Approval,
     ChatRequest,
     ChatResponse,
+    ConversationHistoryResponse,
+    ConversationRecord,
+    CreateConversationLogRequest,
     CreateDeviceRequest,
     Device,
     DeviceCommand,
@@ -34,7 +37,6 @@ from src.services.device_control import control_device
 from src.services.devices import registry, set_active_data_mode
 from src.services.mqtt import get_mqtt_hub
 from src.services.rag import search_device_guides
-from src.services.xiaozhi import xiaozhi_service
 from src.services.speech import (
     InvalidAudioError,
     NoSpeechDetectedError,
@@ -43,6 +45,7 @@ from src.services.speech import (
     SpeechUnavailableError,
     get_speech_runtime,
 )
+from src.services.xiaozhi import xiaozhi_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -56,6 +59,19 @@ async def _invoke_agent(query: str, session_id: str | None = None, mode: str | N
     if active_mode in {"real", "live", "hardware"}:
         result = await xiaozhi_service.process(query, session_id=conversation_id)
         result["session_id"] = conversation_id
+        try:
+            from src.database import db_log_conversation
+            db_log_conversation(
+                source="web",
+                user_query=query,
+                ai_response=result.get("response", ""),
+                session_id=conversation_id,
+                intent=result.get("analysis", "real_control"),
+                device_action=result.get("action"),
+                metadata={"ai_engine": "xiaozhi_ai", "mode": active_mode},
+            )
+        except Exception as log_err:
+            logger.warning("Failed to persist conversation history: %s", log_err)
         return result
 
     history = [
@@ -81,6 +97,21 @@ async def _invoke_agent(query: str, session_id: str | None = None, mode: str | N
     result["metadata"]["ai_engine"] = "local_model"
     result["metadata"]["mode"] = "simulator"
     conversations.add_turn(conversation_id, query, result.get("response", ""))
+    try:
+        from src.database import db_log_conversation
+        cmds = result.get("metadata", {}).get("commands", [])
+        act_str = ", ".join([f"{c.get('device_id')}:{c.get('action')}" for c in cmds if isinstance(c, dict)]) if cmds else None
+        db_log_conversation(
+            source="web",
+            user_query=query,
+            ai_response=result.get("response", ""),
+            session_id=conversation_id,
+            intent=result.get("analysis", "local_model"),
+            device_action=act_str,
+            metadata={"ai_engine": "local_model", "mode": "simulator"},
+        )
+    except Exception as log_err:
+        logger.warning("Failed to persist conversation history: %s", log_err)
     return result
 
 
@@ -90,11 +121,27 @@ async def chat(
     x_data_mode: str | None = Header(None, alias="X-Data-Mode"),
     mode: str | None = Query(None),
 ) -> ChatResponse:
+    from src.services.guardrails import guardrails
+
+    # 1. Input Guardrail: Block prompt injection, secrets theft, physical threats, toxicity
+    input_guard = guardrails.inspect_input(request.message)
+    if not input_guard.passed:
+        reply = input_guard.suggested_response or "Yêu cầu bị từ chối bởi rào chắn an toàn của ngôi nhà."
+        session_id = request.session_id or "default"
+        conversations.add_turn(session_id, request.message, reply)
+        return ChatResponse(
+            response=reply,
+            analysis="guardrail_blocked",
+            session_id=session_id,
+        )
+
     active_mode = (mode or x_data_mode or "simulator").strip().lower()
     set_active_data_mode(active_mode)
     result = await _invoke_agent(request.message, request.session_id, mode=active_mode)
+    # 2. Output Guardrail: Redact any accidental credentials or tokens
+    sanitized_response = guardrails.sanitize_output(result.get("response", ""))
     return ChatResponse(
-        response=result.get("response", ""),
+        response=sanitized_response,
         analysis=result.get("analysis", ""),
         session_id=result["session_id"],
     )
@@ -275,7 +322,7 @@ async def command_device(
     user: AuthUser = Depends(current_user),
     reg: Any = Depends(get_current_registry),
 ) -> Device | Approval:
-    active_mode = (mode or x_data_mode or "simulator").strip().lower()
+    active_mode = (mode or x_data_mode or "real").strip().lower()
     existing = reg.get(device_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -460,11 +507,12 @@ async def synthesize_voice(request: VoiceSynthesisRequest) -> StreamingResponse:
         result = await get_speech_runtime().synthesize(request.text)
     except SpeechError as exc:
         raise _speech_http_error(exc) from exc
+    media_type = "audio/wav" if result.audio.startswith(b"RIFF") else "audio/mpeg"
     return StreamingResponse(
         io.BytesIO(result.audio),
-        media_type="audio/wav",
+        media_type=media_type,
         headers={
-            "X-TTS-Engine": "piper",
+            "X-TTS-Engine": result.voice,
             "X-TTS-Voice": result.voice,
             "X-TTS-Latency-Ms": str(result.latency_ms),
         },
@@ -478,12 +526,14 @@ async def voice_status():
 
 # --- Floorplan 2D & 3D Architectural State Routes ---
 
+
 @router.get("/floorplan")
 async def get_floorplan(
     x_data_mode: str | None = Header(None, alias="X-Data-Mode"),
     mode: str | None = Query(None),
 ):
     from src.services.floorplan import get_floorplan_state
+
     active_mode = (mode or x_data_mode or "simulator").strip().lower()
     return get_floorplan_state(active_mode)
 
@@ -495,6 +545,7 @@ async def save_floorplan_walls_route(
     mode: str | None = Query(None),
 ):
     from src.services.floorplan import save_floorplan_walls
+
     active_mode = (mode or x_data_mode or "simulator").strip().lower()
     walls = payload.get("walls", []) if isinstance(payload, dict) else payload
     return save_floorplan_walls(walls, mode=active_mode)
@@ -508,6 +559,7 @@ async def update_floorplan_device_route(
     mode: str | None = Query(None),
 ):
     from src.services.floorplan import update_floorplan_device
+
     active_mode = (mode or x_data_mode or "simulator").strip().lower()
     updated = update_floorplan_device(device_id, payload, mode=active_mode)
     if updated is None:
@@ -521,11 +573,13 @@ async def reset_floorplan_route(
     mode: str | None = Query(None),
 ):
     from src.services.floorplan import reset_floorplan_state
+
     active_mode = (mode or x_data_mode or "simulator").strip().lower()
     return reset_floorplan_state(active_mode)
 
 
 # --- Home Assistant Integration Routes ---
+
 
 @router.post("/integrations/homeassistant/sync")
 async def sync_homeassistant_discovery():
@@ -544,6 +598,7 @@ async def sync_homeassistant_discovery():
 
 
 # --- User Preferences & Long-Term Memory Routes ---
+
 
 @router.get("/preferences")
 async def list_preferences_route(category: str | None = Query(None)):
@@ -578,5 +633,144 @@ async def delete_preference_route(key: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="preference_not_found")
     return {"status": "success", "deleted_key": key}
+
+
+# --- AI Personality, System Prompt & Voice Settings Routes ---
+
+
+@router.get("/ai/config")
+async def get_ai_configuration():
+    """Retrieve active AI personality, system prompt, voice, and model settings."""
+    from src.services.ai_config import ai_config_service
+
+    return ai_config_service.get_config()
+
+
+@router.post("/ai/config")
+async def update_ai_configuration(payload: dict[str, Any]):
+    """Update and persist AI personality, system prompt, voice, and model settings."""
+    from src.services.ai_config import ai_config_service
+
+    updated = ai_config_service.save(payload)
+    return {
+        "status": "success",
+        "message": "Cấu hình AI đã được lưu và đồng bộ thành công tới Master ESP32 & Web Hub!",
+        "config": updated,
+    }
+
+
+@router.post("/ai/reset")
+async def reset_ai_configuration():
+    """Reset AI configuration back to factory default values."""
+    from src.services.ai_config import ai_config_service
+
+    reset = ai_config_service.reset_to_default()
+    return {
+        "status": "success",
+        "message": "Đã khôi phục cấu hình AI về mặc định ban đầu.",
+        "config": reset,
+    }
+
+
+# --- AI Conversation History Routes ---
+
+
+@router.get("/conversations/history", response_model=ConversationHistoryResponse)
+async def get_conversations_history(
+    source: str | None = Query(None, description="Filter by source: 'web', 'esp_ai', or 'all'"),
+    search: str | None = Query(None, description="Search query in user query or AI response"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> ConversationHistoryResponse:
+    """Retrieve history of conversations from both Web and ESP AI."""
+    from src.database import db_get_conversations
+
+    items, total = db_get_conversations(source=source, search=search, limit=limit, offset=offset)
+    return ConversationHistoryResponse(total=total, items=items)
+
+
+@router.post("/conversations/history", response_model=ConversationRecord, status_code=201)
+async def create_conversation_log(payload: CreateConversationLogRequest) -> ConversationRecord:
+    """Record a conversation turn from an external source (such as ESP32 Xiaozhi server)."""
+    from src.database import db_log_conversation
+
+    record = db_log_conversation(
+        source=payload.source,
+        user_query=payload.user_query,
+        ai_response=payload.ai_response,
+        session_id=payload.session_id or "default",
+        intent=payload.intent,
+        device_action=payload.device_action,
+        audio_url=payload.audio_url,
+        metadata=payload.metadata,
+    )
+    return ConversationRecord(**record)
+
+
+@router.delete("/conversations/history")
+async def clear_conversations_history(
+    source: str | None = Query(None, description="Filter by source: 'web', 'esp_ai', or 'all'"),
+):
+    """Clear conversation history, optionally filtered by source."""
+    from src.database import db_clear_conversations
+
+    deleted = db_clear_conversations(source=source)
+    return {"status": "cleared", "deleted_count": deleted}
+
+
+@router.delete("/conversations/history/{conversation_id}")
+async def delete_single_conversation(conversation_id: str):
+    """Delete a single conversation entry by ID."""
+    from src.database import db_delete_conversation
+
+    deleted = db_delete_conversation(conversation_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="conversation_not_found")
+    return {"status": "deleted", "id": conversation_id}
+
+
+# --- Model Context Protocol (MCP) JSON-RPC 2.0 Route ---
+
+
+@router.post("/mcp")
+async def mcp_endpoint(
+    payload: dict[str, Any],
+    mode: str | None = Query(None),
+    x_data_mode: str | None = Header(None, alias="X-Data-Mode"),
+):
+    """MCP endpoint implementing JSON-RPC 2.0 tools/list, tools/call for Xiaozhi AI & AI agents."""
+    from src.services.mcp_server import mcp_server
+
+    active_mode = (mode or x_data_mode or devices_mod.get_active_data_mode()).strip().lower()
+    return mcp_server.handle_request(payload, mode=active_mode)
+
+
+# --- Voice Announce Endpoint (Xiaozhi active notification) ---
+
+
+@router.post("/voice/announce")
+async def voice_announce(
+    payload: dict[str, Any],
+    mode: str | None = Query(None),
+    x_data_mode: str | None = Header(None, alias="X-Data-Mode"),
+):
+    """Announce an alert or notification via MQTT to the Xiaozhi Gateway speaker."""
+    from src.services.mqtt import get_mqtt_hub
+
+    message = payload.get("message", "").strip()
+    if not message:
+        raise HTTPException(status_code=422, detail="message_required")
+
+    hub = get_mqtt_hub()
+    if hub and hasattr(hub, "client") and hub.client is not None:
+        try:
+            settings = get_settings()
+            prefix = settings.mqtt_topic_prefix.strip("/")
+            hub.client.publish(f"{prefix}/speaker/say", message, qos=0)
+            return {"status": "announced", "message": message}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    return {"status": "simulated", "message": message}
+
 
 

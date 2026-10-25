@@ -8,7 +8,6 @@ export function TopGreeting({
   notificationCount,
   dataMode,
   theme,
-  onToggleDataMode,
   onToggleTheme,
   onToggleSidebar,
   onOpenNotifications,
@@ -18,9 +17,8 @@ export function TopGreeting({
   userName: string;
   sidebarOpen: boolean;
   notificationCount: number;
-  dataMode: DataMode;
+  dataMode?: DataMode;
   theme: ThemeMode;
-  onToggleDataMode: (mode: DataMode) => void;
   onToggleTheme: () => void;
   onToggleSidebar: () => void;
   onOpenNotifications?: () => void;
@@ -54,26 +52,10 @@ export function TopGreeting({
       </div>
 
       <div className="hm-top-status">
-        {/* Prominent Data Mode Switcher Toggle */}
-        <div className="hm-mode-switcher" title="Chuyển đổi chế độ hoạt động giữa Nhà mô phỏng và Mô hình nhà thông minh">
-          <button
-            type="button"
-            className={`hm-mode-btn ${dataMode === "simulator" ? "active" : ""}`}
-            onClick={() => onToggleDataMode("simulator")}
-            aria-pressed={dataMode === "simulator"}
-          >
-            <Icon name="cpu" />
-            <span>Nhà mô phỏng</span>
-          </button>
-          <button
-            type="button"
-            className={`hm-mode-btn ${dataMode === "real" ? "active" : ""}`}
-            onClick={() => onToggleDataMode("real")}
-            aria-pressed={dataMode === "real"}
-          >
-            <Icon name="mqtt" />
-            <span>Mô hình nhà thông minh</span>
-          </button>
+        {/* Real Smart Home Mode Badge */}
+        <div className="hm-connected-mode" title="Hệ thống đang hoạt động với Mô hình nhà thông minh (Phần cứng thật)">
+          <Icon name="mqtt" />
+          <span>Mô hình nhà thông minh</span>
         </div>
 
         <button

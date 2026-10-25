@@ -60,7 +60,7 @@ For every user turn:
 - Unaccented & Regional Variations: Understand unaccented Vietnamese ("bat den phong khach") and regional terminology ("máy lạnh" = aircon, "chỗ ngủ" = bedroom) when mapping is unambiguous. Never guess the room if multiple devices match.
 - Semantic Action Mappings for Vietnamese Verbs:
   - Blinds / Curtains: "kéo rèm", "đóng rèm", "hạ rèm", "khép rèm" -> close / set position (0%); "mở rèm", "kéo rèm lên", "nâng rèm" -> open / set position (100%).
-  - Locks / Doors: "khóa cửa", "gài chốt", "chốt cửa", "khóa chốt" -> lock (action="lock"). (Note: "mở khóa", "mở cửa" -> request_unlock_approval).
+  - Locks / Doors: "khóa cửa", "gài chốt", "chốt cửa", "khóa chốt" -> lock (action="lock"). (Note: "mở khóa", "mở cửa" -> từ chối vì an ninh, yêu cầu người dùng nhập mật khẩu trên bàn phím/web hoặc quét thẻ từ).
   - Air Conditioner: "chỉnh nhiệt", "hạ nhiệt", "giảm nhiệt", "tăng nhiệt", "làm mát", "giảm độ", "tăng độ", "chỉnh điều hòa", "bật máy lạnh" -> control_aircon.
   - Fan alias: when the live registry has no fan entity but an aircon capability supports mode="fan", resolve "quạt" to that aircon in fan mode; never invent a device ID.
   - Speaker / Audio: "tăng âm lượng", "giảm âm lượng", "cho to", "cho nhỏ", "vặn to", "vặn nhỏ", "phát nhạc", "dừng nhạc" -> control_speaker.
@@ -79,7 +79,7 @@ Select the most appropriate tool for each intent:
    - `control_aircon(room, action, mode, target_temperature)`: Control air conditioning power, mode (cool/heat/dry/auto), and temperature (16-30°C).
    - `control_blind(room, action, position)`: Control smart blinds / curtains (0=closed, 100=open).
    - `control_speaker(room, action, volume)`: Control smart speaker power, playback, and volume (0-100).
-   - `play_youtube_music(query, room, action)`: Search YouTube and play music/songs or videos on smart speaker in room ('play', 'pause', 'resume', 'stop').
+   - `play_youtube_music(query, room, action)`: Search YouTube and play music/songs or videos on smart speaker (default target device is 'gateway-speaker' - Loa ESP32 AI Gateway in 'Phòng khách'). Always use Loa ESP32 AI Gateway for music; NEVER play music on display screens.
    - `control_display(room, action, message)`: Control smart screen power and display text messages.
    - `control_lock(room, action)`: Lock doors securely (action="lock"). Direct "unlock" is strictly forbidden on control_lock.
 2. Batch & Scene Tools:
@@ -119,10 +119,10 @@ Select the most appropriate tool for each intent:
 - Do not execute contradictory commands for the same device in a single turn.
 - Only a tool return status of "success" confirms completion. Statuses like "timeout", "offline", "unavailable", "denied", "failed", or "invalid_request" indicate incomplete or failed operations.
 
-# UNLOCKING & APPROVAL WORKFLOW
+# UNLOCKING & DOOR ACCESS SECURITY POLICY
 - Locking a door (action="lock") is routine and safe.
-- Unlocking a door directly is strictly prohibited for the agent.
-- When a user asks to unlock a door, call `request_unlock_approval` to create a pending authorization request on the Homing Hub app, and inform the user to confirm via their app.
+- ALL requests to unlock or open a door via AI are strictly forbidden and MUST BE REJECTED directly without creating any approval requests.
+- When a user asks to unlock or open any door or lock, DO NOT call unlock tools or request_unlock_approval. Directly refuse the request and instruct them: "Vì lý do an ninh, tôi không thể mở cửa. Vui lòng nhập mật khẩu trên bàn phím, trên giao diện web hoặc quét thẻ từ RFID."
 
 # MULTI-CLAUSE, AMBIGUITY & CONTEXT
 - Handle multi-clause requests by executing valid actions and answering information questions. Partial success must be clearly communicated.
@@ -265,6 +265,21 @@ def build_system_prompt(mode: str | None = None, *, profile: str | None = None, 
     )
     env_section = f"\n# CURRENT OPERATING ENVIRONMENT\n- Mode: {env_name}\n- Description: {env_desc}\n"
 
+    from datetime import datetime
+    now = datetime.now()
+    weekdays_vi = {
+        0: "Thứ Hai", 1: "Thứ Ba", 2: "Thứ Tư", 3: "Thứ Năm",
+        4: "Thứ Sáu", 5: "Thứ Bảy", 6: "Chủ Nhật"
+    }
+    weekday_str = weekdays_vi.get(now.weekday(), "")
+    time_section = (
+        f"\n# CURRENT DATE & TIME (VIETNAM LOCAL CLOCK)\n"
+        f"- Current Time: {now.hour:02d}:{now.minute:02d}\n"
+        f"- Day of the Week: {weekday_str}\n"
+        f"- Date: {now.day:02d}/{now.month:02d}/{now.year}\n"
+        f"- Vietnamese phrase: '{weekday_str}, ngày {now.day} tháng {now.month} năm {now.year}'\n"
+    )
+
     memory_section = ""
     try:
         from src.database import db_get_preferences
@@ -285,8 +300,18 @@ def build_system_prompt(mode: str | None = None, *, profile: str | None = None, 
     prompt = (
         _SYSTEM_TEMPLATE.replace("{topology_overview}", topology_overview).replace("{devices_json}", devices_json)
         + env_section
+        + time_section
         + memory_section
     )
+    try:
+        from src.services.ai_config import ai_config_service
+
+        custom_instructions = ai_config_service.get_config()["config"].get("system_prompt", "").strip()
+        if custom_instructions:
+            prompt = f"# USER CUSTOM PERSONA & BEHAVIOR RULES\n{custom_instructions}\n\n" + prompt
+    except Exception:
+        pass
+
     runtime_tools = ", ".join(tool.name for tool in get_runtime_tools()) or "không có"
 
     base_prompt = f"{prompt}\n# RUNTIME TOOLS\n{runtime_tools}\n"
@@ -306,7 +331,10 @@ def build_system_prompt(mode: str | None = None, *, profile: str | None = None, 
             "Do not emit fenced tool protocols or raw tool JSON in assistant text.\n"
         )
     if profile == "informational_no_tools":
-        return base_prompt + "# NO TOOL CALLING\nAnswer informationally only; do not emit tool calls or fenced protocols.\n"
+        return (
+            base_prompt
+            + "# NO TOOL CALLING\nAnswer informationally only; do not emit tool calls or fenced protocols.\n"
+        )
     if profile not in {"local_tool_first", "qwen_tool_first"}:
         raise ValueError(f"Unknown system prompt profile: {profile}")
     catalog = []

@@ -139,26 +139,38 @@ class UserStore:
     def bootstrap_admin(self, settings: Settings | None = None) -> str | None:
         settings = settings or get_settings()
         with self._lock:
-            admin_email = normalize_email(settings.bootstrap_admin_email or "admin@homing.dev")
-            has_admin = any(normalize_email(item.get("email", "")) == admin_email for item in self._users.values())
             admin_pw_to_return = None
-            if not has_admin:
-                password = settings.bootstrap_admin_password or generate_password(16)
-                user_id = str(uuid4())
-                self._users[user_id] = {
-                    "id": user_id,
-                    "email": admin_email,
-                    "display_name": "Home Admin",
-                    "role": "ADMIN",
-                    "password_hash": hash_password(password),
-                    "token_version": 0,
-                    "locked": False,
-                    "failed_attempts": 0,
-                    "created_at": _now(),
-                    "last_login_at": None,
-                }
-                if not settings.bootstrap_admin_password:
-                    admin_pw_to_return = password
+            default_owners = [
+                (
+                    normalize_email(settings.bootstrap_admin_email or "admin@homing.dev"),
+                    "Home Admin",
+                    settings.bootstrap_admin_password or "admin123456",
+                ),
+                ("chunha1@homing.dev", "Chủ nhà 1", "admin123456"),
+                ("chunha2@homing.dev", "Chủ nhà 2", "admin123456"),
+                ("chunha3@homing.dev", "Chủ nhà 3", "admin123456"),
+                ("admin1@homing.dev", "Chủ nhà 1", "admin123456"),
+                ("admin2@homing.dev", "Chủ nhà 2", "admin123456"),
+                ("admin3@homing.dev", "Chủ nhà 3", "admin123456"),
+            ]
+            changed = False
+            for email, display_name, password in default_owners:
+                if not any(normalize_email(item.get("email", "")) == email for item in self._users.values()):
+                    user_id = str(uuid4())
+                    self._users[user_id] = {
+                        "id": user_id,
+                        "email": email,
+                        "display_name": display_name,
+                        "role": "ADMIN",
+                        "password_hash": hash_password(password),
+                        "token_version": 0,
+                        "locked": False,
+                        "failed_attempts": 0,
+                        "created_at": _now(),
+                        "last_login_at": None,
+                    }
+                    changed = True
+            if changed:
                 self._save_locked()
 
             return admin_pw_to_return

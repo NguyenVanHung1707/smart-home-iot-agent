@@ -539,6 +539,46 @@
   box-shadow: var(--hm-shadow-lg);
 }
 
+:root[data-theme="light"] .device-card.is-powered-on {
+  border-color: #0f8778;
+  background: #f0fdfa;
+  box-shadow: 0 4px 14px rgba(15, 135, 120, 0.12);
+}
+
+:root[data-theme="light"] .device-quick-toggle {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.04);
+  color: #64748b;
+}
+
+:root[data-theme="light"] .device-quick-toggle:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1e293b;
+}
+
+:root[data-theme="light"] .device-quick-toggle .toggle-switch-track {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+:root[data-theme="light"] .device-quick-toggle .toggle-switch-thumb {
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="light"] .device-quick-toggle.active {
+  border-color: #0f8778;
+  background: rgba(15, 135, 120, 0.1);
+  color: #0f8778;
+}
+
+:root[data-theme="light"] .device-quick-toggle.active .toggle-switch-track {
+  background: #0f8778;
+}
+
+:root[data-theme="light"] .device-quick-toggle.active .toggle-switch-thumb {
+  background: #ffffff;
+}
+
 :root[data-theme="light"] .light-dot {
   background: rgba(37, 99, 235, 0.1);
   color: #2563eb;

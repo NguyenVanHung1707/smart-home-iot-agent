@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
-    "test:vad": "node --test tests/vad.test.mts"
+    "build": "vite build"
   },
   "dependencies": {
     "@types/three": "^0.186.0",

@@ -117,8 +117,18 @@ def build_ha_discovery_payload(device: Device) -> list[tuple[str, dict[str, Any]
         metrics = list(telemetry.keys()) if telemetry else ["temperature", "humidity", "gas"]
         for metric in metrics:
             topic = f"homeassistant/sensor/homing_{device_id}_{metric}/config"
-            unit = "°C" if metric == "temperature" else "%" if metric == "humidity" else "ppm" if metric == "gas" else None
-            dev_class = "temperature" if metric == "temperature" else "humidity" if metric == "humidity" else "gas" if metric == "gas" else None
+            unit = (
+                "°C" if metric == "temperature" else "%" if metric == "humidity" else "ppm" if metric == "gas" else None
+            )
+            dev_class = (
+                "temperature"
+                if metric == "temperature"
+                else "humidity"
+                if metric == "humidity"
+                else "gas"
+                if metric == "gas"
+                else None
+            )
             payload = {
                 "name": f"{name} {metric.capitalize()}",
                 "unique_id": f"homing_sensor_{device_id}_{metric}",
@@ -164,4 +174,3 @@ def publish_all_devices_discovery(devices: list[Device], mqtt_client: Any = None
         total += publish_homeassistant_discovery(dev, mqtt_client=mqtt_client)
     logger.info("Published Home Assistant Discovery configs for %d devices (%d entities total)", len(devices), total)
     return total
-

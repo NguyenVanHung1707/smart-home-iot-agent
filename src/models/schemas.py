@@ -158,3 +158,33 @@ class PairDeviceRequest(StrictRequest):
 class RenameRoomRequest(StrictRequest):
     old_name: str = Field(..., min_length=1, max_length=100)
     new_name: str = Field(..., min_length=1, max_length=100)
+
+
+class CreateConversationLogRequest(BaseModel):
+    source: Literal["web", "esp_ai"] = "web"
+    user_query: str = Field(..., min_length=1)
+    ai_response: str = Field(..., min_length=1)
+    session_id: str | None = "default"
+    intent: str | None = None
+    device_action: str | None = None
+    audio_url: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ConversationRecord(BaseModel):
+    id: str
+    session_id: str
+    source: Literal["web", "esp_ai"]
+    user_query: str
+    ai_response: str
+    intent: str | None = None
+    device_action: str | None = None
+    audio_url: str | None = None
+    created_at: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ConversationHistoryResponse(BaseModel):
+    total: int
+    items: list[ConversationRecord]
+

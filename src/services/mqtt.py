@@ -188,9 +188,11 @@ class MqttHub:
                 continue
             stale_ids = []
             for reg in _all_registries():
-                if reg is devices_mod.get_registry("simulator") and not any(d.id.startswith("esp32") for d in reg.list()):
+                if reg is devices_mod.get_registry("simulator") and not any(
+                    d.id.startswith("esp32") for d in reg.list()
+                ):
                     continue
-                stale_ids.extend(reg.check_stale_devices(timeout_seconds=30.0))
+                stale_ids.extend(reg.check_stale_devices(timeout_seconds=60.0))
             if stale_ids:
                 unique_stale = list(set(stale_ids))
                 logger.info("Heartbeat Watchdog: Stale devices marked offline: %s", unique_stale)
@@ -254,6 +256,7 @@ class MqttHub:
             client.subscribe(f"{prefix}/devices/+/ack", qos=self.settings.mqtt_qos)
             client.subscribe(f"{prefix}/devices/+/lwt", qos=self.settings.mqtt_qos)
             client.subscribe(f"{prefix}/nodes/+/lwt", qos=self.settings.mqtt_qos)
+            client.subscribe(f"{prefix}/gateway/#", qos=self.settings.mqtt_qos)
             client.subscribe(f"{prefix}/discovery", qos=self.settings.mqtt_qos)
             client.subscribe(f"{prefix}/discovery/+", qos=self.settings.mqtt_qos)
             client.subscribe(f"{prefix}/simulator/devices/+/state", qos=self.settings.mqtt_qos)
@@ -280,6 +283,13 @@ class MqttHub:
             is_simulator = is_sim_topic or (payload.get("source") == "simulator")
             msg_mode = "simulator" if is_simulator else "real"
             target_regs = _target_registries(is_simulator)
+
+            if topic.startswith(f"{prefix}/gateway/"):
+                real_reg = devices_mod.get_registry("real")
+                real_reg.record_heartbeat("esp32_home_appliances")
+                real_reg.record_heartbeat("esp32_main_entrance")
+                self._record({"type": "heartbeat", "mode": "real", "gateway": payload})
+                return
 
             if topic.startswith(f"{prefix}/simulator/discovery"):
                 devices_mod.get_registry("simulator").add_discovered(payload)
@@ -364,7 +374,9 @@ class MqttHub:
                         found_in_any = True
                         reg.update_state(device_id, payload.get("state", {}), online=True)
                 if not found_in_any:
-                    target_reg = devices_mod.get_registry("simulator") if is_simulator else devices_mod.get_registry("real")
+                    target_reg = (
+                        devices_mod.get_registry("simulator") if is_simulator else devices_mod.get_registry("real")
+                    )
                     target_reg.add_discovered(payload)
                     self._record({"type": "discovery", "mode": msg_mode, **payload})
                 else:

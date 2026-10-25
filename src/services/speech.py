@@ -308,45 +308,78 @@ class SpeechRuntime:
             raise SpeechError("tts_text_too_long")
 
         started = time.perf_counter()
+
+        # 1. Thử gọi Piper TTS (nếu endpoint piper được cấu hình và phản hồi)
+        if self.settings.piper_endpoint and "piper:5000" not in self.settings.piper_endpoint:
+            try:
+                async with self._inference_lock:
+                    async with httpx.AsyncClient(timeout=min(self.settings.tts_timeout_seconds, 4.0)) as client:
+                        response = await client.post(
+                            f"{self.settings.piper_endpoint.rstrip('/')}/synthesize",
+                            json={"text": normalized, "voice": self.settings.piper_voice},
+                        )
+                        if response.status_code == 200 and response.content:
+                            return Synthesis(
+                                audio=response.content,
+                                latency_ms=round((time.perf_counter() - started) * 1000),
+                                voice=self.settings.piper_voice,
+                            )
+            except Exception as exc:
+                logger.debug("Piper TTS attempt failed (%s), switching to EdgeTTS / gTTS.", exc)
+
+        # 2. Dự phòng chất lượng cao bằng EdgeTTS (giọng Việt Nam tự nhiên chuẩn Microsoft)
+        import re, io
+        safe_tts = normalized.replace("°C", " độ C").replace("°", " độ ").replace("%", " phần trăm ")
+        safe_tts = safe_tts.replace(":", ", ").replace("/", " trên ")
+        safe_tts = re.sub(r"[\'\"\|\(\)\[\]\{\}\<\>\*\_\~\`\#\$\@\^\&\+\=]", " ", safe_tts)
+        safe_tts = re.sub(r"\s+", " ", safe_tts).strip()
+
         try:
-            async with self._inference_lock:
-                async with httpx.AsyncClient(timeout=self.settings.tts_timeout_seconds) as client:
-                    response = await client.post(
-                        f"{self.settings.piper_endpoint.rstrip('/')}/synthesize",
-                        json={"text": normalized, "voice": self.settings.piper_voice},
-                    )
-                    response.raise_for_status()
-        except httpx.TimeoutException as exc:
-            if getattr(self.settings, "voice_fallback_chime_enabled", False):
-                logger.warning("Piper TTS timeout (%s). Using fallback audio chime.", exc)
+            import edge_tts
+            for voice_name in ["vi-VN-HoaiMyNeural", "vi-VN-NamMinhNeural"]:
+                try:
+                    comm = edge_tts.Communicate(safe_tts, voice_name)
+                    fp = io.BytesIO()
+                    async for chunk in comm.stream():
+                        if chunk.get("type") == "audio":
+                            fp.write(chunk.get("data", b""))
+                    audio_bytes = fp.getvalue()
+                    if audio_bytes and len(audio_bytes) > 200:
+                        return Synthesis(
+                            audio=audio_bytes,
+                            latency_ms=round((time.perf_counter() - started) * 1000),
+                            voice=f"EdgeTTS-{voice_name}",
+                        )
+                except Exception as ex_edge:
+                    logger.debug("EdgeTTS voice %s failed: %s", voice_name, ex_edge)
+        except ImportError:
+            pass
+
+        # 3. Dự phòng 100% tin cậy bằng Google Translate TTS (gTTS)
+        try:
+            from gtts import gTTS
+            fp = io.BytesIO()
+            tts_obj = await asyncio.to_thread(lambda: gTTS(text=safe_tts, lang="vi"))
+            await asyncio.to_thread(lambda: tts_obj.write_to_fp(fp))
+            audio_bytes = fp.getvalue()
+            if audio_bytes and len(audio_bytes) > 200:
                 return Synthesis(
-                    audio=generate_fallback_chime(),
+                    audio=audio_bytes,
                     latency_ms=round((time.perf_counter() - started) * 1000),
-                    voice="fallback-chime",
+                    voice="Google-TTS-vi",
                 )
-            raise SpeechTimeoutError("piper_timeout") from exc
-        except (httpx.HTTPError, SpeechUnavailableError) as exc:
-            if getattr(self.settings, "voice_fallback_chime_enabled", False):
-                logger.warning("Piper TTS unreachable (%s). Using fallback audio chime.", exc)
-                return Synthesis(
-                    audio=generate_fallback_chime(),
-                    latency_ms=round((time.perf_counter() - started) * 1000),
-                    voice="fallback-chime",
-                )
-            raise SpeechUnavailableError("piper_unavailable") from exc
-        if not response.content:
-            if getattr(self.settings, "voice_fallback_chime_enabled", False):
-                return Synthesis(
-                    audio=generate_fallback_chime(),
-                    latency_ms=round((time.perf_counter() - started) * 1000),
-                    voice="fallback-chime",
-                )
-            raise SpeechUnavailableError("empty_piper_response")
-        return Synthesis(
-            audio=response.content,
-            latency_ms=round((time.perf_counter() - started) * 1000),
-            voice=self.settings.piper_voice,
-        )
+        except Exception as ex_gtts:
+            logger.warning("gTTS fallback failed: %s", ex_gtts)
+
+        # 4. Fallback cuối cùng bằng chuông báo âm thanh nếu tất cả đều offline
+        if getattr(self.settings, "voice_fallback_chime_enabled", False):
+            return Synthesis(
+                audio=generate_fallback_chime(),
+                latency_ms=round((time.perf_counter() - started) * 1000),
+                voice="fallback-chime",
+            )
+
+        raise SpeechUnavailableError("tts_unavailable")
 
     async def status(self) -> dict[str, object]:
         if not self.settings.voice_enabled:

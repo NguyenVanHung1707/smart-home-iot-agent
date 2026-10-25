@@ -17,6 +17,7 @@ type HomeDashboardProps = {
   presets: HomePreset[];
   onPresetsChange: (next: HomePreset[]) => void;
   onDeviceCommand: (device: Device, command: ApiDeviceCommand) => Promise<void>;
+  onRequestPinUnlock?: (device: Device) => void;
 };
 
 export function HomeDashboard({
@@ -32,6 +33,7 @@ export function HomeDashboard({
   presets,
   onPresetsChange,
   onDeviceCommand,
+  onRequestPinUnlock,
 }: HomeDashboardProps) {
   const devices = rooms.flatMap((room) => room.devices);
 
@@ -48,6 +50,8 @@ export function HomeDashboard({
           onAddRoom={onAddRoom}
           onAddDevice={onAddDevice}
           onNavigateApprovals={onNavigateApprovals}
+          onDeviceCommand={onDeviceCommand}
+          onRequestPinUnlock={onRequestPinUnlock}
         />
         <HomeRightRail
           rooms={rooms}

@@ -11,6 +11,7 @@
 
 #include <esp_now.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
@@ -21,8 +22,8 @@
 // Địa chỉ MAC thực tế của con ESP32 Xiaozhi Gateway vừa nạp
 uint8_t masterGatewayMac[] = {0x94, 0x54, 0xC5, 0xA9, 0x91, 0xE8};
 
-// Kênh WiFi dùng cho ESP-NOW (phải trùng với kênh WiFi của Router nhà bạn: Kênh 2)
-#define WIFI_CHANNEL 2
+// Kênh WiFi dùng cho ESP-NOW (đồng bộ tuyệt đối với kênh WiFi của Router TP-Link_ED49: Kênh 10)
+#define WIFI_CHANNEL 10
 
 // --- CẤU TRÚC GÓI TIN ESP-NOW CHUẨN ĐỒNG BỘ 3 CON ESP ---
 typedef struct struct_message {
@@ -123,38 +124,38 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingDataBytes, int len) 
 
   // 1. Xử lý Đèn
   if (dev == "living-light") {
-    stateLightLiving = (act == "turn_on" || incomingCmd.value == 1);
+    stateLightLiving = (act == "turn_on" || act == "on" || incomingCmd.value == 1);
     digitalWrite(LIGHT_LIVING, stateLightLiving ? HIGH : LOW);
     statusDisplay = stateLightLiving ? "Living Light: ON" : "Living Light: OFF";
     sendStateToGateway("living-light", stateLightLiving ? "on" : "off", stateLightLiving ? 1 : 0);
   }
   else if (dev == "kitchen-light") {
-    stateLightKitchen = (act == "turn_on" || incomingCmd.value == 1);
+    stateLightKitchen = (act == "turn_on" || act == "on" || incomingCmd.value == 1);
     digitalWrite(LIGHT_KITCHEN, stateLightKitchen ? HIGH : LOW);
     statusDisplay = stateLightKitchen ? "Kitchen Light: ON" : "Kitchen Light: OFF";
     sendStateToGateway("kitchen-light", stateLightKitchen ? "on" : "off", stateLightKitchen ? 1 : 0);
   }
   else if (dev == "bedroom-light") {
-    stateLightBedroom = (act == "turn_on" || incomingCmd.value == 1);
+    stateLightBedroom = (act == "turn_on" || act == "on" || incomingCmd.value == 1);
     digitalWrite(LIGHT_BEDROOM, stateLightBedroom ? HIGH : LOW);
     statusDisplay = stateLightBedroom ? "Bedroom Light: ON" : "Bedroom Light: OFF";
     sendStateToGateway("bedroom-light", stateLightBedroom ? "on" : "off", stateLightBedroom ? 1 : 0);
   }
   // 2. Xử lý Quạt
   else if (dev == "living-fan") {
-    stateFanLiving = (act == "turn_on" || incomingCmd.value > 0) ? 1 : 0;
+    stateFanLiving = (act == "turn_on" || act == "on" || incomingCmd.value > 0) ? 1 : 0;
     digitalWrite(FAN_LIVING, stateFanLiving ? HIGH : LOW);
     statusDisplay = stateFanLiving ? "Living Fan: ON" : "Living Fan: OFF";
     sendStateToGateway("living-fan", stateFanLiving ? "on" : "off", stateFanLiving);
   }
   else if (dev == "kitchen-fan") {
-    stateFanKitchen = (act == "turn_on" || incomingCmd.value > 0) ? 1 : 0;
+    stateFanKitchen = (act == "turn_on" || act == "on" || incomingCmd.value > 0) ? 1 : 0;
     digitalWrite(FAN_KITCHEN, stateFanKitchen ? HIGH : LOW);
     statusDisplay = stateFanKitchen ? "Kitchen Fan: ON" : "Kitchen Fan: OFF";
     sendStateToGateway("kitchen-fan", stateFanKitchen ? "on" : "off", stateFanKitchen);
   }
   else if (dev == "bedroom-fan") {
-    stateFanBedroom = (act == "turn_on" || incomingCmd.value > 0) ? 1 : 0;
+    stateFanBedroom = (act == "turn_on" || act == "on" || incomingCmd.value > 0) ? 1 : 0;
     digitalWrite(FAN_BEDROOM, stateFanBedroom ? HIGH : LOW);
     statusDisplay = stateFanBedroom ? "Bedroom Fan: ON" : "Bedroom Fan: OFF";
     sendStateToGateway("bedroom-fan", stateFanBedroom ? "on" : "off", stateFanBedroom);
@@ -235,8 +236,15 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
 
+  // QUAN TRỌNG: Thiết lập đúng kênh WiFi 10 (đồng bộ với Gateway và router TP-Link_ED49)
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_channel(WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
+  esp_wifi_set_promiscuous(false);
+
   Serial.print("Dia chi MAC ESP #1: ");
   Serial.println(WiFi.macAddress());
+  Serial.print("Kenh WiFi hoat dong: ");
+  Serial.println(WIFI_CHANNEL);
 
   // Khởi tạo ESP-NOW
   if (esp_now_init() != ESP_OK) {
@@ -258,6 +266,15 @@ void setup() {
   } else {
     Serial.println("Dang ky Peer Gateway thanh cong!");
   }
+
+  // Đăng ký Broadcast Peer để nhận lệnh kể cả khi Gateway broadcast
+  uint8_t broadcastMac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  esp_now_peer_info_t peerBroadcast;
+  memset(&peerBroadcast, 0, sizeof(peerBroadcast));
+  memcpy(peerBroadcast.peer_addr, broadcastMac, 6);
+  peerBroadcast.channel = WIFI_CHANNEL;
+  peerBroadcast.encrypt = false;
+  esp_now_add_peer(&peerBroadcast);
 }
 
 void loop() {

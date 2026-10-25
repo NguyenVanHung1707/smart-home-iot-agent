@@ -98,7 +98,7 @@ export function SignInPage({
 
         <header className="hm-auth-head">
           <h1>Đăng nhập Hub</h1>
-          <p>Dùng tài khoản chủ nhà hoặc thành viên đã được cấp.</p>
+          <p>Dùng tài khoản chủ nhà đã được cấp.</p>
         </header>
 
         <form className="hm-auth-form" onSubmit={handleSubmit} noValidate>
@@ -152,7 +152,7 @@ export function SignInPage({
 
           <div className="hm-quick-login-section">
             <div className="hm-quick-login-title">
-              <span>Đăng nhập nhanh</span>
+              <span>Đăng nhập nhanh (Chủ nhà)</span>
             </div>
             <div className="hm-quick-login-grid">
               <button
@@ -161,10 +161,9 @@ export function SignInPage({
                 disabled={busy}
                 onClick={() => void handleQuickLogin("admin@homing.dev", "admin123456")}
               >
-
                 <div className="hm-quick-login-btn-head">
                   <Icon name="shield" />
-                  <span>Chủ nhà</span>
+                  <span>Chủ nhà chính</span>
                 </div>
                 <span className="hm-quick-login-btn-sub">admin@homing.dev</span>
               </button>
@@ -173,13 +172,39 @@ export function SignInPage({
                 type="button"
                 className="hm-quick-login-btn"
                 disabled={busy}
-                onClick={() => void handleQuickLogin("member@homing.dev", "Member@123456")}
+                onClick={() => void handleQuickLogin("chunha1@homing.dev", "admin123456")}
               >
                 <div className="hm-quick-login-btn-head">
-                  <Icon name="house" />
-                  <span>Gia đình</span>
+                  <Icon name="shield" />
+                  <span>Chủ nhà 1</span>
                 </div>
-                <span className="hm-quick-login-btn-sub">member@homing.dev</span>
+                <span className="hm-quick-login-btn-sub">chunha1@homing.dev</span>
+              </button>
+
+              <button
+                type="button"
+                className="hm-quick-login-btn"
+                disabled={busy}
+                onClick={() => void handleQuickLogin("chunha2@homing.dev", "admin123456")}
+              >
+                <div className="hm-quick-login-btn-head">
+                  <Icon name="shield" />
+                  <span>Chủ nhà 2</span>
+                </div>
+                <span className="hm-quick-login-btn-sub">chunha2@homing.dev</span>
+              </button>
+
+              <button
+                type="button"
+                className="hm-quick-login-btn"
+                disabled={busy}
+                onClick={() => void handleQuickLogin("chunha3@homing.dev", "admin123456")}
+              >
+                <div className="hm-quick-login-btn-head">
+                  <Icon name="shield" />
+                  <span>Chủ nhà 3</span>
+                </div>
+                <span className="hm-quick-login-btn-sub">chunha3@homing.dev</span>
               </button>
             </div>
           </div>

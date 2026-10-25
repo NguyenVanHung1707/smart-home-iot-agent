@@ -14,7 +14,7 @@ export function VoiceFallbackInput({
   return (
     <div className="hm-voice-fallback">
       <textarea
-        rows={2}
+        rows={1}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(e) => {
@@ -23,15 +23,16 @@ export function VoiceFallbackInput({
             if (canSend) onSend();
           }
         }}
-        aria-label="Nhập câu lệnh bằng bàn phím"
-        placeholder="Hoặc gõ câu lệnh tiếng Việt tại đây (Enter để gửi)..."
+        aria-label="Nhập câu hỏi hoặc trò chuyện"
+        placeholder="Nhập câu hỏi hoặc trò chuyện với Xiaozhi (Enter để gửi)..."
       />
       <button
         type="button"
         disabled={!canSend}
         onClick={onSend}
-        aria-label="Gửi lệnh"
+        aria-label="Gửi tin nhắn"
         className="hm-voice-send-btn"
+        title="Gửi tin nhắn"
       >
         <Icon name="arrowUp" />
       </button>

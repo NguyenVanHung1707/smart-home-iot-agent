@@ -11,6 +11,7 @@
 
 #include <esp_now.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <MFRC522.h>
@@ -21,7 +22,7 @@
 // --- CẤU HÌNH ĐỊA CHỈ MAC CỦA CON XIAOZHI GATEWAY (MASTER) ---
 // Địa chỉ MAC thực tế của con ESP32 Xiaozhi Gateway vừa nạp
 uint8_t masterGatewayMac[] = {0x94, 0x54, 0xC5, 0xA9, 0x91, 0xE8};
-#define WIFI_CHANNEL 2
+#define WIFI_CHANNEL 10
 
 // --- CẤU TRÚC GÓI TIN ESP-NOW ĐỒNG BỘ ---
 typedef struct struct_message {
@@ -194,8 +195,15 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
 
+  // QUAN TRỌNG: Thiết lập đúng kênh WiFi 10 (đồng bộ với Gateway và router TP-Link_ED49)
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_channel(WIFI_CHANNEL, WIFI_SECOND_CHAN_NONE);
+  esp_wifi_set_promiscuous(false);
+
   Serial.print("Dia chi MAC ESP #2: ");
   Serial.println(WiFi.macAddress());
+  Serial.print("Kenh WiFi hoat dong: ");
+  Serial.println(WIFI_CHANNEL);
 
   // Khởi tạo ESP-NOW
   if (esp_now_init() != ESP_OK) {
@@ -218,6 +226,15 @@ void setup() {
   } else {
     Serial.println("Dang ky Peer Gateway thanh cong!");
   }
+
+  // Đăng ký Broadcast Peer
+  uint8_t broadcastMac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  esp_now_peer_info_t peerBroadcast;
+  memset(&peerBroadcast, 0, sizeof(peerBroadcast));
+  memcpy(peerBroadcast.peer_addr, broadcastMac, 6);
+  peerBroadcast.channel = WIFI_CHANNEL;
+  peerBroadcast.encrypt = false;
+  esp_now_add_peer(&peerBroadcast);
 
   delay(1000);
   lcd.clear();

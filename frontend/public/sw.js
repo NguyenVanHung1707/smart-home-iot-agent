@@ -1,5 +1,5 @@
 // HomeMind Hub Service Worker for PWA & Fast Asset Caching
-const CACHE_NAME = "homemind-hub-v1";
+const CACHE_NAME = "homemind-hub-v4";
 const OFFLINE_URL = "/";
 
 const PRECACHE_ASSETS = [

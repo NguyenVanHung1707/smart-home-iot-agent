@@ -1,5 +1,5 @@
 export type Role = "member" | "homeadmin";
-export type Page = "Rooms" | "Simulator" | "Floorplan2D" | "Floorplan3D" | "Presets" | "History" | "Requests" | "Approvals" | "Activity" | "MQTT";
+export type Page = "Rooms" | "Floorplan2D" | "Floorplan3D" | "Presets" | "History" | "Requests" | "Approvals" | "Activity" | "MQTT" | "AISettings" | "AIConversations";
 export type ThemeMode = "dark" | "light";
 export type DeviceState = "on" | "off" | "offline" | "warning";
 export type HistoryStatus = "done" | "pending" | "declined";
@@ -15,7 +15,7 @@ export type IconName =
   | "power" | "powerOff" | "settings" | "shield" | "sofa" | "sparkles" | "sun" | "sunrise" | "moon"
   | "wifi" | "wifiOff" | "x" | "mqtt" | "cpu" | "lock" | "unlock" | "sliders" | "refresh"
   | "plus" | "trash" | "pencil" | "kitchen" | "desk" | "bulb" | "tv" | "fan"
-  | "ac" | "drop" | "thermo" | "box";
+  | "ac" | "drop" | "thermo" | "box" | "volume";
 
 export interface DiscoveredDevice {
   device_id: string;
@@ -158,3 +158,69 @@ export interface SpeechRecognitionWindow extends Window {
   SpeechRecognition?: new () => SpeechRecognitionLike;
   webkitSpeechRecognition?: new () => SpeechRecognitionLike;
 }
+
+export interface AiConfigData {
+  role: string;
+  role_name: string;
+  system_prompt: string;
+  voice: string;
+  speech_rate: number;
+  speech_pitch: number;
+  model: string;
+  temperature: number;
+  max_tokens: number;
+  wake_words: string[];
+  greeting_text: string;
+}
+
+export interface AiPersonaPreset {
+  id: string;
+  name: string;
+  tagline: string;
+  voice: string;
+  temperature: number;
+  greeting: string;
+  prompt: string;
+}
+
+export interface AiVoiceOption {
+  id: string;
+  name: string;
+  gender: "male" | "female";
+  accent: string;
+  description: string;
+}
+
+export interface AiModelOption {
+  id: string;
+  name: string;
+  provider: string;
+  description: string;
+}
+
+export interface AiConfigResponse {
+  config: AiConfigData;
+  presets: AiPersonaPreset[];
+  voices: AiVoiceOption[];
+  models: AiModelOption[];
+}
+
+export interface AIConversationItem {
+  id: string;
+  session_id: string;
+  source: "web" | "esp_ai";
+  user_query: string;
+  ai_response: string;
+  intent?: string | null;
+  device_action?: string | null;
+  audio_url?: string | null;
+  created_at: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface AIConversationsResponse {
+  total: number;
+  items: AIConversationItem[];
+}
+
+

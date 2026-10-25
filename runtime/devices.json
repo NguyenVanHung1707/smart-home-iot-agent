@@ -139,6 +139,22 @@
     "capabilities": {}
   },
   {
+    "id": "gateway-speaker",
+    "name": "Loa ESP32 AI Gateway",
+    "room": "Phòng khách",
+    "kind": "speaker",
+    "online": true,
+    "state": {
+      "power": true,
+      "volume": 80,
+      "playing": false,
+      "track": "",
+      "media_url": "",
+      "audio_stream_url": ""
+    },
+    "capabilities": {}
+  },
+  {
     "id": "living-display",
     "name": "Màn hình phòng khách",
     "room": "Phòng khách",

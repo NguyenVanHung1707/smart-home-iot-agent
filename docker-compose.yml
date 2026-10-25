@@ -8,21 +8,12 @@ services:
       MQTT_BROKER: mqtt
       MQTT_ENABLED: "true"
       LLM_ENABLED: ${LLM_ENABLED:-true}
-      LLM_LOCAL_ONLY: ${LLM_LOCAL_ONLY:-true}
-      MODEL_NAME: ${MODEL_NAME:-qwen2.5:7b}
-      LLAMA_BASE_URL: ${LLAMA_BASE_URL:-http://ollama:11434/v1}
-      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-120}
+      LLM_LOCAL_ONLY: ${LLM_LOCAL_ONLY:-false}
+      MODEL_NAME: ${MODEL_NAME:-gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LLAMA_BASE_URL: ${LLAMA_BASE_URL:-}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
       VOICE_ENABLED: ${VOICE_ENABLED:-true}
-      ZIPFORMER_ENDPOINT: ${ZIPFORMER_ENDPOINT:-http://192.168.1.16:8090/v1/audio/transcriptions}
-      ZIPFORMER_HEALTH_ENDPOINT: ${ZIPFORMER_HEALTH_ENDPOINT:-http://192.168.1.16:8090/health}
-      ZIPFORMER_MODEL_DIR: ${ZIPFORMER_MODEL_DIR:-/models/zipformer/sherpa-onnx-zipformer-vi-int8-2025-04-20}
-      ZIPFORMER_NUM_THREADS: ${ZIPFORMER_NUM_THREADS:-2}
-      PIPER_ENDPOINT: ${PIPER_ENDPOINT:-http://192.168.1.16:8091}
-      PIPER_VOICE: ${PIPER_VOICE:-vi_VN-vais1000-medium}
-      TTS_TIMEOUT_SECONDS: ${TTS_TIMEOUT_SECONDS:-30}
-      VOICE_MAX_AUDIO_SECONDS: ${VOICE_MAX_AUDIO_SECONDS:-20}
-      VOICE_MAX_AUDIO_BYTES: ${VOICE_MAX_AUDIO_BYTES:-1000000}
-      VOICE_MAX_TTS_CHARS: ${VOICE_MAX_TTS_CHARS:-1000}
     volumes:
       - ./data:/app/data
       - ./runtime:/app/runtime
@@ -32,8 +23,6 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
-      ollama:
-        condition: service_started
     restart: unless-stopped
 
   frontend:
@@ -55,31 +44,6 @@ services:
       - ./infra/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - mqtt-data:/mosquitto/data
     restart: unless-stopped
-
-  device-simulator:
-    build: .
-    command: ["python", "-m", "src.simulator"]
-    ports: ["8001:8001"]
-    environment:
-      MQTT_BROKER: mqtt
-      MQTT_PORT: 1883
-      MQTT_TOPIC_PREFIX: homing
-      DEVICE_STORAGE_PATH: runtime/devices.json
-      SIMULATOR_HOST: "0.0.0.0"
-      SIMULATOR_PORT: "8001"
-    volumes:
-      - ./runtime:/app/runtime
-      - ./frontend-simulator/dist:/app/frontend-simulator/dist:ro
-      - ./src:/app/src
-    depends_on:
-      mqtt:
-        condition: service_started
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\""]
-      interval: 15s
-      timeout: 5s
-      retries: 5
 
   ollama:
     image: ollama/ollama:latest
@@ -118,12 +82,45 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    network_mode: "service:frontend"
-    command: ["tunnel", "--no-autoupdate", "--protocol", "http2", "run"]
+    command: ["tunnel", "--no-autoupdate", "run"]
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
       - frontend
+
+  # Máy chủ AI Xiaozhi ESP32 Voice Server (Tự host cục bộ)
+  xiaozhi-server:
+    image: ghcr.io/xinnan-tech/xiaozhi-esp32-server:server_latest
+    container_name: homing-xiaozhi-server
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+      - LD_LIBRARY_PATH=/usr/local/lib/python3.10/site-packages/nvidia/cublas/lib:/usr/local/lib/python3.10/site-packages/nvidia/cudnn/lib
+    ports:
+      # Port 8090 (host) -> 8000 (WebSocket audio server cho ESP32)
+      - "8090:8000"
+      # Port 8093 (host) -> 8003 (HTTP OTA & Vision API)
+      - "8093:8003"
+    volumes:
+      - ./infra/xiaozhi/data:/opt/xiaozhi-esp32-server/data
+      - ./infra/xiaozhi/plugins/smart_home.py:/opt/xiaozhi-esp32-server/plugins_func/functions/smart_home.py:ro
+      - ./infra/xiaozhi/models/SenseVoiceSmall/model.pt:/opt/xiaozhi-esp32-server/models/SenseVoiceSmall/model.pt
+      - ./infra/xiaozhi/http_server.py:/opt/xiaozhi-esp32-server/core/http_server.py:ro
+      - ./infra/xiaozhi/fun_local.py:/opt/xiaozhi-esp32-server/core/providers/asr/fun_local.py:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    depends_on:
+      backend:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
 
 volumes:
   mqtt-data:

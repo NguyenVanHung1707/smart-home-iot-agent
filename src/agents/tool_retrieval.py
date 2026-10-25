@@ -8,7 +8,9 @@ from collections.abc import Sequence
 from typing import Any
 
 _TOKEN = re.compile(r"[\wÀ-ỹ]+", re.UNICODE)
-_STOP_WORDS = frozenset({"cho", "một", "các", "và", "trong", "với", "của", "để", "theo", "này", "đó", "không", "thuộc", "từ", "vựng"})
+_STOP_WORDS = frozenset(
+    {"cho", "một", "các", "và", "trong", "với", "của", "để", "theo", "này", "đó", "không", "thuộc", "từ", "vựng"}
+)
 
 
 def _tokens(value: str) -> set[str]:
@@ -18,7 +20,9 @@ def _tokens(value: str) -> set[str]:
 
 def _tool_document(tool: Any) -> str:
     schema = tool.args_schema.model_json_schema()
-    fields = " ".join(f"{name} {definition.get('description', '')}" for name, definition in schema.get("properties", {}).items())
+    fields = " ".join(
+        f"{name} {definition.get('description', '')}" for name, definition in schema.get("properties", {}).items()
+    )
     return " ".join((tool.name.replace("_", " "), tool.description or "", fields))
 
 

@@ -1,4 +1,5 @@
 from ipaddress import ip_address
+from typing import Any
 from urllib.parse import urlparse
 
 from langchain_openai import ChatOpenAI
@@ -9,16 +10,30 @@ from src.services.model_adapter import ModelAdapter, local_openai_profile
 
 def get_llm() -> ChatOpenAI:
     settings = get_settings()
-    if getattr(settings, "llm_local_only", True) and not _is_local_endpoint(settings.llama_base_url):
+    is_cloud_api = bool(settings.openai_api_key and settings.openai_api_key.startswith(("sk-", "AIza")))
+    if (
+        not is_cloud_api
+        and getattr(settings, "llm_local_only", False)
+        and not _is_local_endpoint(settings.llama_base_url)
+    ):
         raise RuntimeError("LLM_LOCAL_ONLY requires a local llama.cpp endpoint")
-    return ChatOpenAI(
-        model=settings.model_name,
-        api_key=settings.openai_api_key or "local-llama",
-        base_url=settings.llama_base_url,
-        temperature=settings.llm_temperature,
-        timeout=settings.llm_timeout_seconds,
-        max_retries=settings.llm_max_retries,
-    )
+
+    kwargs: dict[str, Any] = {
+        "model": settings.model_name,
+        "temperature": settings.llm_temperature,
+        "timeout": settings.llm_timeout_seconds,
+        "max_retries": settings.llm_max_retries,
+    }
+
+    if is_cloud_api:
+        kwargs["api_key"] = settings.openai_api_key
+        if settings.llama_base_url and "ollama:11434" not in settings.llama_base_url:
+            kwargs["base_url"] = settings.llama_base_url
+    else:
+        kwargs["api_key"] = settings.openai_api_key or "local-llama"
+        kwargs["base_url"] = settings.llama_base_url
+
+    return ChatOpenAI(**kwargs)
 
 
 def _is_local_endpoint(url: str) -> bool:

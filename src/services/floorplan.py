@@ -13,8 +13,7 @@ from src.services.devices import get_registry
 
 logger = logging.getLogger(__name__)
 
-REAL_FLOORPLAN_PATH = Path("data/floorplan_real.json")
-SIMULATOR_FLOORPLAN_PATH = Path("runtime/simulator_state.json")
+REAL_FLOORPLAN_PATH = Path("data/floorplan.json")
 
 DEFAULT_WALLS: list[dict[str, float]] = [
     {"x1": 50.0, "y1": 50.0, "x2": 550.0, "y2": 50.0},
@@ -88,18 +87,20 @@ def _get_real_floorplan() -> dict[str, Any]:
         default_pos = DEFAULT_REAL_DEVICE_COORDS.get(dev_id, {"x": 250.0, "y": 200.0})
         x = dev_coords.get(dev_id, {}).get("x", default_pos["x"])
         y = dev_coords.get(dev_id, {}).get("y", default_pos["y"])
-        devices_list.append({
-            "id": d.id,
-            "name": d.name,
-            "room": d.room,
-            "kind": d.kind,
-            "x": x,
-            "y": y,
-            "online": d.online,
-            "state": deepcopy(d.state),
-            "capabilities": deepcopy(d.capabilities),
-            "auto_simulate": False,
-        })
+        devices_list.append(
+            {
+                "id": d.id,
+                "name": d.name,
+                "room": d.room,
+                "kind": d.kind,
+                "x": x,
+                "y": y,
+                "online": d.online,
+                "state": deepcopy(d.state),
+                "capabilities": deepcopy(d.capabilities),
+                "auto_simulate": False,
+            }
+        )
 
     return {
         "walls": walls,
@@ -110,26 +111,10 @@ def _get_real_floorplan() -> dict[str, Any]:
 
 
 def _get_simulator_floorplan() -> dict[str, Any]:
-    if SIMULATOR_FLOORPLAN_PATH.exists():
-        try:
-            data = json.loads(SIMULATOR_FLOORPLAN_PATH.read_text(encoding="utf-8"))
-            return {
-                "walls": data.get("walls", deepcopy(DEFAULT_WALLS)),
-                "devices": data.get("devices", []),
-                "faults": data.get("faults", {}),
-                "mode": "simulator",
-            }
-        except Exception:
-            logger.warning("Error reading simulator floorplan from %s", SIMULATOR_FLOORPLAN_PATH, exc_info=True)
-
-    from src.simulator_storage import storage
-    sim_state = storage.get_state()
-    sim_state["mode"] = "simulator"
-    return sim_state
+    return _get_real_floorplan()
 
 
 def save_floorplan_walls(walls: list[dict[str, Any]], mode: str | None = None) -> list[dict[str, float]]:
-    active_mode = _normalize_mode(mode)
     clean_walls = [
         {
             "x1": round(float(w["x1"]), 2),
@@ -142,86 +127,71 @@ def save_floorplan_walls(walls: list[dict[str, Any]], mode: str | None = None) -
     ]
 
     with _lock:
-        if active_mode == "real":
-            current = {}
-            if REAL_FLOORPLAN_PATH.exists():
-                try:
-                    current = json.loads(REAL_FLOORPLAN_PATH.read_text(encoding="utf-8"))
-                except Exception:
-                    pass
-            current["walls"] = clean_walls
-            REAL_FLOORPLAN_PATH.parent.mkdir(parents=True, exist_ok=True)
-            REAL_FLOORPLAN_PATH.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
-            return clean_walls
-        else:
-            from src.simulator_storage import storage
-            return storage.save_walls(clean_walls)
+        current = {}
+        if REAL_FLOORPLAN_PATH.exists():
+            try:
+                current = json.loads(REAL_FLOORPLAN_PATH.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        current["walls"] = clean_walls
+        REAL_FLOORPLAN_PATH.parent.mkdir(parents=True, exist_ok=True)
+        REAL_FLOORPLAN_PATH.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
+        return clean_walls
 
 
-def update_floorplan_device(
-    device_id: str, updates: dict[str, Any], mode: str | None = None
-) -> dict[str, Any] | None:
-    active_mode = _normalize_mode(mode)
+def update_floorplan_device(device_id: str, updates: dict[str, Any], mode: str | None = None) -> dict[str, Any] | None:
     with _lock:
-        if active_mode == "real":
-            current: dict[str, Any] = {"walls": deepcopy(DEFAULT_WALLS), "devices": []}
-            if REAL_FLOORPLAN_PATH.exists():
-                try:
-                    current = json.loads(REAL_FLOORPLAN_PATH.read_text(encoding="utf-8"))
-                except Exception:
-                    pass
+        current: dict[str, Any] = {"walls": deepcopy(DEFAULT_WALLS), "devices": []}
+        if REAL_FLOORPLAN_PATH.exists():
+            try:
+                current = json.loads(REAL_FLOORPLAN_PATH.read_text(encoding="utf-8"))
+            except Exception:
+                pass
 
-            dev_found = False
-            devices = current.get("devices", [])
-            for d in devices:
-                if d.get("id") == device_id:
-                    for k in ("x", "y", "room", "name"):
-                        if k in updates:
-                            d[k] = updates[k]
-                    dev_found = True
-                    break
+        dev_found = False
+        devices = current.get("devices", [])
+        for d in devices:
+            if d.get("id") == device_id:
+                for k in ("x", "y", "room", "name"):
+                    if k in updates:
+                        d[k] = updates[k]
+                dev_found = True
+                break
 
-            if not dev_found:
-                devices.append({
+        if not dev_found:
+            devices.append(
+                {
                     "id": device_id,
                     "x": updates.get("x", 250.0),
                     "y": updates.get("y", 200.0),
                     "room": updates.get("room", "Phòng khách"),
-                })
-            current["devices"] = devices
-            REAL_FLOORPLAN_PATH.parent.mkdir(parents=True, exist_ok=True)
-            REAL_FLOORPLAN_PATH.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
+                }
+            )
+        current["devices"] = devices
+        REAL_FLOORPLAN_PATH.parent.mkdir(parents=True, exist_ok=True)
+        REAL_FLOORPLAN_PATH.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
 
-            # Also update room/name in device registry if requested
-            if any(k in updates for k in ("name", "room")):
-                get_registry("real").update(device_id, updates)
+        # Also update room/name in device registry if requested
+        if any(k in updates for k in ("name", "room")):
+            get_registry("real").update(device_id, updates)
 
-            return {"success": True, "device_id": device_id}
-        else:
-            from src.simulator_storage import storage
-            return storage.update_device(device_id, updates)
+        return {"success": True, "device_id": device_id}
 
 
 def reset_floorplan_state(mode: str | None = None) -> dict[str, Any]:
-    active_mode = _normalize_mode(mode)
     with _lock:
-        if active_mode == "real":
-            default_state = {
-                "walls": deepcopy(DEFAULT_WALLS),
-                "devices": [
-                    {
-                        "id": dev_id,
-                        "x": coords["x"],
-                        "y": coords["y"],
-                        "room": coords["room"],
-                    }
-                    for dev_id, coords in DEFAULT_REAL_DEVICE_COORDS.items()
-                ],
-            }
-            REAL_FLOORPLAN_PATH.parent.mkdir(parents=True, exist_ok=True)
-            REAL_FLOORPLAN_PATH.write_text(json.dumps(default_state, ensure_ascii=False, indent=2), encoding="utf-8")
-            return _get_real_floorplan()
-        else:
-            from src.simulator_storage import storage
-            storage.reset()
-            return storage.get_state()
+        default_state = {
+            "walls": deepcopy(DEFAULT_WALLS),
+            "devices": [
+                {
+                    "id": dev_id,
+                    "x": coords["x"],
+                    "y": coords["y"],
+                    "room": coords["room"],
+                }
+                for dev_id, coords in DEFAULT_REAL_DEVICE_COORDS.items()
+            ],
+        }
+        REAL_FLOORPLAN_PATH.parent.mkdir(parents=True, exist_ok=True)
+        REAL_FLOORPLAN_PATH.write_text(json.dumps(default_state, ensure_ascii=False, indent=2), encoding="utf-8")
+        return _get_real_floorplan()

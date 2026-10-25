@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
+from uuid import uuid4
 
 from sqlalchemy import (
     JSON,
@@ -17,6 +19,7 @@ from sqlalchemy import (
     String,
     Text,
     create_engine,
+    desc,
 )
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -70,6 +73,21 @@ class UserPreferenceDB(Base):
     updated_at = Column(String(64), nullable=False)
 
 
+class ConversationDB(Base):
+    __tablename__ = "conversations"
+
+    id = Column(String(64), primary_key=True, index=True)
+    session_id = Column(String(64), index=True, default="default", nullable=False)
+    source = Column(String(32), index=True, default="web", nullable=False)  # 'web' or 'esp_ai'
+    user_query = Column(Text, nullable=False)
+    ai_response = Column(Text, nullable=False)
+    intent = Column(String(128), nullable=True)
+    device_action = Column(String(255), nullable=True)
+    audio_url = Column(String(512), nullable=True)
+    created_at = Column(String(64), index=True, nullable=False)
+    metadata_json = Column(JSON, default=dict, nullable=True)
+
+
 _engine = None
 _SessionLocal = None
 
@@ -88,6 +106,7 @@ def get_engine():
             if db_url.startswith("postgresql://"):
                 try:
                     import psycopg2  # noqa: F401
+
                     db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
                 except ImportError:
                     pass
@@ -188,9 +207,7 @@ def init_db() -> bool:
             # Seed Devices for real mode
             real_count = session.query(DeviceDB).filter_by(mode="real").count()
             if real_count == 0:
-                real_file = Path(get_settings().real_device_storage_path)
-                if not real_file.exists() and Path("data/devices_real.json").exists():
-                    real_file = Path("data/devices_real.json")
+                real_file = Path("data/devices.json")
                 if real_file.exists():
                     try:
                         raw = json.loads(real_file.read_text(encoding="utf-8"))
@@ -211,6 +228,38 @@ def init_db() -> bool:
                             logger.info("Seeded %d real devices from %s into PostgreSQL", len(raw), real_file)
                     except Exception as e:
                         logger.error("Failed to seed real devices: %s", e)
+
+            # Seed sample conversations if table is empty
+            conv_count = session.query(ConversationDB).count()
+            if conv_count == 0:
+                now_str = datetime.now(UTC).isoformat()
+                session.add_all([
+                    ConversationDB(
+                        id=str(uuid4()),
+                        session_id="web-demo",
+                        source="web",
+                        user_query="Bật đèn phòng khách giúp tôi",
+                        ai_response="Đã bật đèn phòng khách cho bạn rồi nhé.",
+                        intent="bat_den",
+                        device_action="living-light:on",
+                        audio_url=None,
+                        created_at=now_str,
+                        metadata_json={"ai_engine": "local_model", "mode": "real"}
+                    ),
+                    ConversationDB(
+                        id=str(uuid4()),
+                        session_id="esp32-gateway",
+                        source="esp_ai",
+                        user_query="Alo, bật quạt phòng khách",
+                        ai_response="Đã bật quạt mát cho bạn.",
+                        intent="bat_quat",
+                        device_action="living-fan:on",
+                        audio_url="http://192.168.1.105:8093/xiaozhi/audio/bat_quat.wav",
+                        created_at=now_str,
+                        metadata_json={"gateway": "esp32_s3_box", "asr": "whisper_cuda"}
+                    ),
+                ])
+                logger.info("Seeded initial sample conversations into database.")
 
         return True
     except Exception as e:
@@ -393,4 +442,107 @@ def db_delete_preference(key: str, user_id: str = "default") -> bool:
             session.delete(row)
             return True
         return False
+
+
+def db_log_conversation(
+    source: str,
+    user_query: str,
+    ai_response: str,
+    session_id: str = "default",
+    intent: str | None = None,
+    device_action: str | None = None,
+    audio_url: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Persist a conversation turn from Web or ESP AI into the database."""
+    conv_id = str(uuid4())
+    now = datetime.now(UTC).isoformat()
+    with get_db_session() as session:
+        rec = ConversationDB(
+            id=conv_id,
+            session_id=session_id or "default",
+            source=source,
+            user_query=user_query,
+            ai_response=ai_response,
+            intent=intent,
+            device_action=device_action,
+            audio_url=audio_url,
+            created_at=now,
+            metadata_json=metadata or {},
+        )
+        session.add(rec)
+        return {
+            "id": conv_id,
+            "session_id": session_id,
+            "source": source,
+            "user_query": user_query,
+            "ai_response": ai_response,
+            "intent": intent,
+            "device_action": device_action,
+            "audio_url": audio_url,
+            "created_at": now,
+            "metadata": metadata or {},
+        }
+
+
+def db_get_conversations(
+    source: str | None = None,
+    search: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[list[dict[str, Any]], int]:
+    """Retrieve conversations sorted by created_at descending."""
+    with get_db_session() as session:
+        query = session.query(ConversationDB)
+        if source and source.strip().lower() not in {"all", ""}:
+            query = query.filter(ConversationDB.source == source.strip().lower())
+        if search and search.strip():
+            term = f"%{search.strip()}%"
+            query = query.filter(
+                (ConversationDB.user_query.ilike(term)) | (ConversationDB.ai_response.ilike(term))
+            )
+        total = query.count()
+        rows = (
+            query.order_by(desc(ConversationDB.created_at))
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+        items = [
+            {
+                "id": r.id,
+                "session_id": r.session_id,
+                "source": r.source,
+                "user_query": r.user_query,
+                "ai_response": r.ai_response,
+                "intent": r.intent,
+                "device_action": r.device_action,
+                "audio_url": r.audio_url,
+                "created_at": r.created_at,
+                "metadata": r.metadata_json or {},
+            }
+            for r in rows
+        ]
+        return items, total
+
+
+def db_delete_conversation(conversation_id: str) -> bool:
+    """Delete a single conversation record."""
+    with get_db_session() as session:
+        rec = session.query(ConversationDB).filter_by(id=conversation_id).first()
+        if rec:
+            session.delete(rec)
+            return True
+        return False
+
+
+def db_clear_conversations(source: str | None = None) -> int:
+    """Clear conversation history, optionally filtered by source."""
+    with get_db_session() as session:
+        query = session.query(ConversationDB)
+        if source and source.strip().lower() not in {"all", ""}:
+            query = query.filter_by(source=source.strip().lower())
+        count = query.count()
+        query.delete(synchronize_session=False)
+        return count
 
