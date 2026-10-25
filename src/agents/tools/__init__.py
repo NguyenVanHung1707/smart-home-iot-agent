@@ -30,7 +30,7 @@ from src.agents.tools.home_safety_audit import AuditHomeSafetyInput, audit_home_
 from src.agents.tools.internet_search import SearchInternetInput, search_internet
 from src.agents.tools.light import ControlLightInput, control_light
 from src.agents.tools.lock import ControlLockInput, control_lock
-from src.agents.tools.media_player import PlayYoutubeMusicInput, play_youtube_music
+from src.agents.tools.media_player import PlayYoutubeMusicInput, parse_music_intent, play_youtube_music
 from src.agents.tools.preferences import (
     GetUserPreferencesInput,
     SaveUserPreferenceInput,
@@ -124,6 +124,7 @@ __all__ = [
     "get_weather_forecast",
     "list_device_timers",
     "play_youtube_music",
+    "parse_music_intent",
     "request_unlock_approval",
     "AuditHomeSafetyInput",
     "ManageShoppingListInput",

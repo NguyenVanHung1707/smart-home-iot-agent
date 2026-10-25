@@ -144,6 +144,12 @@ async def chat(
         response=sanitized_response,
         analysis=result.get("analysis", ""),
         session_id=result["session_id"],
+        track=result.get("track") or result.get("metadata", {}).get("track"),
+        url=result.get("url") or result.get("metadata", {}).get("url"),
+        audio_stream_url=result.get("audio_stream_url") or result.get("metadata", {}).get("audio_stream_url"),
+        thumbnail=result.get("thumbnail") or result.get("metadata", {}).get("thumbnail"),
+        duration=result.get("duration") or result.get("metadata", {}).get("duration"),
+        metadata=result.get("metadata"),
     )
 
 
@@ -468,6 +474,12 @@ async def process_voice(
         "session_id": result["session_id"],
         "ai_engine": ai_engine,
         "mode": active_mode,
+        "track": result.get("track") or result.get("metadata", {}).get("track"),
+        "url": result.get("url") or result.get("metadata", {}).get("url"),
+        "audio_stream_url": result.get("audio_stream_url") or result.get("metadata", {}).get("audio_stream_url"),
+        "thumbnail": result.get("thumbnail") or result.get("metadata", {}).get("thumbnail"),
+        "duration": result.get("duration") or result.get("metadata", {}).get("duration"),
+        "metadata": result.get("metadata", {}),
         "tts": {"engine": "piper", "voice": settings.piper_voice, "enabled": settings.voice_enabled},
     }
 

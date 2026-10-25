@@ -18,7 +18,7 @@ from src.agents.tools.energy_analytics import get_energy_analytics
 from src.agents.tools.home_notes import add_family_note, get_family_notes
 from src.agents.tools.home_safety_audit import audit_home_safety
 from src.agents.tools.internet_search import search_internet
-from src.agents.tools.media_player import play_youtube_music
+from src.agents.tools.media_player import parse_music_intent, play_youtube_music
 from src.agents.tools.shopping_list import manage_shopping_list
 from src.agents.tools.sleep_optimizer import optimize_sleep_environment
 from src.agents.tools.smart_calc_converter import smart_unit_and_cost_calculator
@@ -205,27 +205,80 @@ class XiaozhiAIService:
                     "session_id": conversation_id,
                 }
 
-        # 4. Check for YouTube / Media playback
-        if _contains(norm_query, "phat nhac", "mo nhac", "bat nhac", "nghe nhac", "youtube", "bai hat", "ca si", "album"):
+        # 4. Check for YouTube / Media playback & Music Control
+        is_music_cmd, music_action, music_search_query = parse_music_intent(query, norm_query)
+        if is_music_cmd:
             try:
-                media_res = play_youtube_music.invoke({"query": query})
-                res_data = json.loads(media_res) if isinstance(media_res, str) else media_res
-                msg = res_data.get("message") or f"Đang phát nhạc trên loa thông minh: {query}"
-                conversations.add_turn(conversation_id, query, msg)
-                self._announce_on_speaker(msg)
-                return {
-                    "transcript": query,
-                    "response": msg,
-                    "analysis": "xiaozhi_media_playback",
-                    "metadata": {
-                        "commands": [{"device_id": "hub-speaker", "action": "play", "value": 1}],
-                        "track": res_data.get("track"),
-                        "url": res_data.get("url"),
-                        "ai_engine": "xiaozhi_ai",
-                        "mode": "real",
-                    },
-                    "session_id": conversation_id,
-                }
+                if music_action in ("stop", "pause"):
+                    media_res = play_youtube_music.invoke({"query": "", "action": music_action, "device_id": "gateway-speaker"})
+                    res_data = json.loads(media_res) if isinstance(media_res, str) else media_res
+                    msg = "Đã dừng phát nhạc trên loa thông minh." if music_action == "stop" else "Đã tạm dừng nhạc trên loa thông minh."
+                    conversations.add_turn(conversation_id, query, msg)
+                    self._announce_on_speaker(msg)
+
+                    self._publish_speaker_state(action="stop", track="", audio_url="")
+                    return {
+                        "transcript": query,
+                        "response": msg,
+                        "analysis": "xiaozhi_media_playback",
+                        "track": "",
+                        "url": "",
+                        "audio_stream_url": "",
+                        "thumbnail": "",
+                        "duration": 0,
+                        "metadata": {
+                            "commands": [{"device_id": "gateway-speaker", "action": music_action, "value": 0}],
+                            "action": music_action,
+                            "track": "",
+                            "ai_engine": "xiaozhi_ai",
+                            "mode": "real",
+                        },
+                        "session_id": conversation_id,
+                    }
+                else:
+                    media_res = play_youtube_music.invoke({"query": music_search_query, "action": "play", "device_id": "gateway-speaker"})
+                    res_data = json.loads(media_res) if isinstance(media_res, str) else media_res
+                    track_name = res_data.get("track") or music_search_query
+                    msg = res_data.get("message") or f"Đang phát bài hát '{track_name}' trên loa thông minh."
+                    conversations.add_turn(conversation_id, query, msg)
+                    self._announce_on_speaker(f"Đang phát bài {track_name} trên loa thông minh.")
+
+                    track_url = res_data.get("url") or ""
+                    audio_url = res_data.get("audio_stream_url") or f"http://{self.settings.host}:{self.settings.port}/xiaozhi/audio/lac_troi_sample.wav"
+                    thumbnail = res_data.get("thumbnail") or ""
+                    duration = res_data.get("duration") or 0
+
+                    self._publish_speaker_state(
+                        action="play",
+                        track=track_name,
+                        audio_url=audio_url,
+                        url=track_url,
+                        thumbnail=thumbnail,
+                        duration=duration,
+                    )
+
+                    return {
+                        "transcript": query,
+                        "response": msg,
+                        "analysis": "xiaozhi_media_playback",
+                        "track": track_name,
+                        "url": track_url,
+                        "audio_stream_url": res_data.get("audio_stream_url") or audio_url,
+                        "thumbnail": thumbnail,
+                        "duration": duration,
+                        "metadata": {
+                            "commands": [{"device_id": "gateway-speaker", "action": "play", "value": 1}],
+                            "action": "play",
+                            "track": track_name,
+                            "url": track_url,
+                            "audio_stream_url": res_data.get("audio_stream_url") or audio_url,
+                            "thumbnail": thumbnail,
+                            "duration": duration,
+                            "ai_engine": "xiaozhi_ai",
+                            "mode": "real",
+                        },
+                        "session_id": conversation_id,
+                    }
             except Exception as e:
                 logger.warning(f"Media playback error: {e}")
 
@@ -675,10 +728,12 @@ class XiaozhiAIService:
 
             llm = get_llm()
             system_prompt = (
-                "Bạn là Xiaozhi (Tiểu Trí) - Trợ lý AI nhà thông minh độc quyền của HomeMind Hub. "
+                "Bạn là Xiaozhi (Tiểu Trí) - Trợ lý AI nhà thông minh độc quyền của HomeMind Hub kết nối loa thông minh ESP32 và Trình phát nhạc Web. "
                 f"{time_context}"
+                "Hệ thống của bạn CÓ KHẢ NĂNG phát nhạc từ YouTube, mở bài hát, điều khiển đèn, quạt, điều hòa, khóa cửa và giải đáp mọi thông tin. "
                 "QUY TẮC BẮT BUỘC: Bạn PHẢI trả lời hoàn toàn 100% bằng TIẾNG VIỆT tự nhiên, ấm áp, ngắn gọn trong 1-2 câu. "
-                "TUYỆT ĐỐI KHÔNG sử dụng tiếng Trung, chữ Hán hoặc tiếng Anh trong câu trả lời."
+                "TUYỆT ĐỐI KHÔNG sử dụng tiếng Trung, chữ Hán hoặc tiếng Anh trong câu trả lời. "
+                "TUYỆT ĐỐI KHÔNG từ chối mở nhạc hay nói rằng không thể mở nhạc trực tiếp; nếu người dùng yêu cầu nghe nhạc hãy vui vẻ trả lời bạn đang phát ngay."
             )
             ai_res = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=raw_query)])
             if ai_res and ai_res.content and str(ai_res.content).strip():
@@ -687,6 +742,43 @@ class XiaozhiAIService:
             logger.warning(f"Xiaozhi LLM generation error: {e}")
 
         return f"Trợ lý Xiaozhi đã ghi nhận: '{raw_query}'. Tôi luôn lắng nghe và sẵn sàng chia sẻ cùng bạn!"
+
+    def _publish_speaker_state(
+        self,
+        action: str = "play",
+        track: str = "",
+        audio_url: str = "",
+        url: str = "",
+        thumbnail: str = "",
+        duration: int = 0,
+    ) -> None:
+        """Publish speaker state update via MQTT to sync ESP32 Gateway and Web Floating player."""
+        hub = get_mqtt_hub()
+        if hub and hasattr(hub, "client") and hub.client is not None:
+            try:
+                prefix = self.settings.mqtt_topic_prefix.strip("/")
+                payload = json.dumps({
+                    "action": action,
+                    "track": track,
+                    "audio_url": audio_url,
+                    "audio_stream_url": audio_url,
+                    "url": url,
+                    "thumbnail": thumbnail,
+                    "duration": duration,
+                    "state": {
+                        "power": action == "play",
+                        "playing": action == "play",
+                        "track": track,
+                        "media_url": url,
+                        "audio_stream_url": audio_url,
+                        "thumbnail": thumbnail,
+                        "duration": duration,
+                    },
+                })
+                hub.client.publish(f"{prefix}/devices/gateway-speaker/state", payload, qos=0)
+                hub.client.publish(f"{prefix}/devices/hub-speaker/state", payload, qos=0)
+            except Exception:
+                logger.debug("Failed to publish speaker state to MQTT", exc_info=True)
 
     def _announce_on_speaker(self, message: str) -> None:
         """Publish text to the Xiaozhi Gateway speaker via homing/speaker/say."""

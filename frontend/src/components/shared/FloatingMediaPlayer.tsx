@@ -70,20 +70,82 @@ export function FloatingMediaPlayer({
     };
   }, [volume]);
 
+  // Lắng nghe sự kiện phát nhạc từ AI Chat / Voice / Web Hub
+  useEffect(() => {
+    const handleMediaEvent = (e: Event) => {
+      const custom = e as CustomEvent<{
+        action?: "play" | "stop" | "pause" | "resume";
+        track?: string;
+        artist?: string;
+        audioUrl?: string;
+        youtubeUrl?: string;
+        thumbnail?: string;
+      }>;
+      const detail = custom.detail;
+      if (!detail) return;
+
+      if (detail.action === "stop" || detail.action === "pause") {
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+        setIsPlaying(false);
+        return;
+      }
+
+      if (detail.track) {
+        const newTrack: MediaTrackInfo = {
+          track: detail.track,
+          artist: detail.artist || "Đang phát qua YouTube",
+          audioUrl: detail.audioUrl || "/xiaozhi/audio/lac_troi_sample.wav",
+          youtubeUrl: detail.youtubeUrl,
+          thumbnail: detail.thumbnail || "https://i.ytimg.com/vi/Llw9Q6akRo4/hqdefault.jpg",
+        };
+        setCurrentTrack(newTrack);
+        setVisible(true);
+        setMinimized(false);
+
+        if (audioRef.current) {
+          audioRef.current.src = newTrack.audioUrl || "/xiaozhi/audio/lac_troi_sample.wav";
+          audioRef.current.load();
+          audioRef.current
+            .play()
+            .then(() => setIsPlaying(true))
+            .catch((err) => {
+              console.warn("[Media Player] Autoplay bị chặn bởi chính sách trình duyệt:", err);
+            });
+        }
+
+        if (onNotify) {
+          onNotify(`Đang phát '${detail.track}' trên Trình duyệt Web & Hệ thống Loa!`);
+        }
+      }
+    };
+
+    window.addEventListener("homing:play-media", handleMediaEvent);
+    return () => {
+      window.removeEventListener("homing:play-media", handleMediaEvent);
+    };
+  }, [onNotify]);
+
   // Lắng nghe sự kiện MQTT khi ESP32 hoặc Web phát bài mới
   useEffect(() => {
     const unsubscribe = onCloudMqttState((data) => {
       if (data.deviceId === "gateway-speaker" || data.deviceId === "hub-speaker") {
         const payload = data.rawPayload || {};
-        if (payload.action === "play" || payload.state?.playing) {
+        if (payload.action === "stop") {
+          if (audioRef.current) audioRef.current.pause();
+          setIsPlaying(false);
+        } else if (payload.action === "play" || payload.state?.playing) {
           const track = payload.track || payload.state?.track || "Lạc Trôi";
-          const audioUrl = payload.audio_url || payload.state?.audio_stream_url || "/xiaozhi/audio/lac_troi_sample.wav";
+          const audioUrl = payload.audio_url || payload.audio_stream_url || payload.state?.audio_stream_url || "/xiaozhi/audio/lac_troi_sample.wav";
           const youtubeUrl = payload.url || payload.state?.media_url;
+          const thumbnail = payload.thumbnail || payload.state?.thumbnail;
           setCurrentTrack((prev) => ({
             ...prev,
             track,
             audioUrl,
             youtubeUrl: youtubeUrl || prev.youtubeUrl,
+            thumbnail: thumbnail || prev.thumbnail,
           }));
           setVisible(true);
         }
@@ -124,7 +186,7 @@ export function FloatingMediaPlayer({
 
     // 2. Bắn lệnh MQTT để Loa ESP32 AI Gateway phát song song
     setPlayingOnEsp32(true);
-    const esp32AudioUrl = "http://192.168.1.105:8093/xiaozhi/audio/lac_troi_sample.wav";
+    const esp32AudioUrl = currentTrack.audioUrl || "http://192.168.1.105:8093/xiaozhi/audio/lac_troi_sample.wav";
     publishDeviceCommand("gateway-speaker", "play", {
       action: "play",
       track: currentTrack.track,

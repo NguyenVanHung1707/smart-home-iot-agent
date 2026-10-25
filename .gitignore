@@ -105,3 +105,6 @@ test-results/
 frontend-simulator/dist/
 frontend-simulator/playwright-report/
 frontend-simulator/test-results/
+
+# TTS Cache
+infra/xiaozhi/data/tts_cache/

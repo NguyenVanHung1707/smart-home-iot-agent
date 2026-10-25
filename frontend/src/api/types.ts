@@ -56,6 +56,12 @@ export interface VoiceProcessResponse {
     value?: Record<string, unknown>;
   }>;
   session_id: string;
+  track?: string;
+  url?: string;
+  audio_stream_url?: string;
+  thumbnail?: string;
+  duration?: number;
+  metadata?: Record<string, unknown>;
   tts?: { engine: string; voice: string; enabled: boolean };
 }
 

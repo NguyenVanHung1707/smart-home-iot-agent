@@ -256,3 +256,116 @@ def play_youtube_music(
         thumbnail=thumbnail,
         message=f"Đang phát bài hát '{media['title']}' trên {device.name} ({room}). Link YouTube: {media['url']}{stream_msg}",
     )
+
+
+def parse_music_intent(query: str, norm_text: str | None = None) -> tuple[bool, str, str]:
+    """Parse Vietnamese natural language request to detect music/media playback intent.
+
+    Returns:
+        (is_music, action, clean_query)
+        action: 'play', 'stop', 'pause', 'resume'
+    """
+    import unicodedata
+
+    if norm_text is None:
+        lowered = unicodedata.normalize("NFD", query.lower())
+        without_marks = "".join(c for c in lowered if unicodedata.category(c) != "Mn")
+        norm = re.sub(r"[^a-z0-9\s]", " ", without_marks).strip()
+    else:
+        norm = norm_text
+
+    padded = f" {norm} "
+
+    # 1. Stop / Pause commands
+    stop_cues = (
+        "dung nhac", "tat nhac", "ngung nhac", "tat loa", "tam dung nhac",
+        "dung phat nhac", "stop music", "pause music", "tat youtube",
+        "tat bai hat", "dung bai hat", "ngung phat nhac", "tat am nhac",
+        "tat bai ca", "dung hat", "ngung hat", "tat nhac di", "dung nhac lai"
+    )
+    if any(f" {cue} " in padded for cue in stop_cues):
+        return True, "stop", ""
+
+    # 2. Resume commands
+    resume_cues = ("tiep tuc phat nhac", "tiep tuc phat bai", "tiep tuc hat", "phat tiep", "resume music")
+    if any(f" {cue} " in padded for cue in resume_cues):
+        return True, "resume", ""
+
+    # 3. Safeguard: Non-music home automation commands
+    home_appliances = (
+        "den", "quat", "dieu hoa", "may lanh", "rem", "cua", "khoa cua",
+        "nhiet do", "do am", "khi gas", "camera", "o cam", "binh nong lanh"
+    )
+    music_nouns = (
+        "nhac", "bai", "vai", "ca khuc", "bai hat", "bai ca", "album",
+        "playlist", "video", "mv", "youtube", "am nhac"
+    )
+    has_appliance = any(f" {a} " in padded for a in home_appliances)
+    has_music_noun = any(f" {m} " in padded for m in music_nouns)
+
+    if has_appliance and not has_music_noun:
+        return False, "play", query
+
+    # 4. Check explicit music playback cues
+    is_music = False
+    music_direct_cues = (
+        "phat nhac", "mo nhac", "bat nhac", "nghe nhac",
+        "mo bai", "phat bai", "bat bai", "nghe bai", "hat bai",
+        "mo vai", "phat vai", "bat vai", "nghe vai",
+        "cho toi nghe", "cho minh nghe", "cho em nghe", "cho anh nghe",
+        "mo ca khuc", "phat ca khuc", "bat ca khuc", "nghe ca khuc",
+        "youtube", "bai hat", "ca si", "nghe gi do", "bai ca",
+        "mo playlist", "phat playlist", "bat playlist",
+        "mo mv", "phat mv", "bat mv"
+    )
+    if any(f" {cue} " in padded for cue in music_direct_cues):
+        is_music = True
+
+    # 5. Starts with music/playback verb and contains music noun
+    if not is_music:
+        words = norm.split()
+        if words and words[0] in ("mo", "phat", "bat", "nghe", "hat", "play"):
+            if has_music_noun:
+                is_music = True
+
+    # 6. Famous singers / popular songs
+    famous_artists = (
+        "son tung", "den vau", "jack", "mono", "erik", "duc phuc", "my tam",
+        "ha anh tuan", "hoang thuy linh", "chillies", "da lab", "b ray",
+        "phan manh quynh", "vu", "soobin", "min", "amee", "truc nhan",
+        "hoa minzy", "grey d", "hieuthuhai", "mck", "tlinh", "low g",
+        "wren evans", "justatee", "phuong ly", "karik", "tang duy tan"
+    )
+    famous_songs = (
+        "em cua ngay hom qua", "lac troi", "noi nay co anh", "chung ta cua hien tai",
+        "chay ngay di", "buong doi tay nhau ra", "con mua ngang qua", "nang am xa dan",
+        "dung lam trai tim anh dau", "muon roi ma sao con", "con mua bang gia",
+        "cat doi noi sau", "ngay mai nguoi ta lay chong", "sai gon dau long qua"
+    )
+    if not is_music:
+        has_artist_or_song = any(f" {a} " in padded for a in famous_artists) or any(f" {s} " in padded for s in famous_songs)
+        if has_artist_or_song:
+            if any(f" {v} " in padded for v in ("mo", "phat", "bat", "nghe", "hat", "bai", "vai", "nhac", "ca khuc", "cho", "tim")):
+                is_music = True
+
+    if not is_music:
+        return False, "play", query
+
+    # 7. Clean query extraction
+    clean = query.strip()
+    prefix_patterns = [
+        r"^(?:xin\s+vui\s+lòng\s+|vui\s+lòng\s+|hãy\s+)?(?:mở|phát|bật|cho\s+tôi\s+nghe|cho\s+mình\s+nghe|cho\s+em\s+nghe|cho\s+anh\s+nghe|hát)\s+(?:cho\s+tôi\s+|cho\s+mình\s+|cho\s+em\s+|cho\s+anh\s+)?(?:nghe\s+)?(?:một\s+bài|một\s+vài|bài\s+hát|bài|vài|ca\s+khúc|nhạc)?\s*(?:bất\s+kỳ\s+)?(?:của\s+)?",
+        r"^(?:mở|phát|bật|nghe|hát|tìm|play)\s+(?:bài\s+hát|bài|vài|ca\s+khúc|nhạc\s+của|nhạc|video|mv|youtube)?\s*(?:của\s+)?",
+    ]
+    for p in prefix_patterns:
+        clean = re.sub(p, "", clean, flags=re.IGNORECASE).strip()
+
+    clean = re.sub(r"\s+(?:đi|nhé|nha|giúp\s+tôi|hộ\s+tôi|với|trên\s+youtube|qua\s+loa)\s*$", "", clean, flags=re.IGNORECASE).strip()
+    clean = re.sub(r"^(?:bất\s+kỳ\s+của|bất\s+kỳ|của)\s+", "", clean, flags=re.IGNORECASE).strip()
+    clean = clean.strip(".?!,: ")
+
+    if not clean:
+        clean = query.strip()
+
+    return True, "play", clean
+

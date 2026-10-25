@@ -171,6 +171,27 @@ function useHomeAppController(role: Role) {
         void speak(data.response);
       }
 
+      if (
+        data.analysis === "xiaozhi_media_playback" ||
+        data.analysis === "media_playback" ||
+        data.track ||
+        data.metadata?.track
+      ) {
+        const meta = (data.metadata || {}) as Record<string, unknown>;
+        const isStop = meta.action === "stop" || meta.action === "pause" || data.plan?.some((p) => p.action === "stop" || p.action === "pause");
+        window.dispatchEvent(
+          new CustomEvent("homing:play-media", {
+            detail: {
+              action: isStop ? "stop" : "play",
+              track: data.track || (meta.track as string) || "",
+              audioUrl: data.audio_stream_url || (meta.audio_stream_url as string),
+              youtubeUrl: data.url || (meta.url as string),
+              thumbnail: data.thumbnail || (meta.thumbnail as string),
+            },
+          })
+        );
+      }
+
       await home.refresh({ silent: true });
     } catch (caught) {
       const messageText = caught instanceof Error ? caught.message : "Không gửi được lệnh đến Hub.";
@@ -223,6 +244,27 @@ function useHomeAppController(role: Role) {
 
       if (ttsEnabled && data.response) {
         void speak(data.response);
+      }
+
+      if (
+        data.analysis === "xiaozhi_media_playback" ||
+        data.analysis === "media_playback" ||
+        data.track ||
+        data.metadata?.track
+      ) {
+        const meta = (data.metadata || {}) as Record<string, unknown>;
+        const isStop = meta.action === "stop" || meta.action === "pause" || data.plan?.some((p) => p.action === "stop" || p.action === "pause");
+        window.dispatchEvent(
+          new CustomEvent("homing:play-media", {
+            detail: {
+              action: isStop ? "stop" : "play",
+              track: data.track || (meta.track as string) || "",
+              audioUrl: data.audio_stream_url || (meta.audio_stream_url as string),
+              youtubeUrl: data.url || (meta.url as string),
+              thumbnail: data.thumbnail || (meta.thumbnail as string),
+            },
+          })
+        );
       }
 
       await home.refresh({ silent: true });

@@ -1142,6 +1142,11 @@ def should_handle_natural_home_request(
     session_id: str | None = None,
     mode: str | None = None,
 ) -> bool:
+    from src.agents.tools.media_player import parse_music_intent
+    is_music, _, _ = parse_music_intent(query)
+    if is_music:
+        return True
+
     if route_information_request(query, mode) is not None:
         return True
     plan = parse_home_request(query, mode=mode)
@@ -1191,6 +1196,45 @@ async def handle_natural_home_request(
                 "reason": input_guard.reason,
             },
         }
+
+    # Music intent check
+    from src.agents.tools.media_player import parse_music_intent, play_youtube_music
+    is_music, music_act, music_q = parse_music_intent(query)
+    if is_music:
+        try:
+            import json
+            target_speaker = "gateway-speaker" if mode in {"real", "live", "hardware"} else "hub-speaker"
+            media_res = play_youtube_music.invoke({
+                "query": music_q,
+                "action": music_act,
+                "device_id": target_speaker,
+            })
+            res_data = json.loads(media_res) if isinstance(media_res, str) else media_res
+            track_name = res_data.get("track") or music_q
+            if music_act in ("stop", "pause"):
+                msg = "Đã dừng phát nhạc trên loa thông minh." if music_act == "stop" else "Đã tạm dừng nhạc."
+            else:
+                msg = res_data.get("message") or f"Đang phát bài hát '{track_name}' trên loa thông minh."
+            return {
+                "response": msg,
+                "analysis": "media_playback",
+                "track": track_name if music_act not in ("stop", "pause") else "",
+                "url": res_data.get("url", ""),
+                "audio_stream_url": res_data.get("audio_stream_url", ""),
+                "thumbnail": res_data.get("thumbnail", ""),
+                "duration": res_data.get("duration", 0),
+                "metadata": {
+                    "commands": [{"device_id": target_speaker, "action": music_act, "value": 1 if music_act == "play" else 0}],
+                    "action": music_act,
+                    "track": track_name if music_act not in ("stop", "pause") else "",
+                    "url": res_data.get("url", ""),
+                    "audio_stream_url": res_data.get("audio_stream_url", ""),
+                    "thumbnail": res_data.get("thumbnail", ""),
+                    "duration": res_data.get("duration", 0),
+                },
+            }
+        except Exception:
+            pass
 
     if route := route_information_request(query, mode):
         return execute_information_route(route)

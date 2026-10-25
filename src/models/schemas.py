@@ -22,6 +22,12 @@ class ChatResponse(BaseModel):
     response: str
     analysis: str = ""
     session_id: str
+    track: str | None = None
+    url: str | None = None
+    audio_stream_url: str | None = None
+    thumbnail: str | None = None
+    duration: int | float | None = None
+    metadata: dict[str, Any] | None = None
 
 
 Role = Literal["ADMIN", "MEMBER"]
