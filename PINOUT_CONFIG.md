@@ -12,7 +12,10 @@ Hệ thống sử dụng **3 vi điều khiển ESP32** (chuẩn ESP32 DevKit WR
 | :--- | :--- | :--- | :--- |
 | **ESP32 #1** | `esp32_home_appliances_espnow.ino` | Thiết bị gia dụng & Môi trường | ESP-NOW (Slave) |
 | **ESP32 #2** | `esp32_main_entrance_espnow.ino` | Cửa chính & An ninh thông minh | ESP-NOW (Slave) |
-| **ESP32 #3** | `esp32_xiaozhi_gateway.ino` | Xiaozhi AI Voice & Cầu nối Cloud | WiFi + MQTT + ESP-NOW (Master) |
+| **ESP32 #3** | `esp32_xiaozhi_gateway.ino` | Xiaozhi AI Voice Gateway Master | WiFi + MQTT + I2S + ESP-NOW (Master) |
+
+> **MAC Address thực tế ESP32 #3**: `94:54:C5:A9:91:E8`  
+> **IP LAN thực tế**: `192.168.1.101` (ESP32 Gateway kết nối WiFi `TP-Link_ED49`)
 
 ---
 
@@ -67,7 +70,7 @@ Hệ thống sử dụng **3 vi điều khiển ESP32** (chuẩn ESP32 DevKit WR
 | | Dây Cam (PWM) | **GPIO 4** | PWM | 0°: Khóa chốt, 90°: Mở khóa chốt |
 | **Còi Bíp Báo Hiệu** | (+) | **GPIO 15** | Digital OUT | Kêu bíp khi bấm phím / quẹt thẻ |
 | | (-) | GND | 0V | Nối Mass |
-| **Đầu đọc thẻ RFID-RC522** | 3.3V (VCC) | **3.3V** | **Tuyệt đối 3.3V**| **CẮM 5V SẼ CHÁY MODULE RFID** |
+| **Đầu đọc thẻ RFID-RC522** | 3.3V (VCC) | **3.3V** | **Tuyệt đối 3.3V** | **CẮM 5V SẼ CHÁY MODULE RFID** |
 | | GND | GND | 0V | Nối Mass |
 | | RST | **GPIO 2** | Logic 3.3V | Chân Reset |
 | | SDA (SS) | **GPIO 5** | SPI CS | Chip Select SPI |
@@ -93,7 +96,11 @@ Hệ thống sử dụng **3 vi điều khiển ESP32** (chuẩn ESP32 DevKit WR
 
 > **Thư mục firmware**: `src/firmware/esp32_xiaozhi_gateway/esp32_xiaozhi_gateway.ino`
 
-Đóng vai trò loa thông minh AI, cầu nối WiFi / MQTT với Cloud và điều phối sóng vô tuyến ESP-NOW tới Bo mạch #1 và #2.
+Đóng vai trò **loa thông minh AI tự host**, cầu nối WiFi / MQTT với Cloud và điều phối sóng vô tuyến ESP-NOW tới Bo mạch #1 và #2. Hỗ trợ:
+- **Ghi âm & ASR**: Micro INMP441 → FunASR SenseVoice nhận diện tiếng Việt
+- **Phát TTS & Nhạc**: Edge-TTS Tiếng Việt + Phát nhạc WAV stream qua HTTP trực tiếp ra Loa MAX98357A I2S
+- **Điều khiển MQTT**: Nhận lệnh từ Topic `homing/speaker/play`, `homing/speaker/say`, `homing/devices/+/command`
+- **Hiển thị OLED**: Biểu cảm robot (happy, neutral, speaking, thinking) + văn bản ASR/TTS
 
 ### 4.1. Bảng nối chân chi tiết
 
@@ -117,10 +124,43 @@ Hệ thống sử dụng **3 vi điều khiển ESP32** (chuẩn ESP32 DevKit WR
 | | SDA | **GPIO 21** | I2C SDA | Dữ liệu màn hình |
 | | SCL | **GPIO 22** | I2C SCL | Xung clock màn hình |
 
+### 4.2. Cấu hình firmware quan trọng (đầu file .ino)
+
+| Tham số | Giá trị mặc định | Ý nghĩa |
+| :--- | :--- | :--- |
+| `BOARD_ESP32_CLASSIC` / `BOARD_ESP32_S3` | `BOARD_ESP32_CLASSIC` | Chọn đúng loại chip (WROOM-32 hoặc S3) |
+| `OLED_DRIVER_SH1106` / `OLED_DRIVER_SSD1306` | `SH1106` | OLED 1.3" = SH1106, OLED 0.96" = SSD1306 |
+| `wifi_ssid` / `wifi_pass` | *(cấu hình trong code)* | WiFi 2.4GHz (không dùng được WiFi 5GHz) |
+| `xiaozhi_ota_url` | `http://lophocso.io.vn/xiaozhi/ota/` | Địa chỉ Hub AI Xiaozhi |
+| `mqtt_server` | `192.168.1.105` | IP LAN máy chủ MQTT Mosquitto |
+| `AUDIO_SAMPLE_RATE` | `16000` Hz | Tần số lấy mẫu âm thanh WAV |
+| `VAD_THRESHOLD` | `1500` RMS | Ngưỡng phát hiện giọng nói (VAD) |
+
+### 4.3. Các MQTT Topic ESP32 #3 xử lý
+
+| Topic | Hướng | Chức năng |
+| :--- | :--- | :--- |
+| `homing/devices/+/command` | Subscribe | Nhận lệnh bật/tắt thiết bị → relay ESP-NOW sang #1, #2 |
+| `homing/speaker/say` | Subscribe | Nhận văn bản → phát TTS Edge-TTS tiếng Việt ra Loa I2S |
+| `homing/speaker/play` | Subscribe | Nhận URL WAV → tải stream → phát ra Loa MAX98357A I2S |
+| `homing/broadcast/scan` | Subscribe | Quét danh sách thiết bị ESP-NOW đang online |
+| `homing/gateway/state` | Publish | Báo cáo trạng thái Gateway (online, IP, MAC) |
+| `homing/devices/+/state` | Publish | Báo cáo trạng thái từng thiết bị nhận từ ESP-NOW |
+
 ---
 
 ## 5. Lưu ý quan trọng khi đấu nối phần cứng
 
 1. **Mass (GND) chung**: Tất cả các nguồn cấp (5V, 3.3V, Adapter ngoài) phải được **nối chung chân GND** lại với nhau. Nếu không chung GND, cảm biến và giao tiếp I2C/SPI sẽ bị nhiễu hoặc sai dữ liệu.
+
 2. **Điện áp module RFID-RC522 và Micro INMP441**: Chỉ được cấp nguồn **3.3V**. Cấp 5V sẽ gây hỏng chip ngay lập tức.
+
 3. **Nguồn cấp cho Động cơ Servo (SG90) và Cảm biến MQ-2**: Cần nguồn **5V / tối thiểu 2A**. Không lấy nguồn 3.3V từ chân ESP32 để kéo Servo vì sẽ làm sụt áp gây reset ESP32 liên tục (Brownout Detector reset).
+
+4. **Partition Scheme cho Bo mạch #3**: Bắt buộc chọn **`Huge APP (3MB No OTA/1MB SPIFFS)`** trong Arduino IDE khi biên dịch Bo mạch #3 (Gateway AI) — firmware có thêm thư viện I2S âm thanh và JSON kích thước lớn.
+
+5. **WiFi 2.4GHz**: ESP32 WROOM-32 **chỉ hỗ trợ WiFi 2.4GHz**. Đảm bảo router gia đình phát băng tần 2.4GHz và tên WiFi không chứa ký tự đặc biệt.
+
+6. **Giao tiếp I2S Loa và Micro không xung đột**: Bo mạch #3 dùng **hai cổng I2S độc lập**:
+   - **I2S Port 0** (GPIO 25, 26, 27): Loa MAX98357A (phát âm thanh)
+   - **I2S Port 1** (GPIO 14, 15, 32): Micro INMP441 (thu âm thanh)

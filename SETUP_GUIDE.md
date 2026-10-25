@@ -1,4 +1,4 @@
-# HƯỚNG DẪN CÀI ĐẶT & TRIỂN KHAI DỰ ÁN TỪ A-Z (CHO NGƯỜI MỚI BẮT ĐẦU)
+# HƯỚNG DẪN CÀI ĐẶT & TRIỂN KHAI DỰ ÁN TỪ A-Z
 
 Tài liệu này được biên soạn từng bước cụ thể, chi tiết và dễ hiểu nhất để bất kỳ ai dù chưa từng làm việc với Docker hay ESP32 cũng có thể tự cài đặt và vận hành hoàn chỉnh hệ thống **Homing Smart Home Hub**.
 
@@ -7,9 +7,11 @@ Tài liệu này được biên soạn từng bước cụ thể, chi tiết và
 ## MỤC LỤC
 1. [Chuẩn bị công cụ & phần mềm](#1-chuẩn-bị-công-cụ--phần-mềm)
 2. [Cài đặt và chạy hệ thống Server & Web Dashboard](#2-cài-đặt-và-chạy-hệ-thống-server--web-dashboard)
-3. [Hướng dẫn cài đặt Arduino IDE / Arduino CLI & nạp code cho ESP32](#3-hướng-dẫn-cài-đặt-arduino-ide--nạp-code-cho-esp32)
+3. [Hướng dẫn cài đặt Arduino IDE & nạp code cho ESP32](#3-hướng-dẫn-cài-đặt-arduino-ide--nạp-code-cho-esp32)
 4. [Kiểm tra vận hành toàn bộ hệ thống](#4-kiểm-tra-vận-hành-toàn-bộ-hệ-thống)
-5. [Khắc phục các lỗi thường gặp (Troubleshooting)](#5-khắc-phục-các-lỗi-thường-gặp-troubleshooting)
+5. [Cấu hình AI Voice & Xiaozhi Server cục bộ](#5-cấu-hình-ai-voice--xiaozhi-server-cục-bộ)
+6. [Tích hợp MCP Server với Claude / Gemini API](#6-tích-hợp-mcp-server-với-claude--gemini-api)
+7. [Khắc phục các lỗi thường gặp (Troubleshooting)](#7-khắc-phục-các-lỗi-thường-gặp-troubleshooting)
 
 ---
 
@@ -28,81 +30,100 @@ Trước khi bắt đầu, hãy tải và cài đặt sẵn các phần mềm mi
 
 ## 2. Cài đặt và chạy hệ thống Server & Web Dashboard
 
-### Bước 2.1: Mở thư mục dự án
-Mở cửa sổ dòng lệnh (Terminal trên macOS/Linux hoặc **PowerShell** trên Windows), chuyển đến thư mục dự án:
+### Bước 2.1: Clone dự án
 ```powershell
-cd e:\hung\VinAI\Prj\smart-home-iot-agent
+git clone https://github.com/NguyenVanHung1707/smart-home-iot-agent.git
+cd smart-home-iot-agent
 ```
 
 ### Bước 2.2: Thiết lập file môi trường (.env)
-Dự án đã có sẵn file mẫu `.env.example` hoặc `.env`. Mở file `.env` và kiểm tra các cấu hình cơ bản:
+Dự án đã có sẵn file mẫu `.env.example`. Sao chép và điền thông tin của bạn:
+```powershell
+copy .env.example .env
+```
+Mở file `.env` và chỉnh sửa các tham số cần thiết:
 ```ini
-# Cấu hình AI API (Sử dụng OpenAI API hoặc tương thích)
+# Cấu hình AI API (dùng OpenAI, Together AI, hoặc Ollama local)
 OPENAI_API_KEY=sk-xxxxxx...
 MODEL_NAME=gpt-4o-mini
+
+# Kích hoạt LLM
+LLM_ENABLED=true
+LLM_LOCAL_ONLY=false       # true = chỉ dùng Ollama local, không gọi API ngoài
+LLAMA_BASE_URL=http://ollama:11434/v1  # URL Ollama nếu dùng GPU local
 
 # MQTT Broker nội bộ
 MQTT_ENABLED=true
 MQTT_BROKER=mqtt
 MQTT_PORT=1883
 
+# Cloudflare Tunnel Token (nếu muốn truy cập từ Internet)
+CLOUDFLARE_TUNNEL_TOKEN=
+
 # Mật khẩu tài khoản chủ nhà khởi tạo
 BOOTSTRAP_ADMIN_PASSWORD=admin123456
 ```
 
 ### Bước 2.3: Khởi động hệ thống với Docker Compose
-Chỉ cần chạy duy nhất một câu lệnh sau:
+Chạy lệnh sau (lần đầu sẽ tốn ~3-5 phút tải image):
 ```bash
 docker compose up -d --build
 ```
-> **Giải thích**: Docker sẽ tự động tải các dịch vụ (PostgreSQL, Eclipse Mosquitto MQTT, FastAPI Backend, React Frontend Nginx) và biên dịch mã nguồn.
 
-Sau khoảng 1-2 phút, bạn kiểm tra trạng thái hoạt động:
+> **Dịch vụ được khởi động**:
+> - `backend` — FastAPI + AI Agent Engine (Port 8000)
+> - `frontend` — React Web Dashboard + Nginx (Port 80)
+> - `mqtt` — Eclipse Mosquitto Broker (Port 1883 LAN + 9001 WebSocket)
+> - `postgres` — PostgreSQL 16 Database (Port 5432)
+> - `ollama` — Ollama GPU Local LLM (Port 11434, cần GPU NVIDIA)
+> - `xiaozhi-server` — Xiaozhi AI Voice Hub (Port 8090 WS + 8093 HTTP)
+> - `cloudflared` — Cloudflare Tunnel (nếu có token)
+
+Kiểm tra trạng thái:
 ```bash
 docker compose ps
 ```
-Nếu thấy các dịch vụ `backend`, `frontend`, `mqtt`, `postgres` đều ở trạng thái `Up` (hoặc `healthy`) là hệ thống đã sẵn sàng!
-
-- **Giao diện Web Dashboard**: Mở trình duyệt truy cập: [http://localhost](http://localhost)
-- **API Backend Docs**: Mở trình duyệt truy cập: [http://localhost:8000/docs](http://localhost:8000/docs)
+Khi tất cả đều `Up` hoặc `healthy`:
+- **Web Dashboard**: [http://localhost](http://localhost)
+- **API Backend Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Xiaozhi Audio API**: [http://localhost:8093](http://localhost:8093)
 
 ---
 
 ## 3. Hướng dẫn cài đặt Arduino IDE & nạp code cho ESP32
 
 Hệ thống có 3 file mã nguồn ESP32 nằm tại thư mục `src/firmware/`:
-1. `src/firmware/esp32_home_appliances_espnow/esp32_home_appliances_espnow.ino` (Bo mạch #1: Thiết bị trong nhà)
-2. `src/firmware/esp32_main_entrance_espnow/esp32_main_entrance_espnow.ino` (Bo mạch #2: Cửa chính & An ninh)
-3. `src/firmware/esp32_xiaozhi_gateway/esp32_xiaozhi_gateway.ino` (Bo mạch #3: Gateway Master)
+1. `src/firmware/esp32_home_appliances_espnow/esp32_home_appliances_espnow.ino` — Bo mạch #1
+2. `src/firmware/esp32_main_entrance_espnow/esp32_main_entrance_espnow.ino` — Bo mạch #2
+3. `src/firmware/esp32_xiaozhi_gateway/esp32_xiaozhi_gateway.ino` — Bo mạch #3 (AI Voice Gateway)
 
 ### Bước 3.1: Thêm gói bo mạch ESP32 vào Arduino IDE
-1. Mở **Arduino IDE** > Chọn menu **File** > **Preferences** (Cài đặt).
-2. Tại dòng **Additional boards manager URLs**, dán đường dẫn sau:
-   ```text
+1. Mở **Arduino IDE** > **File** > **Preferences**.
+2. Tại dòng **Additional boards manager URLs**, dán:
+   ```
    https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
    ```
-3. Nhấn **OK**.
-4. Vào menu **Tools** > **Board** > **Boards Manager...**
-5. Gõ từ khóa `esp32` của **Espressif Systems** và bấm **Install**.
+3. Nhấn **OK** > vào **Tools** > **Board** > **Boards Manager...** > tìm `esp32` của **Espressif Systems** > **Install**.
 
 ### Bước 3.2: Cài đặt các thư viện Arduino cần thiết
-Vào menu **Tools** > **Manage Libraries...** (hoặc bấm tổ hợp phím `Ctrl + Shift + I`), lần lượt tìm kiếm và bấm **Install** các thư viện sau:
-- **`PubSubClient`** (bởi Nick O'Leary) — Thư viện MQTT client.
-- **`ArduinoJson`** (bởi Benoit Blanchon) — Chọn phiên bản **6.x** (khuyên dùng bản 6.21.x).
-- **`ESP32Servo`** (bởi Kevin Harrington) — Điều khiển động cơ servo chốt cửa và cửa sổ.
-- **`DHT sensor library`** (bởi Adafruit) — Đọc cảm biến nhiệt độ DHT11.
-- **`Adafruit Unified Sensor`** (bởi Adafruit) — Thư viện hỗ trợ cảm biến.
-- **`U8g2`** (bởi oliver) — Điều khiển màn hình OLED 1.3" I2C SH1106.
-- **`LiquidCrystal_I2C`** (bởi Frank de Brabander) — Điều khiển màn hình LCD 16x2.
-- **`MFRC522`** (bởi GithubCommunity) — Đọc thẻ từ RFID RC522.
-- **`Keypad`** (bởi Mark Stanley) — Bàn phím số ma trận 4x4.
+Vào **Tools** > **Manage Libraries...** (`Ctrl + Shift + I`), cài từng thư viện:
+- **`PubSubClient`** (Nick O'Leary) — MQTT client
+- **`ArduinoJson`** (Benoit Blanchon) — **phiên bản 6.x** (khuyên dùng 6.21.x)
+- **`ESP32Servo`** (Kevin Harrington) — Động cơ servo
+- **`DHT sensor library`** (Adafruit) — Cảm biến nhiệt độ DHT11
+- **`Adafruit Unified Sensor`** (Adafruit) — Bộ hỗ trợ cảm biến
+- **`U8g2`** (oliver) — Màn hình OLED 1.3" I2C SH1106
+- **`LiquidCrystal_I2C`** (Frank de Brabander) — Màn hình LCD 16x2
+- **`MFRC522`** (GithubCommunity) — Đọc thẻ RFID RC522
+- **`Keypad`** (Mark Stanley) — Bàn phím số ma trận 4x4
 
 ---
 
 ### Bước 3.3: Lấy địa chỉ MAC của ESP32 #3 (Gateway Master)
-Sóng ESP-NOW cần biết chính xác địa chỉ phần cứng (MAC Address) của bo mạch Gateway Master để gửi nhận tin:
-1. Cắm bo mạch ESP32 #3 vào máy tính qua cáp Micro-USB hoặc Type-C.
-2. Mở Arduino IDE, tạo file mới và nạp đoạn code ngắn sau để đọc địa chỉ MAC:
+Sóng ESP-NOW cần địa chỉ MAC chính xác của bo mạch Gateway để giao tiếp:
+
+1. Cắm **Bo mạch ESP32 #3** vào máy tính.
+2. Nạp đoạn code ngắn sau để đọc MAC:
    ```cpp
    #include <WiFi.h>
    void setup() {
@@ -113,9 +134,9 @@ Sóng ESP-NOW cần biết chính xác địa chỉ phần cứng (MAC Address) 
    }
    void loop() {}
    ```
-3. Mở **Serial Monitor** (tốc độ 115200 baud), bạn sẽ thấy địa chỉ MAC hiển thị dạng:
-   `94:54:C5:A9:91:E8`
-4. Ghi lại địa chỉ MAC này để cấu hình vào code của Bo mạch #1 và Bo mạch #2.
+3. Mở **Serial Monitor** (115200 baud), bạn sẽ thấy:
+   `ESP32 MAC Address: 94:54:C5:A9:91:E8` *(ví dụ thực tế)*
+4. Ghi lại địa chỉ MAC này để cấu hình vào code của Bo mạch #1 và #2.
 
 ---
 
@@ -123,181 +144,237 @@ Sóng ESP-NOW cần biết chính xác địa chỉ phần cứng (MAC Address) 
 
 #### 1. Nạp Bo Mạch #1 (Thiết bị gia dụng & Môi trường)
 1. Mở file: `src/firmware/esp32_home_appliances_espnow/esp32_home_appliances_espnow.ino`.
-2. Kiểm tra dòng 22 xem địa chỉ MAC đã khớp với địa chỉ MAC của Bo mạch #3 vừa lấy ở bước trên chưa:
+2. Kiểm tra dòng khai báo địa chỉ MAC Gateway:
    ```cpp
    uint8_t masterGatewayMac[] = {0x94, 0x54, 0xC5, 0xA9, 0x91, 0xE8};
    ```
-3. Cắm bo mạch #1 vào máy tính.
-4. Tại Arduino IDE:
-   - **Tools** > **Board** > chọn **ESP32 Dev Module** (hoặc DOIT ESP32 DEVKIT V1).
-   - **Tools** > **Port** > chọn đúng cổng COM xuất hiện (ví dụ `COM3`, `COM4`).
-5. Bấm nút **Upload** (mũi tên hướng sang phải). Khi màn hình hiện `Connecting......`, bạn có thể nhấn giữ nút **BOOT** trên bo mạch khoảng 2 giây để nạp.
+3. Cắm bo mạch #1 vào máy tính > **Tools** > **Board**: `ESP32 Dev Module` > **Port**: chọn đúng COM.
+4. Bấm **Upload** (mũi tên →). Khi hiện `Connecting......`, nhấn giữ nút **BOOT** ~2 giây.
 
 #### 2. Nạp Bo Mạch #2 (Cửa chính & An ninh)
 1. Mở file: `src/firmware/esp32_main_entrance_espnow/esp32_main_entrance_espnow.ino`.
-2. Kiểm tra địa chỉ MAC dòng 23 và điền đúng địa chỉ MAC của Bo mạch #3.
-3. Cắm bo mạch #2 vào máy tính, chọn đúng cổng COM và bấm **Upload**.
+2. Kiểm tra địa chỉ MAC Gateway và điền đúng.
+3. Cắm bo mạch #2, chọn đúng cổng COM > **Upload**.
 
-#### 3. Nạp Bo Mạch #3 (Xiaozhi Master Voice AI Gateway)
-1. Mở file: [`src/firmware/esp32_xiaozhi_gateway/esp32_xiaozhi_gateway.ino`](file:///e:/hung/VinAI/Prj/smart-home-iot-agent/src/firmware/esp32_xiaozhi_gateway/esp32_xiaozhi_gateway.ino).
-2. Kiểm tra các thông số cấu hình ở đầu file:
-   - **Loại bo mạch (Dòng 38-39)**: Chọn `#define BOARD_ESP32_CLASSIC` (cho ESP32 WROOM-32) hoặc `#define BOARD_ESP32_S3` (cho ESP32-S3).
-   - **Driver màn hình OLED (Dòng 76-77)**: Mặc định `#define OLED_DRIVER_SH1106` (OLED 1.3 inch). Nếu dùng OLED 0.96 inch SSD1306 thì mở comment `#define OLED_DRIVER_SSD1306`.
-   - **WiFi 2.4GHz (Dòng 99-100)**: Điền đúng WiFi gia đình:
+#### 3. Nạp Bo Mạch #3 (Xiaozhi AI Voice Gateway Master)
+
+> [!IMPORTANT]
+> Bo mạch #3 bắt buộc dùng **Partition Scheme: Huge APP (3MB No OTA/1MB SPIFFS)** vì firmware chứa thư viện I2S âm thanh lớn.
+
+1. Mở file: `src/firmware/esp32_xiaozhi_gateway/esp32_xiaozhi_gateway.ino`.
+2. Cấu hình các thông số ở đầu file:
+   - **Bo mạch**: `#define BOARD_ESP32_CLASSIC` (WROOM-32) hoặc `BOARD_ESP32_S3`
+   - **Màn hình**: `#define OLED_DRIVER_SH1106` (OLED 1.3") hoặc `OLED_DRIVER_SSD1306` (OLED 0.96")
+   - **WiFi 2.4GHz**:
      ```cpp
      const char *wifi_ssid = "Ten_WiFi_Nha_Ban";
      const char *wifi_pass = "Mat_Khau_WiFi";
      ```
-   - **Máy chủ AI Hub (Dòng 112)**: Đã trỏ sẵn theo domain tự host:
+   - **Hub Xiaozhi AI**: Đã trỏ về domain tự host:
      ```cpp
      const char *xiaozhi_ota_url = "http://lophocso.io.vn/xiaozhi/ota/";
      ```
-3. Cài đặt thông số biên dịch trong Arduino IDE (menu **Tools**):
-   - **Board**: Chọn **ESP32 Dev Module**
-   - **Partition Scheme**: Chọn **`Huge APP (3MB No OTA/1MB SPIFFS)`** *(Bắt buộc chọn mục này để tránh lỗi tràn dung lượng bộ nhớ Flash)*
-   - **Upload Speed**: `921600` (hoặc `115200` nếu dây cáp kém)
-   - **Port**: Chọn đúng cổng COM của bo mạch
-4. Bấm nút **Upload**. Khi Serial hiện `Connecting........_____.....`, hãy **nhấn giữ nút BOOT** trên bo ESP32 khoảng 2 giây rồi thả ra.
-5. Sau khi nạp thành công:
-   - Loa MAX98357A sẽ phát 2 tiếng chuông chào mừng.
-   - Màn hình OLED hiển thị: `HOMING AI GATEWAY`, `Hub: lophocso.io.vn` và `Voice AI: SAN SANG`.
+   - **MQTT Broker** (IP LAN máy chủ):
+     ```cpp
+     const char *mqtt_server = "192.168.1.105";  // Thay bằng IP máy chủ của bạn
+     ```
+3. Cài đặt trong **Tools** (Arduino IDE):
+   - **Board**: `ESP32 Dev Module`
+   - **Partition Scheme**: `Huge APP (3MB No OTA/1MB SPIFFS)` ← **Bắt buộc**
+   - **Upload Speed**: `921600`
+   - **Port**: Chọn đúng cổng COM
+4. Bấm **Upload**. Sau khi nạp thành công:
+   - Loa MAX98357A phát 2 tiếng chuông chào mừng.
+   - Màn hình OLED hiển thị: `HOMING AI HUB`, `lophocso.io.vn`, `Voice AI: SAN SANG`.
 
 ---
 
-### Bước 3.5: Lựa chọn nâng cao — Biên dịch & Nạp code bằng Arduino CLI (Command Line)
+### Bước 3.5: Biên dịch & Nạp bằng Arduino CLI (Command Line)
 
-Dành cho các bạn muốn biên dịch và nạp code trực tiếp từ cửa sổ dòng lệnh (Terminal / PowerShell) mà không cần mở giao diện đồ họa Arduino IDE:
-
-#### 1. Kiểm tra hoặc Cài đặt Arduino CLI
-Kiểm tra xem máy tính của bạn đã có `arduino-cli` chưa:
+#### 1. Cài đặt Arduino CLI
 ```powershell
+winget install Arduino.ArduinoCLI
 arduino-cli version
 ```
-*(Nếu chưa cài, trên Windows mở PowerShell chạy lệnh: `winget install Arduino.ArduinoCLI`)*.
 
-#### 2. Cài đặt Core ESP32 & Thư viện tự động
+#### 2. Cài ESP32 Core & Thư viện
 ```powershell
-# Cấu hình nguồn package ESP32
 arduino-cli config init
 arduino-cli config add board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 arduino-cli core update-index
 arduino-cli core install esp32:esp32
 
-# Cài đặt tự động toàn bộ thư viện cần thiết cho dự án
 arduino-cli lib install "PubSubClient" "ArduinoJson@6.21.4" "U8g2" "ESP32Servo" "DHT sensor library" "Adafruit Unified Sensor" "LiquidCrystal_I2C" "MFRC522" "Keypad"
 ```
 
-#### 3. Tìm cổng COM của bo mạch
-Cắm ESP32 vào máy tính và chạy:
+#### 3. Tìm cổng COM
 ```powershell
 arduino-cli board list
 ```
-*(Ghi nhớ cổng COM hiển thị, ví dụ `COM3`, `COM5`...)*.
 
-#### 4. Biên dịch và Nạp code cho Bo mạch #3 (Voice AI Gateway)
-> [!IMPORTANT]
-> Bo mạch AI Gateway có thư viện xử lý âm thanh I2S và màn hình OLED nên bắt buộc truyền tham số `--build-property "build.partitions=huge_app"` để cấp đủ 3MB bộ nhớ Flash.
+#### 4. Biên dịch & Nạp Bo Mạch #3 (AI Voice Gateway)
+```powershell
+# Biên dịch + Nạp (thay COM3 bằng cổng COM thực tế)
+arduino-cli compile --fqbn esp32:esp32:esp32 --build-property "build.partitions=huge_app" -p COM3 -u src/firmware/esp32_xiaozhi_gateway
 
-* **Biên dịch & Nạp ngay trong 1 câu lệnh (thay `COM3` bằng cổng COM thực tế của bạn)**:
-  ```powershell
-  arduino-cli compile --fqbn esp32:esp32:esp32 --build-property "build.partitions=huge_app" -p COM3 -u src/firmware/esp32_xiaozhi_gateway
-  ```
-  *(Nếu bạn sử dụng bo mạch **ESP32-S3**, đổi FQBN thành: `--fqbn esp32:esp32:esp32s3`)*.
+# Chỉ biên dịch (kiểm tra lỗi)
+arduino-cli compile --fqbn esp32:esp32:esp32 --build-property "build.partitions=huge_app" src/firmware/esp32_xiaozhi_gateway
+```
 
-* **Chỉ biên dịch kiểm tra lỗi cú pháp (không nạp vào mạch)**:
-  ```powershell
-  arduino-cli compile --fqbn esp32:esp32:esp32 --build-property "build.partitions=huge_app" src/firmware/esp32_xiaozhi_gateway
-  ```
+#### 5. Biên dịch & Nạp Bo Mạch #1 & #2
+```powershell
+# Bo mạch #1
+arduino-cli compile --fqbn esp32:esp32:esp32 -p COM3 -u src/firmware/esp32_home_appliances_espnow
 
-#### 5. Biên dịch và Nạp code cho Bo mạch #1 & Bo mạch #2
-* **Bo mạch #1 (Thiết bị gia dụng)**:
-  ```powershell
-  arduino-cli compile --fqbn esp32:esp32:esp32 -p COM3 -u src/firmware/esp32_home_appliances_espnow
-  ```
-* **Bo mạch #2 (Cửa chính & An ninh)**:
-  ```powershell
-  arduino-cli compile --fqbn esp32:esp32:esp32 -p COM3 -u src/firmware/esp32_main_entrance_espnow
-  ```
+# Bo mạch #2
+arduino-cli compile --fqbn esp32:esp32:esp32 -p COM3 -u src/firmware/esp32_main_entrance_espnow
+```
 
-#### 6. Theo dõi Log Serial Monitor trực tiếp từ dòng lệnh
+#### 6. Serial Monitor từ dòng lệnh
 ```powershell
 arduino-cli monitor -p COM3 -c baudrate=115200
 ```
-*(Bấm `Ctrl + C` để thoát Serial Monitor)*.
+*(Bấm `Ctrl + C` để thoát)*
 
-
+Hoặc dùng script Python có sẵn:
+```powershell
+python scripts/check_serial.py
+```
 
 ---
 
 ## 4. Kiểm tra vận hành toàn bộ hệ thống
 
-1. **Đăng nhập Web Dashboard**:
-   - Truy cập: **[http://localhost](http://localhost)**
-   - Sử dụng tài khoản Chủ nhà:
-     - **Email**: `admin@homing.dev` (hoặc `chunha1@homing.dev`, `chunha2@homing.dev`)
-     - **Mật khẩu**: `admin123456`
-2. **Kiểm tra trạng thái thiết bị**:
-   - Trên màn hình **Phòng & Thiết bị**, bạn sẽ thấy các thiết bị: Đèn phòng khách, Đèn phòng ngủ, Quạt, Khóa cửa, Cảm biến nhiệt độ, Khí gas.
-   - Thử bấm nút Bật/Tắt Đèn phòng khách trên giao diện web -> Quan sát đèn LED trên ESP32 #1 sáng/tắt ngay lập tức!
-3. **Thử nghiệm mở khóa an ninh**:
-   - Quẹt thẻ RFID vào đầu đọc bo mạch #2 -> Khóa servo quay 90° mở chốt, màn hình LCD hiển thị *"Access Granted"*.
-   - Hoặc gõ mật khẩu `1234#` trên bàn phím Keypad 4x4 để mở khóa.
-4. **Thử nghiệm điều khiển bằng Giọng nói (Voice AI)**:
-   - **Cách 1 - Nói trực tiếp qua Micro phần cứng trên ESP32 #3 (INMP441 + OLED 1.3" + Loa MAX98357A)**:
-     - Nói vào Micro INMP441 (ví dụ nói rõ: *"alo"*, *"xin chào"*, *"bật đèn"*, *"mở cửa"*).
-     - ESP32 sẽ phát chuông thức tỉnh êm ái (Wake Chime), tự động ghi âm 1.5 giây và gửi đến máy chủ FunASR SenseVoice.
-     - **Màn hình OLED 1.3"**: Hiển thị chữ bạn vừa nói (ví dụ: `> Ban: alo`, `> Ban: bat den`) và sau đó hiển thị câu trả lời của AI (`> AI: Toi nghe day`, `> AI: Da bat den cho ban`).
-     - **Loa MAX98357A**: Tự động phát trực tiếp giọng nói tiếng Việt câu trả lời ra loa (ví dụ: *"Tôi nghe đây, xin chào bạn!"*, *"Đã bật đèn cho bạn."*).
-     - Đồng thời, nếu là câu lệnh thiết bị, ESP32 sẽ bắn lệnh tức thì sang các node thiết bị qua mạng ESP-NOW!
-   - **Cách 2 - Điều khiển qua Web Dashboard**:
-     - Bấm vào biểu tượng Micro ở góc dưới màn hình web [http://localhost](http://localhost).
-     - Nói câu lệnh: *"Bật đèn phòng khách và mở quạt phòng bếp"* -> Agent sẽ tự động phân tích và kích hoạt thiết bị.
+1. **Đăng nhập Web Dashboard** tại [http://localhost](http://localhost):
+   - Email: `admin@homing.dev` (hoặc `chunha1@homing.dev`)
+   - Mật khẩu: `admin123456`
+
+2. **Điều khiển thiết bị qua Web**:
+   - Trên trang **Phòng & Thiết bị**, bấm nút Bật/Tắt Đèn phòng khách → Quan sát đèn LED trên ESP32 #1 sáng/tắt tức thì!
+
+3. **Thử nghiệm an ninh**:
+   - Quẹt thẻ RFID → Khóa servo mở 90°, LCD hiển thị *"Access Granted"*.
+   - Gõ `1234#` trên Keypad 4x4 → Mở khóa thành công.
+
+4. **Thử nghiệm Voice AI (Nói trực tiếp vào Micro INMP441 ESP32 #3)**:
+   - Nói rõ: *"alo"*, *"xin chào"*, *"bật đèn"*, *"mở cửa"*.
+   - ESP32 ghi âm → gửi Hub ASR → nhận TTS → Loa MAX98357A phát câu trả lời tiếng Việt.
+   - Đồng thời, OLED hiển thị `> Ban: bat den` và `> AI: Da bat den cho ban`.
+
+5. **Thử nghiệm Voice AI qua Web Dashboard**:
+   - Bấm vào biểu tượng Micro (góc phải) trên [http://localhost](http://localhost).
+   - Nói: *"Bật đèn phòng khách và mở quạt phòng bếp"* → Agent phân tích và kích hoạt thiết bị.
+
+6. **Phát nhạc đồng thời Web + ESP32**:
+   - Trên Web Dashboard, thanh nhạc FloatingMediaPlayer xuất hiện ở dưới cùng.
+   - Bấm nút **🔥 Phát cả ESP32 & WEB** → Nhạc phát đồng thời trên loa trình duyệt và loa phần cứng ESP32.
+   - Hoặc nói: *"Phát bài Lạc Trôi"* qua Voice AI.
 
 ---
 
-## 5. Khắc phục các lỗi thường gặp (Troubleshooting)
+## 5. Cấu hình AI Voice & Xiaozhi Server cục bộ
 
-### Lỗi 1: Cổng COM không nhận khi cắm ESP32 vào máy tính
+### 5.1. Kiến trúc luồng giọng nói
+
+```
+Micro INMP441 (ESP32 #3)
+    → WiFi → WebSocket ws://host:8090/xiaozhi/v1/
+        → Xiaozhi Server: FunASR SenseVoice (ASR tiếng Việt)
+            → DeepSeek / Ollama LLM (Tool Calling)
+                → smart_home.py Plugin → API Backend / MQTT
+            → Edge-TTS (vi-VN-HoaiMyNeural hoặc vi-VN-NamMinhNeural)
+    ← HTTP GET http://host:8093/audio/cached_xxx.wav
+        ← ESP32 phát qua I2S MAX98357A
+```
+
+### 5.2. Cấu hình AI Settings trên Web Dashboard
+
+Vào trang **"Cài đặt AI Voice"** (menu trái) tại [http://localhost](http://localhost):
+
+| Tính năng | Mô tả |
+| :--- | :--- |
+| **Persona / Tính cách** | Chọn mẫu: Quản gia Jarvis, Cô Tấm dịu dàng, Trợ lý HomeMind, Vệ binh Sentinel |
+| **System Prompt** | Tùy chỉnh hoàn toàn hành vi AI (phong cách, quy tắc, xưng hô) |
+| **Giọng đọc** | `vi-VN-HoaiMyNeural` (Nữ), `vi-VN-NamMinhNeural` (Nam) |
+| **Tốc độ & Cao độ** | Chỉnh rate (0.8x – 1.4x) và pitch |
+| **Mô hình AI** | DeepSeekLLM (mặc định), Ollama Qwen, GPT-4o-mini |
+| **Wake Words** | Thêm từ khoá gọi loa (xiaozhi, jarvis, homing…) |
+| **Nghe thử** | Bấm "Nghe thử giọng" để preview TTS |
+| **Lưu & Đồng bộ** | Cập nhật ngay tức thì xuống ESP32 Gateway và Xiaozhi Server |
+
+### 5.3. Smart Home Plugin (Điều khiển thiết bị qua Voice AI)
+
+File `infra/xiaozhi/plugins/smart_home.py` xử lý tất cả câu lệnh thiết bị từ giọng nói:
+
+- Nhận diện ý định: `bat_den`, `tat_den`, `bat_quat`, `mo_cua`, `tat_den_tat_quat`, `phat_nhac`, v.v.
+- Gọi Backend API: `POST /api/devices/{device_id}/command`
+- Bắn MQTT: Topic `homing/devices/{id}/command`
+- Hỗ trợ 14 thiết bị: 3 đèn, 3 quạt, 1 rèm servo, 1 khóa cửa, 4 cảm biến, 1 loa nhạc
+
+---
+
+## 6. Tích hợp MCP Server với Claude / Gemini API
+
+Dự án có sẵn MCP Server (`src/services/mcp_server.py`) cho phép các AI assistant bên ngoài (Claude Desktop, Gemini CLI) gọi tool điều khiển thiết bị qua chuẩn **Model Context Protocol**.
+
+### 6.1. Khởi chạy MCP Server
+
+MCP Server chạy cùng FastAPI backend. Các tool available:
+
+| Tool Name | Mô tả |
+| :--- | :--- |
+| `control_device` | Bật/tắt thiết bị theo ID |
+| `get_device_status` | Đọc trạng thái thiết bị |
+| `get_sensor_data` | Đọc dữ liệu cảm biến (nhiệt độ, khí gas, PIR) |
+| `set_scene` | Kích hoạt Preset ngữ cảnh |
+| `play_music` | Phát nhạc qua loa ESP32 |
+| `get_weather` | Thời tiết hiện tại |
+
+### 6.2. Cấu hình Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "homing-smart-home": {
+      "url": "http://localhost:8000/mcp",
+      "transport": "http"
+    }
+  }
+}
+```
+
+---
+
+## 7. Khắc phục các lỗi thường gặp (Troubleshooting)
+
+### Lỗi 1: Cổng COM không nhận khi cắm ESP32
 - **Nguyên nhân**: Thiếu driver chip nạp UART (CP2102 hoặc CH340).
-- **Cách xử lý**: Cài driver ở [Mục 1](#1-chuẩn-bị-công-cụ--phần-mềm). Đổi sang dây cáp USB có chức năng truyền dữ liệu (nhiều dây cáp sạc điện thoại giá rẻ chỉ có 2 lõi nguồn, không truyền được dữ liệu).
+- **Cách xử lý**: Cài driver ở [Mục 1](#1-chuẩn-bị-công-cụ--phần-mềm). Đổi sang dây cáp USB có lõi dữ liệu (không phải dây sạc điện thoại giá rẻ chỉ có 2 lõi nguồn).
 
-### Lỗi 2: Arduino IDE báo lỗi khi nạp: `A fatal error occurred: Failed to connect to ESP32`
-- **Cách xử lý**: Khi Arduino IDE bắt đầu in dòng chữ `Connecting........_____.....`, hãy **nhấn và giữ nút BOOT (hoặc FLASH)** trên mạch ESP32 khoảng 2-3 giây rồi thả tay ra để đưa mạch vào chế độ nạp firmware.
+### Lỗi 2: Arduino IDE báo `Failed to connect to ESP32`
+- **Cách xử lý**: Khi hiện `Connecting........_____.....`, **nhấn giữ nút BOOT** trên bo ESP32 khoảng 2-3 giây rồi thả ra.
 
-### Lỗi 3: ESP32 bị reset liên tục khi cắm Servo SG90 hoặc cảm biến MQ-2
-- **Nguyên nhân**: Sụt áp nguồn (Brownout detector reset) do động cơ Servo và cảm biến sấy khí gas ăn dòng lớn.
-- **Cách xử lý**: Cấp nguồn 5V ngoài (Adapter 5V/2A) cho chân VIN của Servo và MQ-2, đồng thời **nối chung chân GND của nguồn ngoài với chân GND của ESP32**.
+### Lỗi 3: ESP32 bị reset liên tục (Brownout reset)
+- **Nguyên nhân**: Servo SG90 hoặc MQ-2 ăn dòng lớn gây sụt áp nguồn.
+- **Cách xử lý**: Cấp nguồn 5V/2A ngoài cho Servo và MQ-2. **Nối chung GND** nguồn ngoài với GND của ESP32.
 
-### Lỗi 4: Port 80 bị chiếm dụng (Không mở được giao diện Web)
-- **Cách xử lý**: Nếu trên máy tính của bạn đã có sẵn IIS hoặc ứng dụng khác chiếm cổng 80, hãy mở file `docker-compose.yml`, sửa dòng `ports: ["80:80"]` thành `ports: ["3000:80"]`. Khi đó truy cập web qua địa chỉ `http://localhost:3000`.
+### Lỗi 4: Port 80 bị chiếm dụng
+- **Cách xử lý**: Mở `docker-compose.yml`, sửa `ports: ["80:80"]` thành `ports: ["3000:80"]`. Truy cập Web qua `http://localhost:3000`.
 
----
+### Lỗi 5: Loa không phát âm thanh (I2S MAX98357A)
+- **Kiểm tra**: GPIO 25 (LRC), GPIO 26 (BCLK), GPIO 27 (DIN) đã nối đúng chưa?
+- **Kiểm tra nguồn**: MAX98357A cần 5V (cắm vào VIN), không phải 3.3V.
+- **Kiểm tra log**: Mở Serial Monitor 115200 baud, tìm dòng `[AUDIO STREAM] Kich thuoc audio: xxx bytes`. Nếu có số bytes > 0 là firmware hoạt động đúng, lỗi do phần cứng.
 
-## 6. Vận hành Loa AI Xiaozhi Tự Chủ (Self-hosted Xiaozhi Server)
+### Lỗi 6: Micro INMP441 không nhận tiếng
+- **Kiểm tra**: Chân L/R của INMP441 phải nối GND (không để hở).
+- **Kiểm tra**: GPIO 14 (SCK), GPIO 15 (WS), GPIO 32 (SD) đã nối đúng chưa?
+- **Kiểm tra log Serial**: Tìm dòng `[MIC TEST] RMS hien tai: xxx`. Khi nói to, RMS phải tăng lên trên 1500.
 
-Hệ thống đã tích hợp sẵn container `xiaozhi-server` mã nguồn mở (tối ưu hóa từ XinNan Tech) để chạy hoàn toàn cục bộ:
+### Lỗi 7: ESP32 #3 không kết nối MQTT (không nhận lệnh từ Web)
+- **Kiểm tra**: `mqtt_server` trong firmware có đúng IP LAN máy chủ chưa?
+- **Kiểm tra log Serial**: Tìm `[MQTT] KET NOI THANH CONG!`. Nếu thấy dòng này là MQTT đã kết nối.
+- **Kiểm tra firewall**: Đảm bảo cổng 1883 trên máy chủ không bị chặn bởi Windows Firewall.
 
-### 1. Kiến trúc luồng giọng nói cục bộ
-- **HTTP OTA & Vision Endpoint**: `http://lophocso.io.vn/xiaozhi/ota/` (hoặc nội bộ cổng `8093`)
-- **WebSocket Voice Server**: `ws://lophocso.io.vn/xiaozhi/v1/` (hoặc nội bộ cổng `8090`)
-- **Text-to-Speech (TTS)**: Sử dụng **Edge-TTS** giọng Tiếng Việt tự nhiên (`vi-VN-HoaiMyNeural` hoặc `vi-VN-NamMinhNeural`).
-- **Smart Home Plugin**: File `infra/xiaozhi/plugins/smart_home.py` tự động nhận diện ý định và kích hoạt điều khiển 13 thiết bị thực tế qua API Backend / MQTT.
-
-### 2. Cấu hình bo mạch ESP32 #3 kết nối Server cục bộ
-Trong file [`src/firmware/esp32_xiaozhi_gateway/esp32_xiaozhi_gateway.ino`](file:///e:/hung/VinAI/Prj/smart-home-iot-agent/src/firmware/esp32_xiaozhi_gateway/esp32_xiaozhi_gateway.ino):
-1. Đặt địa chỉ OTA Domain chính thức:
-   ```cpp
-   const char *xiaozhi_ota_url = "http://lophocso.io.vn/xiaozhi/ota/";
-   ```
-   *(ESP32 kết nối trực tiếp qua Domain hoặc IP mạng LAN `http://<IP_LAN>:8093/xiaozhi/ota/`)*
-2. Nạp code vào ESP32 #3. Khi khởi động, màn hình OLED sẽ hiển thị trạng thái kết nối tới server cục bộ.
-3. Nói vào Micro INMP441: *"Bật đèn phòng khách"* -> Server phân tích và loa MAX98357A sẽ phản hồi bằng giọng Tiếng Việt, đồng thời đèn phòng khách trên ESP32 #1 sẽ sáng ngay lập tức!
-
-### 3. Tùy chỉnh Nhân vật, System Prompt & Giọng nói trên Web Dashboard
-Bạn có thể truy cập trang **"Cấu hình AI Voice"** trên thanh menu bên trái của Web Dashboard (`https://lophocso.io.vn/`):
-- **Chọn mẫu tính cách (Persona)**: Quản gia Jarvis, Cô Tấm dịu dàng, Trợ lý HomeMind, Vệ binh Sentinel.
-- **Tùy chỉnh System Prompt**: Thay đổi phong cách xưng hô (em - anh/chị), quy tắc kiểm tra an ninh hoặc cách trả lời ngắn gọn.
-- **Giọng đọc & Tốc độ**: Chọn giọng Hoài My (Nữ), Nam Minh (Nam), chỉnh tốc độ đọc (0.8x - 1.4x) và nhấn **"Nghe thử giọng"**.
-- **Mô hình & Từ khóa đánh thức (Wake words)**: Thêm/bớt từ khóa gọi loa (xiaozhi, jarvis, homing...). Nhấn **"Lưu & Đồng bộ"** để tự động cập nhật ngay lập tức xuống cả Master ESP32 Gateway và Web Hub.
-
-
+### Lỗi 8: Firmware Bo mạch #3 báo lỗi dung lượng Flash khi biên dịch
+- **Cách xử lý**: Bắt buộc chọn **Partition Scheme: Huge APP (3MB No OTA/1MB SPIFFS)** trong menu **Tools** của Arduino IDE trước khi Upload.
