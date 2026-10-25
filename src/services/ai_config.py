@@ -62,9 +62,9 @@ AVAILABLE_MODELS = [
     },
     {
         "id": "LocalLLM",
-        "name": "Local Qwen 2.5 (Ollama)",
-        "provider": "Local Host",
-        "description": "Mô hình chạy offline 100% bảo mật cục bộ trong mạng gia đình",
+        "name": "Local Qwen 2.5 7B (Ollama GPU)",
+        "provider": "NVIDIA GPU Local",
+        "description": "Mô hình Qwen 2.5 7B chạy offline 100% bằng GPU máy tính, thông minh vượt trội và bảo mật",
     },
 ]
 

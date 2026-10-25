@@ -107,7 +107,7 @@ def warmup_llm():
     try:
         httpx.post(
             "http://ollama:11434/api/generate",
-            json={"model": "qwen2.5:3b", "prompt": "xin chào", "keep_alive": "30m"},
+            json={"model": "qwen2.5:7b", "prompt": "xin chào", "keep_alive": "30m"},
             timeout=120.0,
         )
     except Exception as e:

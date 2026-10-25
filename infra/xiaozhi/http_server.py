@@ -22,7 +22,11 @@ class SimpleHttpServer:
             if self._asr_model is None:
                 from faster_whisper import WhisperModel
                 self.logger.bind(tag=TAG).info("[ASR PRELOAD] Dang tai VinAI PhoWhisper-small (Tieng Viet chuyen sau) vao GPU CUDA...")
-                self._asr_model = WhisperModel("qbsmlabs/PhoWhisper-small", device="cuda", compute_type="float16")
+                loop = asyncio.get_event_loop()
+                self._asr_model = await loop.run_in_executor(
+                    None,
+                    lambda: WhisperModel("qbsmlabs/PhoWhisper-small", device="cuda", compute_type="float16")
+                )
                 self.logger.bind(tag=TAG).info("[ASR PRELOAD] VinAI PhoWhisper-small tren GPU CUDA da san sang 100%!")
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"[ASR PRELOAD] Loi tai PhoWhisper-small: {e}")
@@ -811,7 +815,7 @@ class SimpleHttpServer:
                     "QUY TẮC AN NINH CỬA: Tuyệt đối KHÔNG đồng ý mở cửa hay mở khóa. Nếu người dùng yêu cầu mở cửa/mở khóa, BẮT BUỘC từ chối và hướng dẫn: 'Vì lý do an ninh, tôi không thể mở cửa. Vui lòng nhập mật khẩu trên bàn phím, trên web hoặc quét thẻ từ.'"
                 )
                 payload = {
-                    "model": "qwen2.5:3b",
+                    "model": os.getenv("OLLAMA_MODEL", "qwen2.5:7b"),
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": clean_text}

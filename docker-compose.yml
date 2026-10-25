@@ -8,10 +8,10 @@ services:
       MQTT_BROKER: mqtt
       MQTT_ENABLED: "true"
       LLM_ENABLED: ${LLM_ENABLED:-true}
-      LLM_LOCAL_ONLY: ${LLM_LOCAL_ONLY:-false}
-      MODEL_NAME: ${MODEL_NAME:-gpt-4o-mini}
+      LLM_LOCAL_ONLY: ${LLM_LOCAL_ONLY:-true}
+      MODEL_NAME: ${MODEL_NAME:-qwen2.5:7b}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      LLAMA_BASE_URL: ${LLAMA_BASE_URL:-}
+      LLAMA_BASE_URL: ${LLAMA_BASE_URL:-http://ollama:11434/v1}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
       VOICE_ENABLED: ${VOICE_ENABLED:-true}
     volumes:
@@ -23,6 +23,8 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
+      ollama:
+        condition: service_started
     restart: unless-stopped
 
   frontend:
@@ -50,6 +52,8 @@ services:
     container_name: homing-ollama
     ports:
       - "11434:11434"
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
     volumes:
       - ollama-data:/root/.ollama
     deploy:
@@ -60,6 +64,17 @@ services:
               count: all
               capabilities: [gpu]
     restart: unless-stopped
+
+  # Tự động tải mô hình Qwen 2.5 7B vào GPU ngay khi khởi động hoặc clone mới dự án
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: homing-ollama-init
+    entrypoint: ["sh", "-c", "until ollama list >/dev/null 2>&1; do sleep 2; done; if ! ollama list | grep -q 'qwen2.5:7b'; then echo 'Pulling qwen2.5:7b...'; ollama pull qwen2.5:7b; fi; echo 'qwen2.5:7b is ready!'"]
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    depends_on:
+      - ollama
+    restart: "no"
 
   postgres:
     image: postgres:16-alpine
@@ -90,7 +105,10 @@ services:
 
   # Máy chủ AI Xiaozhi ESP32 Voice Server (Tự host cục bộ)
   xiaozhi-server:
-    image: ghcr.io/xinnan-tech/xiaozhi-esp32-server:server_latest
+    build:
+      context: ./infra/xiaozhi
+      dockerfile: Dockerfile
+    image: homing-xiaozhi-server:latest
     container_name: homing-xiaozhi-server
     restart: unless-stopped
     security_opt:
@@ -109,6 +127,7 @@ services:
       - ./infra/xiaozhi/models/SenseVoiceSmall/model.pt:/opt/xiaozhi-esp32-server/models/SenseVoiceSmall/model.pt
       - ./infra/xiaozhi/http_server.py:/opt/xiaozhi-esp32-server/core/http_server.py:ro
       - ./infra/xiaozhi/fun_local.py:/opt/xiaozhi-esp32-server/core/providers/asr/fun_local.py:ro
+      - hf-cache:/root/.cache/huggingface
     deploy:
       resources:
         reservations:
@@ -126,3 +145,4 @@ volumes:
   mqtt-data:
   postgres-data:
   ollama-data:
+  hf-cache:

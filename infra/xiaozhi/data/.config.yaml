@@ -100,7 +100,7 @@ LLM:
   OllamaLLM:
     type: ollama
     base_url: http://homing-ollama:11434
-    model_name: qwen2.5:3b
+    model_name: qwen2.5:7b
   DeepSeekLLM:
     type: openai
     base_url: https://api.deepseek.com
