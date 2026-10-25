@@ -141,20 +141,28 @@ class SimpleHttpServer:
                 self._asr_model = WhisperModel("qbsmlabs/PhoWhisper-small", device="cuda", compute_type="float16")
 
             try:
-                # Beam search kích thước 5 với temperature=0.0 cho độ chính xác cao nhất
+                # Kích hoạt Silero VAD tích hợp trong Faster-Whisper để lọc 100% tiếng ồn/tiếng ù tần số thấp
                 segments, info = self._asr_model.transcribe(
                     audio_float,
                     language="vi",
                     beam_size=5,
                     best_of=5,
                     initial_prompt=None,
-                    vad_filter=False,
+                    vad_filter=True,
+                    vad_parameters=dict(min_silence_duration_ms=400, speech_pad_ms=150),
                     condition_on_previous_text=False,
                     compression_ratio_threshold=2.4,
                     no_speech_threshold=0.6,
+                    repetition_penalty=1.2,
                     temperature=0.0,
                 )
                 clean_text = " ".join([s.text for s in segments]).strip(".,?!;:-_ ")
+                # Lọc bỏ ảo giác lặp từ (ví dụ 'tập. tập. tập.' do nhiễu micro)
+                if clean_text:
+                    tokens = [t.strip(".,?!;:-_") for t in clean_text.lower().split() if t.strip(".,?!;:-_")]
+                    if len(tokens) >= 3 and len(set(tokens)) == 1:
+                        self.logger.bind(tag=TAG).info(f"Bo qua ao giac lap tu Whisper ({clean_text})")
+                        clean_text = ""
             except Exception as asr_err:
                 self.logger.bind(tag=TAG).warning(f"Whisper inference error: {asr_err}")
                 clean_text = ""
@@ -817,7 +825,7 @@ class SimpleHttpServer:
                     data=json.dumps(payload).encode("utf-8"),
                     headers={"Content-Type": "application/json"}
                 )
-                with urllib.request.urlopen(req, timeout=4.5) as response:
+                with urllib.request.urlopen(req, timeout=10.0) as response:
                     res_data = json.loads(response.read().decode("utf-8"))
                     reply_text = res_data.get("message", {}).get("content", "").strip()
                     if "<think>" in reply_text and "</think>" in reply_text:

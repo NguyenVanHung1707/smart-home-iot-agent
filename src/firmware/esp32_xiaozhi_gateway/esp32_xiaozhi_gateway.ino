@@ -640,7 +640,7 @@ void initI2S_Microphone() {
       .sample_rate = AUDIO_SAMPLE_RATE,
       .bits_per_sample =
           I2S_BITS_PER_SAMPLE_32BIT, // INMP441 truyen 24-bit trong slot 32-bit
-      .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
+      .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT, // 64 xung clock/khung chuẩn cho INMP441 (hỗ trợ cả Left lẫn Right)
       .communication_format = I2S_COMM_FORMAT_STAND_I2S,
       .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
       .dma_buf_count = 8,
@@ -868,6 +868,8 @@ void micAudioReaderTask(void *param) {
   preRollFilled = false;
   Serial.println("[TASK MIC] WiFi san sang, Mic bat dau lang nghe!");
 
+  static int activeMicChannel = -1; // -1: Tu dong do kenh, 0: Left (L/R noi GND), 1: Right (L/R noi VDD hoac tha noi)
+
   while (true) {
     if (wavBufStatic == NULL) {
       vTaskDelay(pdMS_TO_TICKS(500));
@@ -882,19 +884,46 @@ void micAudioReaderTask(void *param) {
     esp_err_t res = i2s_read(I2S_MIC_PORT, rawSamples, sizeof(rawSamples),
                              &bytesRead, pdMS_TO_TICKS(100));
     if (res == ESP_OK && bytesRead > 0) {
-      int numSamples = bytesRead / 4;
-      int64_t sumSamples = 0;
-      for (int i = 0; i < numSamples; i++) {
-        sumSamples += (rawSamples[i] >> 13);
+      int numSamples = bytesRead / sizeof(int32_t);
+      int numPairs = numSamples / 2;
+      if (numPairs <= 0) continue;
+
+      // Tự động nhận diện kênh Micro Left (L/R nối GND) hoặc Right (L/R nối 3.3V hoặc thả nổi)
+      if (activeMicChannel == -1) {
+        int64_t sumSqL = 0, sumSqR = 0;
+        for (int i = 0; i < numPairs; i++) {
+          int32_t sL = rawSamples[i * 2] >> 13;
+          int32_t sR = rawSamples[i * 2 + 1] >> 13;
+          sumSqL += (int64_t)sL * sL;
+          sumSqR += (int64_t)sR * sR;
+        }
+        if (sumSqL > 20000 || sumSqR > 20000) {
+          activeMicChannel = (sumSqR > sumSqL) ? 1 : 0;
+          Serial.printf("[INMP441] Tu dong khoa kenh Micro: %s (L_energy=%lld, R_energy=%lld)\n",
+                        activeMicChannel == 1 ? "RIGHT (L/R noi VDD hoac tha noi)" : "LEFT (L/R noi GND)",
+                        sumSqL, sumSqR);
+        }
       }
-      int32_t dcMean = sumSamples / numSamples;
+
+      int ch = (activeMicChannel == 1) ? 1 : 0;
+      int64_t sumSamples = 0;
+      for (int i = 0; i < numPairs; i++) {
+        int32_t rawVal = (activeMicChannel == -1)
+                             ? ((abs(rawSamples[i * 2] >> 13) > abs(rawSamples[i * 2 + 1] >> 13)) ? (rawSamples[i * 2] >> 13) : (rawSamples[i * 2 + 1] >> 13))
+                             : (rawSamples[i * 2 + ch] >> 13);
+        sumSamples += rawVal;
+      }
+      int32_t dcMean = sumSamples / numPairs;
 
       int64_t sumSquares = 0;
 
       // Xử lý mẫu âm thanh 24-bit từ slot 32-bit của INMP441
       // Khử thành phần một chiều (DC Offset) để đo chính xác năng lượng âm thanh thực
-      for (int i = 0; i < numSamples; i++) {
-        int32_t s = (rawSamples[i] >> 13) - dcMean;
+      for (int i = 0; i < numPairs; i++) {
+        int32_t rawVal = (activeMicChannel == -1)
+                             ? ((abs(rawSamples[i * 2] >> 13) > abs(rawSamples[i * 2 + 1] >> 13)) ? (rawSamples[i * 2] >> 13) : (rawSamples[i * 2 + 1] >> 13))
+                             : (rawSamples[i * 2 + ch] >> 13);
+        int32_t s = rawVal - dcMean;
         if (s > 32767) s = 32767;
         if (s < -32768) s = -32768;
         int16_t sample16 = (int16_t)s;
@@ -908,13 +937,15 @@ void micAudioReaderTask(void *param) {
         }
       }
 
-      int rms = (int)sqrt(sumSquares / numSamples);
+      int rms = (int)sqrt(sumSquares / numPairs);
 
       // In log định kỳ mỗi 2 giây để kiểm tra phần cứng Micro INMP441
       static unsigned long lastRmsPrint = 0;
       if (millis() - lastRmsPrint > 2000) {
         lastRmsPrint = millis();
-        Serial.printf("[MIC TEST] RMS hien tai: %d (Nguong phat hien: %d)\n", rms, VAD_THRESHOLD);
+        Serial.printf("[MIC TEST] RMS hien tai: %d (Nguong: %d, Kenh: %s)\n",
+                      rms, VAD_THRESHOLD,
+                      activeMicChannel == 1 ? "RIGHT" : (activeMicChannel == 0 ? "LEFT" : "AUTO"));
       }
 
       // Bộ lọc lọc gai nhiễu: chỉ kích hoạt khi giọng nói duy trì liên tục ít nhất 2 frame (~32ms)
@@ -948,7 +979,7 @@ void micAudioReaderTask(void *param) {
         }
 
         // 2. Tiếp tục thu trực tiếp từ I2S - Tự động phát hiện điểm ngắt câu thông minh (End-Of-Speech EOS)
-        int32_t rawChunk[128];
+        int32_t rawChunk[128 * 2]; // 128 cặp stereo (256 int32_t)
         unsigned long recordStart = millis();
         int consecutiveSilenceChunks = 0;
         const size_t minSpeechSamples = 16000; // Tối thiểu 1.0 giây bản thu (tránh ngắt sớm do tiếng động lạ)
@@ -956,26 +987,33 @@ void micAudioReaderTask(void *param) {
 
         while (samplesRecorded < targetSamples && (millis() - recordStart < maxRecordMs)) {
           size_t bytesReadNow = 0;
-          size_t toRead = min((size_t)128, targetSamples - samplesRecorded);
-          esp_err_t err = i2s_read(I2S_MIC_PORT, rawChunk, toRead * sizeof(int32_t), &bytesReadNow, pdMS_TO_TICKS(100));
+          size_t toReadPairs = min((size_t)128, targetSamples - samplesRecorded);
+          esp_err_t err = i2s_read(I2S_MIC_PORT, rawChunk, toReadPairs * 2 * sizeof(int32_t), &bytesReadNow, pdMS_TO_TICKS(100));
           if (err == ESP_OK && bytesReadNow > 0) {
-            size_t readCount = bytesReadNow / 4;
+            int chunkPairs = (bytesReadNow / sizeof(int32_t)) / 2;
+            int ch = (activeMicChannel == 1) ? 1 : 0;
             int64_t chunkSum = 0;
-            for (size_t s = 0; s < readCount; s++) {
-              chunkSum += (rawChunk[s] >> 13);
+            for (int s = 0; s < chunkPairs; s++) {
+              int32_t rawVal = (activeMicChannel == -1)
+                                   ? ((abs(rawChunk[s * 2] >> 13) > abs(rawChunk[s * 2 + 1] >> 13)) ? (rawChunk[s * 2] >> 13) : (rawChunk[s * 2 + 1] >> 13))
+                                   : (rawChunk[s * 2 + ch] >> 13);
+              chunkSum += rawVal;
             }
-            int32_t chunkMean = chunkSum / readCount;
+            int32_t chunkMean = chunkSum / (chunkPairs > 0 ? chunkPairs : 1);
 
             int64_t chunkSquares = 0;
-            for (size_t s = 0; s < readCount && samplesRecorded < targetSamples; s++) {
-              int32_t sample = (rawChunk[s] >> 13) - chunkMean;
+            for (int s = 0; s < chunkPairs && samplesRecorded < targetSamples; s++) {
+              int32_t rawVal = (activeMicChannel == -1)
+                                   ? ((abs(rawChunk[s * 2] >> 13) > abs(rawChunk[s * 2 + 1] >> 13)) ? (rawChunk[s * 2] >> 13) : (rawChunk[s * 2 + 1] >> 13))
+                                   : (rawChunk[s * 2 + ch] >> 13);
+              int32_t sample = rawVal - chunkMean;
               if (sample > 32767) sample = 32767;
               if (sample < -32768) sample = -32768;
               pcmData[samplesRecorded++] = (int16_t)sample;
               chunkSquares += (int64_t)sample * (int64_t)sample;
             }
 
-            int chunkRms = (int)sqrt(chunkSquares / readCount);
+            int chunkRms = (int)sqrt(chunkSquares / (chunkPairs > 0 ? chunkPairs : 1));
             // Phát hiện khoảng lặng sau khi nói xong (EOS)
             // Ngưỡng im lặng: dưới 65% VAD_THRESHOLD
             if (chunkRms < (VAD_THRESHOLD * 0.65)) {
