@@ -108,3 +108,6 @@ frontend-simulator/test-results/
 
 # TTS Cache
 infra/xiaozhi/data/tts_cache/
+
+# Test audio recordings
+scripts/recordings/
